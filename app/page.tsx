@@ -102,56 +102,98 @@ export default function Home() {
       <LaserDivider />
 
       {/* 3. RECENT RECAPS SECTION */}
-      <section className="py-40 bg-black relative">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="mb-20 text-left">
-            <h2 className="text-sm font-bold uppercase tracking-[0.5em] text-brandRed mb-4">Past Vibes</h2>
-            <h3 className="text-5xl md:text-6xl font-black uppercase tracking-tighter">Recent <span className="text-zinc-800 tracking-normal italic">Recaps</span></h3>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-            {/* Card 1 */}
-            <div className="group p-12 rounded-[40px] bg-zinc-900/10 border border-white/5 hover:border-brandRed/40 transition-all duration-700">
-              <span className="text-zinc-600 font-mono text-sm tracking-tighter">JAN 2026</span>
-              <h4 className="text-4xl font-black uppercase mt-6 mb-4 group-hover:text-brandRed transition-colors tracking-tight">Agam Live In Pune</h4>
-              <p className="text-zinc-500 text-lg font-medium leading-relaxed italic">A sold-out night of Carnatic Progressive Rock that electrified the city.</p>
-            </div>
-            {/* Card 2 */}
-            <div className="group p-12 rounded-[40px] bg-zinc-900/10 border border-white/5 hover:border-brandRed/40 transition-all duration-700">
-              <span className="text-zinc-600 font-mono text-sm tracking-tighter">FEB 2026</span>
-              <h4 className="text-4xl font-black uppercase mt-6 mb-4 group-hover:text-brandRed transition-colors tracking-tight">The Digital Hub</h4>
-              <p className="text-zinc-500 text-lg font-medium leading-relaxed italic">Launching our official community portal to bring every Pune Mallu together.</p>
-            </div>
+<section className="py-40 bg-black relative">
+  <div className="max-w-7xl mx-auto px-6">
+    <div className="mb-20">
+      <h2 className="text-sm font-bold uppercase tracking-[0.5em] text-brandRed mb-4">Live Energy</h2>
+      <h3 className="text-5xl md:text-6xl font-black uppercase tracking-tighter">Recent <span className="text-zinc-800 tracking-normal italic">Recaps</span></h3>
+    </div>
+
+    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+      
+      {/* AGAM VIDEO RECAP CARD */}
+      <div className="group relative p-12 rounded-[40px] bg-zinc-950 border border-white/5 hover:border-brandRed/40 transition-all duration-700 overflow-hidden">
+        
+        {/* Background Video - Plays on Hover */}
+        <div className="absolute inset-0 z-0 opacity-20 group-hover:opacity-50 transition-opacity duration-700">
+          <video
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-1000"
+          >
+            <source src="/videos/agam-recap.mp4" type="video/mp4" />
+          </video>
+          {/* Dark Overlay to keep text readable */}
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/60 to-transparent" />
+        </div>
+
+        {/* Content Layer */}
+        <div className="relative z-10">
+          <span className="text-zinc-600 font-mono text-sm tracking-tighter group-hover:text-brandRed transition-colors">JAN 2026</span>
+          <h4 className="text-4xl font-black uppercase mt-6 mb-4 tracking-tight">Agam Live In Pune</h4>
+          <p className="text-zinc-500 text-lg font-medium leading-relaxed italic group-hover:text-zinc-300 transition-colors">
+            A sold-out night of Carnatic Progressive Rock. Experience the energy that brought our diaspora together.
+          </p>
+          
+          <div className="mt-8 flex items-center gap-3 text-brandRed font-black uppercase text-[10px] tracking-[0.3em] opacity-0 group-hover:opacity-100 transition-all transform translate-y-4 group-hover:translate-y-0">
+            <span className="w-8 h-px bg-brandRed" /> Watch Highlights
           </div>
         </div>
-      </section>
+      </div>
+
+      {/* SECOND CARD (Keep as static image or text for balance) */}
+      <div className="group p-12 rounded-[40px] bg-zinc-900/10 border border-white/5 hover:border-brandRed/40 transition-all duration-700">
+        <span className="text-zinc-600 font-mono text-sm tracking-tighter">FEB 2026</span>
+        <h4 className="text-4xl font-black uppercase mt-6 mb-4 group-hover:text-brandRed transition-colors tracking-tight">The Digital Hub</h4>
+        <p className="text-zinc-500 text-lg font-medium leading-relaxed italic">Launching our official community portal to streamline networking for all.</p>
+      </div>
+
+    </div>
+  </div>
+</section>
 
       <LaserDivider />
 
       {/* 4. FOUNDERS SECTION */}
-      <section className="py-40 bg-black">
-        <div className="max-w-7xl mx-auto px-6 text-center">
-          <h2 className="text-5xl md:text-7xl font-black uppercase italic tracking-tighter mb-24">Meet The <span className="text-brandRed">Founders</span></h2>
-          <div className="flex flex-wrap justify-center gap-20">
-            {/* Founder 1 */}
-            <div className="group w-full max-w-[320px]">
-              <div className="aspect-[3/4] bg-zinc-950 rounded-[45px] mb-8 overflow-hidden border border-white/10 group-hover:border-brandRed transition-all duration-700 grayscale group-hover:grayscale-0 shadow-2xl">
-                <div className="w-full h-full flex items-center justify-center text-zinc-900 text-8xl font-black italic uppercase">RA</div>
-              </div>
-              <h4 className="text-3xl font-black uppercase tracking-tight">Rohit Anish</h4>
-              <p className="text-brandRed font-bold uppercase text-xs tracking-[0.4em] mt-3">Visionary & Strategy</p>
-            </div>
-            {/* Founder 2 */}
-            <div className="group w-full max-w-[320px]">
-              <div className="aspect-[3/4] bg-zinc-950 rounded-[45px] mb-8 overflow-hidden border border-white/10 group-hover:border-brandRed transition-all duration-700 grayscale group-hover:grayscale-0 shadow-2xl">
-                <div className="w-full h-full flex items-center justify-center text-zinc-900 text-8xl font-black italic uppercase">PM</div>
-              </div>
-              <h4 className="text-3xl font-black uppercase tracking-tight">Admin</h4>
-              <p className="text-brandRed font-bold uppercase text-xs tracking-[0.4em] mt-3">Operations</p>
-            </div>
-          </div>
+<section className="py-40 bg-black">
+  <div className="max-w-7xl mx-auto px-6 text-center">
+    <h2 className="text-5xl md:text-7xl font-black uppercase italic tracking-tighter mb-24">
+      Meet The <span className="text-brandRed">Founders</span>
+    </h2>
+    
+    <div className="flex flex-wrap justify-center gap-20">
+      {/* Founder 1 - Rohit Anish */}
+      <div className="group w-full max-w-[320px]">
+        <div className="aspect-[3/4] bg-zinc-950 rounded-[45px] mb-8 overflow-hidden border border-white/10 group-hover:border-brandRed transition-all duration-700 shadow-2xl relative">
+          <Image 
+            src="/founders/suchi.jpg" // Path: public/founders/rohit.jpg
+            alt="Sucheendran KC"
+            fill
+            className="object-cover grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-105"
+          />
         </div>
-      </section>
+        <h4 className="text-3xl font-black uppercase tracking-tight">Sucheendran K.C</h4>
+        <p className="text-brandRed font-bold uppercase text-xs tracking-[0.4em] mt-3">Founder</p>
+      </div>
 
+      {/* Founder 2 - Admin */}
+      <div className="group w-full max-w-[320px]">
+        <div className="aspect-[3/4] bg-zinc-950 rounded-[45px] mb-8 overflow-hidden border border-white/10 group-hover:border-brandRed transition-all duration-700 shadow-2xl relative">
+          <Image 
+            src="/founders/shehanas.jpg" // Path: public/founders/admin.jpg
+            alt="Shehanas"
+            fill
+            className="object-cover grayscale group-hover:grayscale-0 transition-all duration-700 group-hover:scale-105"
+          />
+        </div>
+        <h4 className="text-3xl font-black uppercase tracking-tight">Shena</h4>
+        <p className="text-brandRed font-bold uppercase text-xs tracking-[0.4em] mt-3">Co-Founder</p>
+      </div>
+    </div>
+  </div>
+</section>
       <LaserDivider />
 
       {/* 5. MODERN ICONIC FOOTER SECTION */}
