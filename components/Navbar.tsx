@@ -12,7 +12,7 @@ export default function Navbar() {
     { name: 'Community', href: '/community' },
     { name: 'Events', href: '/events' },
     { name: 'Mallu Dial', href: '/mallu-dial', special: true },
-    { name: 'Contact', href: '/contact' },
+    { name: 'Contact Us', href: '/contact' },
   ];
 
   return (
