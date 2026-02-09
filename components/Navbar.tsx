@@ -1,72 +1,87 @@
 "use client";
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
 
 export default function Navbar() {
   const pathname = usePathname();
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setScrolled(window.scrollY > 20);
+    };
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const navLinks = [
     { name: 'Home', href: '/' },
     { name: 'About Us', href: '/about' },
-    { name: 'Community', href: '/community' },
     { name: 'Events', href: '/events' },
-    { name: 'Mallu Dial', href: '/mallu-dial', special: true },
-    { name: 'Contact Us', href: '/contact' },
+    { name: 'Community', href: '/community' },
+    { name: 'Mallu Dial', href: '/directory' },
+    { name: 'Contact', href: '/contact' },
   ];
 
   return (
-    <nav className="fixed top-0 w-full z-50 px-10 py-5 flex items-center bg-black/40 backdrop-blur-xl border-b border-white/5">
-      
-      {/* 1. Logo */}
-      <div className="flex-shrink-0">
-        <Link href="/" className="flex items-center">
-          <Image 
-            src="/logo.png" 
-            alt="Puneri Mallus Logo" 
-            width={400} 
-            height={150} 
-            className="h-[100px] w-auto object-contain" 
-            priority 
-          />
-        </Link>
-      </div>
+    <nav className={`fixed top-0 inset-x-0 z-[100] transition-all duration-700 ${
+      scrolled 
+        ? 'py-3 bg-black/90 backdrop-blur-xl border-none' // BORDER REMOVED HERE
+        : 'py-0 bg-transparent border-none'
+    }`}>
+      {/* Container with items-start to keep elements pushed to the top */}
+      <div className="w-full flex items-start relative min-h-[80px]">
+        
+        {/* LOGO - EXTREME TOP LEFT */}
+        <div className="absolute top-0 left-0 p-0 m-0">
+          <Link href="/#hero" className="block group">
+            <Image 
+              src="/logo.png" 
+              alt="Puneri Mallus" 
+              width={500} 
+              height={180} 
+              className={`object-contain transition-all duration-500 group-hover:scale-105 ${
+                // Maintained the massive size you liked
+                scrolled ? 'h-24 md:h-28 ml-4' : 'h-40 md:h-52 ml-0' 
+              } drop-shadow-[0_0_35px_rgba(255,0,0,0.6)]`} 
+              priority
+            />
+          </Link>
+        </div>
 
-      {/* 2. Navigation Links (Dynamic Highlighting) */}
-      <div className="hidden lg:flex flex-grow justify-center items-center gap-12">
-        {navLinks.map((link) => {
-          // Dynamic check: Does the current URL match this link's destination?
-          const isActive = pathname === link.href;
+        {/* NAVIGATION - PUSHED RIGHT & TOP ALIGNED */}
+        <div className="flex-1 flex justify-center items-center gap-10 pt-10 pl-40 lg:pl-60">
+          {navLinks.map((link) => {
+            const isActive = pathname === link.href;
+            return (
+              <Link 
+                key={link.name} 
+                href={link.href}
+                className="group relative py-1"
+              >
+                <span className={`text-[13px] font-black uppercase tracking-[0.3em] transition-all duration-300 ${
+                  isActive ? 'text-brandRed' : 'text-white/80 group-hover:text-white'
+                }`}>
+                  {link.name}
+                </span>
+                <span className={`absolute -bottom-1 left-0 h-[2px] bg-brandRed transition-all duration-500 ${
+                  isActive ? 'w-full shadow-[0_0_10px_#FF0000]' : 'w-0 group-hover:w-full'
+                }`} />
+              </Link>
+            );
+          })}
+        </div>
 
-          return (
-            <Link 
-              key={link.name}
-              href={link.href} 
-              className={`text-[15px] font-bold uppercase tracking-[0.2em] transition-all duration-300 relative py-2 ${
-                isActive 
-                  ? 'text-brandRed' 
-                  : 'text-zinc-200 hover:text-brandRed'
-              } ${link.special && !isActive ? 'animate-pulse' : ''}`}
-            >
-              {link.name}
-              
-              {/* Animated Underline Indicator - only shows when active */}
-              {isActive && (
-                <div 
-                  className="absolute bottom-0 left-0 w-full h-0.5 bg-brandRed shadow-[0_0_12px_#FF0000]" 
-                  style={{ transition: 'all 0.3s ease' }}
-                />
-              )}
-            </Link>
-          );
-        })}
-      </div>
-
-      {/* 3. Auth Button */}
-      <div className="flex-shrink-0">
-        <Link href="/auth/login" className="text-[14px] font-black uppercase tracking-widest border-2 border-brandRed/40 text-white px-10 py-3.5 rounded-full hover:bg-brandRed hover:border-brandRed transition-all duration-500 shadow-[0_0_20px_rgba(255,0,0,0.1)]">
-          Login
-        </Link>
+        {/* JOIN TRIBE - TOP RIGHT */}
+        <div className="pt-8 pr-8 md:pr-12 lg:pr-16">
+          <Link href="/auth/login">
+            <button className="px-10 py-3.5 rounded-full bg-brandRed text-white font-black uppercase text-[11px] tracking-widest hover:scale-105 transition-all duration-500 shadow-[0_0_20px_rgba(255,0,0,0.4)]">
+              Join Tribe
+            </button>
+          </Link>
+        </div>
       </div>
     </nav>
   );
