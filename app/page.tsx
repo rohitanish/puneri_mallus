@@ -11,6 +11,7 @@ import {
   Zap
 } from 'lucide-react';
 import EventGlimpse from '@/components/EventGlimpse';
+import EventCard from '@/components/EventCard'; // Ensure you have this component
 
 const LaserDivider = () => (
   <div className="relative w-full h-px flex items-center justify-center overflow-visible my-4">
@@ -23,13 +24,45 @@ const LaserDivider = () => (
 
 export default function Home() {
   const [heroVideo, setHeroVideo] = useState(false);
+  const [upcoming, setUpcoming] = useState<any[]>([]);
+  const [past, setPast] = useState<any[]>([]); // Added state for Past events
 
-  // Hero Transition (Static to Video once)
-  useEffect(() => {
+  // Hero Transition & Data Loading
+ useEffect(() => {
+    // 1. Hero Timer (Keep your existing timer)
     const timer = setTimeout(() => setHeroVideo(true), 2000);
+    
+    // 2. Dynamic Data Loading
+    // We no longer define staticData here. We pull the "Seeded" data from memory.
+    let allEvents = [];
+    try {
+      const saved = localStorage.getItem('pm_events');
+      allEvents = saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      console.error("Pulse Error: Could not load events", e);
+      allEvents = [];
+    }
+
+    // 3. Set Upcoming (Spotlight)
+    // Pull the latest upcoming event added/edited in Admin
+    setUpcoming(allEvents.filter((e: any) => e.type === 'upcoming').slice(0, 1));
+
+    // 4. Set Past (Event Glimpse)
+    // Filter for past, sort by 'featured' (The Star in Admin), then take top 3
+    const glimpseEvents = allEvents
+      .filter((e: any) => e.type === 'past')
+      .sort((a: any, b: any) => {
+        if (a.featured === b.featured) return 0;
+        return a.featured ? -1 : 1;
+      })
+      .slice(0, 3);
+
+    setPast(glimpseEvents);
+
     return () => clearTimeout(timer);
   }, []);
 
+  
   return (
     <div className="flex flex-col min-h-screen bg-black text-white selection:bg-brandRed/30 relative">
       
@@ -42,10 +75,9 @@ export default function Home() {
 
       <div className="relative z-10">
         
-        {/* 1. HERO SECTION WITH NEW MANTRA & NAVIGATION */}
+        {/* 1. HERO SECTION */}
         <section className="relative h-screen w-full overflow-hidden bg-black flex flex-col items-center justify-center">
           <div className="absolute inset-0 z-0">
-            {/* Background Layers */}
             <Image
               src="/hero-bg.jpeg"
               alt="Puneri Mallus"
@@ -72,7 +104,6 @@ export default function Home() {
               />
             </div>
 
-            {/* THE MANTRA */}
             <div className="space-y-6">
               <div className="flex flex-col items-center space-y-3">
                 <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tighter leading-none text-white/90">
@@ -87,14 +118,12 @@ export default function Home() {
               </div>
             </div>
 
-            {/* UPDATED CTA BUTTON */}
             <div className="pt-8">
               <Link href="/about">
                 <button className="group relative bg-brandRed text-white px-16 py-6 rounded-full font-black uppercase tracking-[0.3em] text-sm overflow-hidden transition-all hover:scale-110 shadow-[0_0_60px_rgba(255,0,0,0.4)]">
                   <span className="relative z-10 flex items-center gap-3">
                     Know More <ArrowUpRight size={20} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
                   </span>
-                  {/* Hover Slide Effect */}
                   <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
                 </button>
               </Link>
@@ -104,20 +133,75 @@ export default function Home() {
 
         <LaserDivider />
 
-        {/* 2. EVENT GLIMPSE */}
+        {/* 2. NEW: UPCOMING EXPERIENCE SPOTLIGHT */}
         <section className="py-40 bg-black relative">
           <div className="max-w-7xl mx-auto px-6">
-            <div className="flex justify-between items-end mb-20">
-              <h2 className="text-5xl md:text-7xl font-black uppercase italic tracking-tighter">Event <span className="text-brandRed">Glimpse</span></h2>
-              <Link href="/events" className="text-xs font-black uppercase tracking-widest text-zinc-500 hover:text-brandRed transition-all">View All Events</Link>
+            <div className="flex items-center gap-4 mb-20">
+              <h2 className="text-5xl md:text-7xl font-black uppercase italic tracking-tighter">Next <span className="text-brandRed">Experience</span></h2>
+              <div className="h-px flex-1 bg-brandRed/20" />
             </div>
-            <EventGlimpse />
+
+            {upcoming.length > 0 ? (
+              upcoming.map(event => (
+                <div key={event.id} className="grid grid-cols-1 lg:grid-cols-12 gap-16 items-center">
+                  <div className="lg:col-span-7">
+                    <EventCard {...event} isUpcoming={true} />
+                  </div>
+                  <div className="lg:col-span-5 space-y-8">
+                    <div className="space-y-4">
+                      <span className="text-brandRed font-black tracking-[0.4em] text-xs uppercase block animate-pulse">
+                        // Limited Capacity Session
+                      </span>
+                      <h3 className="text-5xl md:text-7xl font-black uppercase italic leading-none tracking-tighter">
+                        {event.title}
+                      </h3>
+                      <p className="text-zinc-500 text-xl font-medium leading-relaxed italic">
+                        The tribe gathers again. Witness the most explosive {event.category.toLowerCase()} session in the heart of the city.
+                      </p>
+                    </div>
+                    <Link href="/events" className="inline-block px-12 py-5 bg-white text-black font-black uppercase text-[10px] tracking-[0.3em] hover:bg-brandRed hover:text-white transition-all rounded-full shadow-2xl">
+                      Secure Your Spot Now
+                    </Link>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="py-20 text-center border border-dashed border-white/5 rounded-[40px]">
+                <p className="text-zinc-800 font-black italic text-2xl uppercase tracking-widest">New Experiences Dropping Soon</p>
+              </div>
+            )}
           </div>
         </section>
 
         <LaserDivider />
 
-        {/* 3. RECENT RECAPS (Now both with Video-on-Hover) */}
+        {/* 2. EVENT GLIMPSE SECTION */}
+<section className="py-40 bg-black relative">
+  <div className="max-w-7xl mx-auto px-6">
+    <div className="flex justify-between items-end mb-20">
+      <h2 className="text-5xl md:text-7xl font-black uppercase italic tracking-tighter">
+        Event <span className="text-brandRed">Glimpse</span>
+      </h2>
+      <Link href="/events" className="text-xs font-black uppercase tracking-widest text-zinc-500 hover:text-brandRed transition-all">
+        View All Events
+      </Link>
+    </div>
+
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+      {past.map((event) => (
+        <EventCard 
+          key={event.id}
+          {...event}
+          isUpcoming={false} // Ensures grayscale-to-color styling
+        />
+      ))}
+    </div>
+  </div>
+</section>
+
+        <LaserDivider />
+
+        {/* 4. RECENT RECAPS */}
         <section className="py-40 bg-black relative">
           <div className="max-w-7xl mx-auto px-6">
             <div className="mb-20">
@@ -129,8 +213,6 @@ export default function Home() {
             </div>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
-              
-              {/* CARD 1: AGAM RECAP */}
               <div className="group relative p-12 rounded-[40px] bg-zinc-950 border border-white/5 hover:border-brandRed/40 transition-all duration-700 overflow-hidden">
                 <div className="absolute inset-0 z-0 opacity-20 group-hover:opacity-60 transition-opacity duration-1000">
                   <video autoPlay loop muted playsInline className="w-full h-full object-cover grayscale group-hover:grayscale-0">
@@ -145,7 +227,6 @@ export default function Home() {
                 </div>
               </div>
 
-              {/* CARD 2: JAMMING SESSION (Now with Video!) */}
               <div className="group relative p-12 rounded-[40px] bg-zinc-950 border border-white/5 hover:border-brandRed/40 transition-all duration-700 overflow-hidden">
                 <div className="absolute inset-0 z-0 opacity-20 group-hover:opacity-60 transition-opacity duration-1000">
                   <video autoPlay loop muted playsInline className="w-full h-full object-cover grayscale group-hover:grayscale-0">
@@ -159,14 +240,13 @@ export default function Home() {
                   <p className="text-zinc-500 text-lg font-medium leading-relaxed italic group-hover:text-zinc-300">Our unplugged community jams bringing the raw soul of Kerala to the city streets.</p>
                 </div>
               </div>
-
             </div>
           </div>
         </section>
 
         <LaserDivider />
 
-        {/* 4. FOUNDERS SECTION (Clean Static Portraits) */}
+        {/* 5. FOUNDERS SECTION */}
         <section className="py-40 bg-black relative overflow-hidden">
           <div className="max-w-7xl mx-auto px-6 text-center relative z-10">
             <h2 className="text-5xl md:text-8xl font-black uppercase italic tracking-tighter mb-24">Meet The <span className="text-brandRed">Founders</span></h2>
@@ -200,23 +280,22 @@ export default function Home() {
 
         <LaserDivider />
 
-        {/* 5. FOOTER */}
+        {/* 6. FOOTER */}
         <footer className="py-32 bg-black relative">
           <div className="max-w-7xl mx-auto px-6">
             <div className="flex flex-col lg:flex-row justify-between gap-24 mb-24">
               <div className="space-y-12 max-w-lg">
-                {/* LOGO - Increased scale and added glow */}
                 <div className="relative inline-block group">
-  <Link href="/">
-    <Image 
-      src="/logo.png" 
-      alt="Puneri Mallus" 
-      width={500} 
-      height={180} 
-      className="h-32 w-auto object-contain drop-shadow-[0_0_30px_rgba(255,0,0,0.3)] transition-all duration-500 group-hover:drop-shadow-[0_0_50px_rgba(255,0,0,0.6)] group-hover:scale-105" 
-    />
-  </Link>
-</div>
+                  <Link href="/">
+                    <Image 
+                      src="/logo.png" 
+                      alt="Puneri Mallus" 
+                      width={500} 
+                      height={180} 
+                      className="h-32 w-auto object-contain drop-shadow-[0_0_30px_rgba(255,0,0,0.3)] transition-all duration-500 group-hover:drop-shadow-[0_0_50px_rgba(255,0,0,0.6)] group-hover:scale-105" 
+                    />
+                  </Link>
+                </div>
 
                 <h2 className="text-5xl font-black uppercase italic tracking-tighter leading-tight">
                   Kerala's <span className="text-brandRed">Heart</span>, <br /> 
@@ -242,7 +321,7 @@ export default function Home() {
                   <ul className="space-y-5">
                     {['Home', 'About Us', 'Events', 'Community'].map((item) => (
                       <li key={item}>
-                        <Link href={item === 'About Us' ? '/about' : '#'} className="text-lg font-bold text-zinc-500 hover:text-white transition-colors flex items-center group">
+                        <Link href={item === 'About Us' ? '/about' : (item === 'Events' ? '/events' : '#')} className="text-lg font-bold text-zinc-500 hover:text-white transition-colors flex items-center group">
                           {item}
                           <ArrowUpRight size={14} className="ml-2 opacity-0 group-hover:opacity-100 transition-all text-brandRed" />
                         </Link>
@@ -253,9 +332,9 @@ export default function Home() {
                 <div className="space-y-8">
                   <h4 className="text-brandRed font-black uppercase text-[10px] tracking-[0.5em]">Connect</h4>
                   <ul className="space-y-5">
-                    {['Mallu Dial', 'Contact', 'Join Tribe'].map((item) => (
+                    {['Mallu Dial', 'Contact', 'Join Tribe', 'Admin'].map((item) => (
                       <li key={item}>
-                        <Link href="#" className="text-lg font-bold text-zinc-500 hover:text-white transition-colors flex items-center group">
+                        <Link href={item === 'Admin' ? '/admin' : '#'} className="text-lg font-bold text-zinc-500 hover:text-white transition-colors flex items-center group">
                           {item}
                           <ArrowUpRight size={14} className="ml-2 opacity-0 group-hover:opacity-100 transition-all text-brandRed" />
                         </Link>
