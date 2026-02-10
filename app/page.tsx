@@ -28,34 +28,34 @@ export default function Home() {
   const [past, setPast] = useState<any[]>([]); // Added state for Past events
 
   // Hero Transition & Data Loading
- useEffect(() => {
-    // 1. Hero Timer (Keep your existing timer)
+ // Hero Transition & Data Loading
+  useEffect(() => {
+    // 1. Hero Timer
     const timer = setTimeout(() => setHeroVideo(true), 2000);
     
     // 2. Dynamic Data Loading
-    // We no longer define staticData here. We pull the "Seeded" data from memory.
     let allEvents = [];
     try {
       const saved = localStorage.getItem('pm_events');
       allEvents = saved ? JSON.parse(saved) : [];
     } catch (e) {
       console.error("Pulse Error: Could not load events", e);
-      allEvents = [];
     }
 
-    // 3. Set Upcoming (Spotlight)
-    // Pull the latest upcoming event added/edited in Admin
-    setUpcoming(allEvents.filter((e: any) => e.type === 'upcoming').slice(0, 1));
+    // 3. Set Upcoming Experience (Spotlight)
+    // We prioritize the most recent UPCOMING event that is also FEATURED
+    const spotlight = allEvents
+      .filter((e: any) => e.type === 'upcoming' && e.featured === true)
+      .slice(0, 1);
+    
+    // Fallback: If no upcoming is featured, just take the latest upcoming
+    setUpcoming(spotlight.length > 0 ? spotlight : allEvents.filter((e: any) => e.type === 'upcoming').slice(0, 1));
 
-    // 4. Set Past (Event Glimpse)
-    // Filter for past, sort by 'featured' (The Star in Admin), then take top 3
+    // 4. Set Event Glimpse (Past Events)
+    // Filter for past events that HAVE been pinned (featured: true)
     const glimpseEvents = allEvents
-      .filter((e: any) => e.type === 'past')
-      .sort((a: any, b: any) => {
-        if (a.featured === b.featured) return 0;
-        return a.featured ? -1 : 1;
-      })
-      .slice(0, 3);
+      .filter((e: any) => e.type === 'past' && e.featured === true)
+      .slice(0, 3); // Take top 3 pinned past events
 
     setPast(glimpseEvents);
 
