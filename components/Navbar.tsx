@@ -3,21 +3,52 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { Menu, X, Instagram, MessageCircle } from 'lucide-react';
+import { Menu, X, Instagram, MessageCircle, User, LogOut } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { createBrowserClient } from '@supabase/ssr';
 
 export default function Navbar() {
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [user, setUser] = useState<any>(null);
+
+  // Initialize Supabase
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 
   useEffect(() => {
+    // Scroll Listener
     const handleScroll = () => {
       setScrolled(window.scrollY > 20);
     };
     window.addEventListener('scroll', handleScroll);
-    return () => window.removeEventListener('scroll', handleScroll);
-  }, []);
+
+    // Initial User Fetch
+    const fetchUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+    };
+    fetchUser();
+
+    // Listen for Auth Changes (Login/Logout)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+      subscription.unsubscribe();
+    };
+  }, [supabase]);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    setIsMobileMenuOpen(false);
+    window.location.href = '/';
+  };
 
   const navLinks = [
     { name: 'Home', href: '/' },
@@ -47,7 +78,7 @@ export default function Navbar() {
             </button>
           </div>
 
-          {/* LOGO - EXTREME TOP LEFT (Main Header) */}
+          {/* LOGO */}
           <div className="absolute top-0 left-1/2 -translate-x-1/2 lg:left-0 lg:translate-x-0 p-0 m-0 z-[105]">
             <Link href="/#hero" className="block group">
               <Image 
@@ -84,14 +115,42 @@ export default function Navbar() {
             })}
           </div>
 
-          {/* JOIN TRIBE */}
-          <div className="hidden sm:block pt-8 pr-8 md:pr-12 lg:pr-16">
-            <Link href="/auth/login">
-              <button className="px-10 py-3.5 rounded-full bg-brandRed text-white font-black uppercase text-[11px] tracking-widest hover:scale-105 transition-all duration-500 shadow-[0_0_20px_rgba(255,0,0,0.4)]">
-                Join Tribe
-              </button>
-            </Link>
-          </div>
+          {/* AUTH SECTION (JOIN TRIBE OR PROFILE) */}
+<div className="hidden sm:block pt-8 pr-8 md:pr-12 lg:pr-16">
+  {user ? (
+    /* Wrap the entire profile pill in a Link */
+    <div className="flex items-center gap-4 relative group">
+      <Link 
+        href="/profile" 
+        className="flex items-center gap-4 bg-white/5 backdrop-blur-md border border-white/10 p-1.5 pr-5 rounded-full hover:border-brandRed transition-all cursor-pointer"
+      >
+        <div className="w-10 h-10 bg-brandRed rounded-full flex items-center justify-center shadow-[0_0_15px_rgba(255,0,0,0.4)]">
+          <User size={18} className="text-white" />
+        </div>
+        <div className="flex flex-col text-left">
+          <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest leading-none mb-1">Hello</span>
+          <span className="text-[11px] font-black text-white uppercase italic leading-none truncate max-w-[120px]">
+            {user.user_metadata?.full_name || 'TRIBE MEMBER'}
+          </span>
+        </div>
+      </Link>
+      
+      {/* Logout Button (Keep this OUTSIDE the profile Link so clicking logout doesn't trigger the profile page) */}
+      <button 
+        onClick={handleLogout}
+        className="absolute -bottom-12 right-0 bg-zinc-900 border border-white/10 px-4 py-2 rounded-xl text-[10px] font-black uppercase text-zinc-400 hover:text-brandRed opacity-0 group-hover:opacity-100 transition-all flex items-center gap-2 z-50"
+      >
+        <LogOut size={12} /> Logout
+      </button>
+    </div>
+  ) : (
+    <Link href="/auth/login">
+      <button className="px-10 py-3.5 rounded-full bg-brandRed text-white font-black uppercase text-[11px] tracking-widest hover:scale-105 transition-all duration-500 shadow-[0_0_20px_rgba(255,0,0,0.4)]">
+        Join Tribe
+      </button>
+    </Link>
+  )}
+</div>
         </div>
       </nav>
 
@@ -99,54 +158,43 @@ export default function Navbar() {
       <AnimatePresence>
         {isMobileMenuOpen && (
           <>
-            {/* Backdrop */}
             <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
               onClick={() => setIsMobileMenuOpen(false)}
               className="fixed inset-0 bg-black/90 backdrop-blur-md z-[150] lg:hidden"
             />
 
-            {/* Sidebar */}
             <motion.div 
-              initial={{ x: '-100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '-100%' }}
+              initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className="fixed top-0 left-0 h-full w-[85%] max-w-[320px] bg-zinc-950 z-[160] p-8 border-r border-white/10 lg:hidden flex flex-col"
             >
-              {/* TOP SECTION: BRAND LOGO + CLOSE BUTTON */}
               <div className="flex justify-between items-start mb-12">
                 <div className="flex flex-col gap-2">
-                  <Image 
-                    src="/logo.png" 
-                    alt="Puneri Mallus" 
-                    width={180} 
-                    height={60} 
-                    className="h-16 w-auto object-contain drop-shadow-[0_0_15px_rgba(255,0,0,0.4)]"
-                  />
-                  <span className="text-[8px] font-black tracking-[0.5em] text-brandRed uppercase ml-1">
-                    The Tribe Menu
-                  </span>
+                  <Image src="/logo.png" alt="Logo" width={180} height={60} className="h-16 w-auto object-contain" />
+                  <span className="text-[8px] font-black tracking-[0.5em] text-brandRed uppercase ml-1">The Tribe Menu</span>
                 </div>
-                
-                <button 
-                  onClick={() => setIsMobileMenuOpen(false)} 
-                  className="p-2 text-white/50 hover:text-brandRed transition-colors"
-                >
+                <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 text-white/50 hover:text-brandRed">
                   <X size={32} />
                 </button>
               </div>
 
-              {/* Sidebar Links */}
               <div className="flex flex-col gap-6 flex-1 overflow-y-auto">
+                {user && (
+  <Link 
+    href="/profile"
+    onClick={() => setIsMobileMenuOpen(false)}
+    className="mb-4 p-4 bg-white/5 rounded-2xl border border-white/10 block hover:border-brandRed transition-all"
+  >
+    <p className="text-[9px] font-black text-brandRed uppercase tracking-widest mb-1">Welcome back</p>
+    <p className="text-xl font-black text-white uppercase italic">{user.user_metadata?.full_name}</p>
+  </Link>
+)}
                 {navLinks.map((link) => {
                   const isActive = pathname === link.href;
                   return (
                     <Link 
-                      key={link.name} 
-                      href={link.href}
+                      key={link.name} href={link.href}
                       onClick={() => setIsMobileMenuOpen(false)}
                       className={`text-3xl font-black italic tracking-tighter transition-all ${
                         isActive ? 'text-brandRed translate-x-4' : 'text-white hover:text-brandRed'
@@ -156,21 +204,34 @@ export default function Navbar() {
                     </Link>
                   );
                 })}
+                {user ? (
+                  <button 
+                    onClick={handleLogout}
+                    className="text-left text-2xl font-black italic tracking-tighter text-zinc-600 hover:text-brandRed transition-all"
+                  >
+                    LOGOUT
+                  </button>
+                ) : (
+                  <Link 
+                    href="/auth/login"
+                    onClick={() => setIsMobileMenuOpen(false)}
+                    className="text-2xl font-black italic tracking-tighter text-brandRed hover:text-white transition-all"
+                  >
+                    JOIN TRIBE
+                  </Link>
+                )}
               </div>
 
-              {/* Sidebar Footer */}
               <div className="pt-8 border-t border-white/5 space-y-6">
                 <div className="flex gap-4">
-                  <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-brandRed transition-colors cursor-pointer text-white">
+                  <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white hover:bg-brandRed transition-all cursor-pointer">
                     <Instagram size={18} />
                   </div>
-                  <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center hover:bg-brandRed transition-colors cursor-pointer text-white">
+                  <div className="w-10 h-10 rounded-full bg-white/5 flex items-center justify-center text-white hover:bg-brandRed transition-all cursor-pointer">
                     <MessageCircle size={18} />
                   </div>
                 </div>
-                <p className="text-[9px] font-black text-zinc-600 tracking-[0.3em] uppercase">
-                  Puneri Mallus Community © 2026
-                </p>
+                <p className="text-[9px] font-black text-zinc-600 tracking-[0.3em] uppercase">Puneri Mallus Community © 2026</p>
               </div>
             </motion.div>
           </>

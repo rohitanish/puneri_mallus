@@ -1,28 +1,46 @@
 "use client";
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Loader2 } from 'lucide-react';
 import EventCard from '@/components/EventCard';
 
 export default function EventsPage() {
   const [filter, setFilter] = useState('ALL');
   const [search, setSearch] = useState('');
   const [events, setEvents] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // FIXED: The hook is now inside the component body
+  // FETCH FROM MONGODB API
   useEffect(() => {
-    try {
-      // Pull dynamic data from Admin's memory
-      const saved = JSON.parse(localStorage.getItem('pm_events') || '[]');
-      setEvents(saved);
-    } catch (error) {
-      console.error("Failed to load events:", error);
-      setEvents([]);
-    }
+    const fetchEvents = async () => {
+      try {
+        const res = await fetch('/api/events');
+        const data = await res.json();
+        // MongoDB stores IDs as _id, we map them for your EventCard if needed
+        const formattedData = data.map((e: any) => ({
+          ...e,
+          id: e._id || e.id
+        }));
+        setEvents(formattedData);
+      } catch (error) {
+        console.error("Failed to load events from MongoDB:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchEvents();
   }, []);
 
   const filtered = events.filter(e => 
-    (filter === 'ALL' || e.category === filter) && 
+    (filter === 'ALL' || e.category?.toUpperCase() === filter) && 
     e.title.toLowerCase().includes(search.toLowerCase())
+  );
+
+  if (loading) return (
+    <div className="min-h-screen bg-black flex flex-col items-center justify-center">
+      <Loader2 className="text-brandRed animate-spin mb-4" size={40} />
+      <p className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.3em]">Syncing Lineup...</p>
+    </div>
   );
 
   return (
@@ -40,7 +58,7 @@ export default function EventsPage() {
           <div className="flex flex-col md:flex-row gap-4 w-full lg:w-auto">
             <input 
               placeholder="SEARCH..." 
-              className="bg-zinc-900 border border-white/5 p-4 rounded-xl text-[10px] font-black tracking-widest outline-none focus:border-brandRed transition-all" 
+              className="bg-zinc-900 border border-white/5 p-4 rounded-xl text-[10px] font-black tracking-widest outline-none focus:border-brandRed transition-all text-white" 
               onChange={e => setSearch(e.target.value)} 
             />
             <div className="flex bg-zinc-900 p-1 rounded-xl border border-white/5">
@@ -60,7 +78,7 @@ export default function EventsPage() {
         {/* UPCOMING SECTION */}
         <EventSection 
           title="Upcoming Experiences" 
-          items={filtered.filter(e => e.type === 'upcoming')} 
+          items={filtered.filter(e => e.type?.toLowerCase() === 'upcoming')} 
           isUpcoming={true} 
           cols="lg:grid-cols-3" 
         />
@@ -69,7 +87,7 @@ export default function EventsPage() {
         <div className="mt-24">
           <EventSection 
             title="The Archive" 
-            items={filtered.filter(e => e.type === 'past')} 
+            items={filtered.filter(e => e.type?.toLowerCase() === 'past')} 
             isUpcoming={false} 
             cols="lg:grid-cols-5" 
           />
@@ -79,7 +97,6 @@ export default function EventsPage() {
   );
 }
 
-// Sub-component for sections
 function EventSection({ title, items, isUpcoming, cols }: any) {
   if (items.length === 0) return null;
   

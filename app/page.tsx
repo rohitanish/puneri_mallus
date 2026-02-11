@@ -8,10 +8,10 @@ import {
   MessageCircle, 
   ArrowUpRight, 
   MapPin,
-  Zap
+  Zap,
+  Loader2
 } from 'lucide-react';
-import EventGlimpse from '@/components/EventGlimpse';
-import EventCard from '@/components/EventCard'; // Ensure you have this component
+import EventCard from '@/components/EventCard';
 
 const LaserDivider = () => (
   <div className="relative w-full h-px flex items-center justify-center overflow-visible my-4">
@@ -25,44 +25,57 @@ const LaserDivider = () => (
 export default function Home() {
   const [heroVideo, setHeroVideo] = useState(false);
   const [upcoming, setUpcoming] = useState<any[]>([]);
-  const [past, setPast] = useState<any[]>([]); // Added state for Past events
+  const [past, setPast] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  // Hero Transition & Data Loading
- // Hero Transition & Data Loading
   useEffect(() => {
-    // 1. Hero Timer
-    const timer = setTimeout(() => setHeroVideo(true), 2000);
+    // 1. Hero Video Delay
+    const videoTimer = setTimeout(() => setHeroVideo(true), 2000);
     
-    // 2. Dynamic Data Loading
-    let allEvents = [];
-    try {
-      const saved = localStorage.getItem('pm_events');
-      allEvents = saved ? JSON.parse(saved) : [];
-    } catch (e) {
-      console.error("Pulse Error: Could not load events", e);
-    }
+    // 2. Fetch Dynamic Data from MongoDB
+    const fetchHomeData = async () => {
+      try {
+        const res = await fetch('/api/events');
+        const allEvents = await res.json();
 
-    // 3. Set Upcoming Experience (Spotlight)
-    // We prioritize the most recent UPCOMING event that is also FEATURED
-    const spotlight = allEvents
-      .filter((e: any) => e.type === 'upcoming' && e.featured === true)
-      .slice(0, 1);
-    
-    // Fallback: If no upcoming is featured, just take the latest upcoming
-    setUpcoming(spotlight.length > 0 ? spotlight : allEvents.filter((e: any) => e.type === 'upcoming').slice(0, 1));
+        // MongoDB uses _id, so we map it to id for the EventCard key
+        const formattedEvents = allEvents.map((e: any) => ({ ...e, id: e._id }));
 
-    // 4. Set Event Glimpse (Past Events)
-    // Filter for past events that HAVE been pinned (featured: true)
-    const glimpseEvents = allEvents
-      .filter((e: any) => e.type === 'past' && e.featured === true)
-      .slice(0, 3); // Take top 3 pinned past events
+        // 3. Set Spotlight (Priority: Upcoming + Featured)
+        const spotlight = formattedEvents
+          .filter((e: any) => e.type?.toLowerCase() === 'upcoming' && e.featured === true)
+          .slice(0, 1);
+        
+        // Fallback: Latest upcoming if none are featured
+        setUpcoming(spotlight.length > 0 
+          ? spotlight 
+          : formattedEvents.filter((e: any) => e.type?.toLowerCase() === 'upcoming').slice(0, 1)
+        );
 
-    setPast(glimpseEvents);
+        // 4. Set Glimpse (Top 3 Featured Past Events)
+        const glimpseEvents = formattedEvents
+          .filter((e: any) => e.type?.toLowerCase() === 'past' && e.featured === true)
+          .slice(0, 3);
 
-    return () => clearTimeout(timer);
+        setPast(glimpseEvents);
+      } catch (e) {
+        console.error("Pulse Error: Could not sync with Cloud Database", e);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchHomeData();
+    return () => clearTimeout(videoTimer);
   }, []);
 
-  
+  if (loading) return (
+    <div className="min-h-screen bg-black flex flex-col items-center justify-center">
+      <Loader2 className="text-brandRed animate-spin mb-4" size={40} />
+      <p className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.3em]">Syncing Tribe Pulse...</p>
+    </div>
+  );
+
   return (
     <div className="flex flex-col min-h-screen bg-black text-white selection:bg-brandRed/30 relative">
       
@@ -75,12 +88,12 @@ export default function Home() {
 
       <div className="relative z-10">
         
-        {/* 1. HERO SECTION */}
+        {/* 1. HERO SECTION (Logo Removed) */}
         <section className="relative h-screen w-full overflow-hidden bg-black flex flex-col items-center justify-center">
           <div className="absolute inset-0 z-0">
             <Image
               src="/hero-bg.jpeg"
-              alt="Puneri Mallus"
+              alt="Puneri Mallus Background"
               fill
               className={`object-cover grayscale-[20%] transition-opacity duration-1000 ${heroVideo ? 'opacity-0' : 'opacity-60'}`}
               priority
@@ -93,17 +106,9 @@ export default function Home() {
             <div className="absolute inset-0 bg-gradient-to-b from-black via-transparent to-black z-10" />
           </div>
 
-          <div className="relative z-20 text-center space-y-12 -mt-20 px-6">
-            <div className="flex justify-center">
-              <Image 
-                src="/logo.png" 
-                alt="Logo" 
-                width={600} 
-                height={250} 
-                className="h-[180px] w-auto object-contain drop-shadow-[0_0_45px_rgba(255,0,0,0.6)]"
-              />
-            </div>
-
+          <div className="relative z-20 text-center space-y-12 px-6">
+            {/* LOGO REMOVED FROM HERE */}
+            
             <div className="space-y-6">
               <div className="flex flex-col items-center space-y-3">
                 <h1 className="text-4xl md:text-6xl font-black uppercase tracking-tighter leading-none text-white/90">
@@ -120,7 +125,7 @@ export default function Home() {
 
             <div className="pt-8">
               <Link href="/about">
-                <button className="group relative bg-brandRed text-white px-16 py-6 rounded-full font-black uppercase tracking-[0.3em] text-sm overflow-hidden transition-all hover:scale-110 shadow-[0_0_60px_rgba(255,0,0,0.4)]">
+                <button className="group relative bg-brandRed text-white px-16 py-6 rounded-full font-black uppercase tracking-[0.3em] text-sm overflow-hidden transition-all hover:scale-110 shadow-[0_0_60px_rgba(255,0,0,0.4)] active:scale-95">
                   <span className="relative z-10 flex items-center gap-3">
                     Know More <ArrowUpRight size={20} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
                   </span>
@@ -133,7 +138,7 @@ export default function Home() {
 
         <LaserDivider />
 
-        {/* 2. NEW: UPCOMING EXPERIENCE SPOTLIGHT */}
+        {/* 2. UPCOMING EXPERIENCE SPOTLIGHT */}
         <section className="py-40 bg-black relative">
           <div className="max-w-7xl mx-auto px-6">
             <div className="flex items-center gap-4 mb-20">
@@ -156,10 +161,10 @@ export default function Home() {
                         {event.title}
                       </h3>
                       <p className="text-zinc-500 text-xl font-medium leading-relaxed italic">
-                        The tribe gathers again. Witness the most explosive {event.category.toLowerCase()} session in the heart of the city.
+                        {event.description}
                       </p>
                     </div>
-                    <Link href="/events" className="inline-block px-12 py-5 bg-white text-black font-black uppercase text-[10px] tracking-[0.3em] hover:bg-brandRed hover:text-white transition-all rounded-full shadow-2xl">
+                    <Link href="/events" className="inline-block px-12 py-5 bg-white text-black font-black uppercase text-[10px] tracking-[0.3em] hover:bg-brandRed hover:text-white transition-all rounded-full shadow-2xl active:scale-95">
                       Secure Your Spot Now
                     </Link>
                   </div>
@@ -175,29 +180,29 @@ export default function Home() {
 
         <LaserDivider />
 
-        {/* 2. EVENT GLIMPSE SECTION */}
-<section className="py-40 bg-black relative">
-  <div className="max-w-7xl mx-auto px-6">
-    <div className="flex justify-between items-end mb-20">
-      <h2 className="text-5xl md:text-7xl font-black uppercase italic tracking-tighter">
-        Event <span className="text-brandRed">Glimpse</span>
-      </h2>
-      <Link href="/events" className="text-xs font-black uppercase tracking-widest text-zinc-500 hover:text-brandRed transition-all">
-        View All Events
-      </Link>
-    </div>
+        {/* 3. EVENT GLIMPSE SECTION */}
+        <section className="py-40 bg-black relative">
+          <div className="max-w-7xl mx-auto px-6">
+            <div className="flex justify-between items-end mb-20">
+              <h2 className="text-5xl md:text-7xl font-black uppercase italic tracking-tighter">
+                Event <span className="text-brandRed">Glimpse</span>
+              </h2>
+              <Link href="/events" className="text-xs font-black uppercase tracking-widest text-zinc-500 hover:text-brandRed transition-all">
+                View All Events
+              </Link>
+            </div>
 
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-      {past.map((event) => (
-        <EventCard 
-          key={event.id}
-          {...event}
-          isUpcoming={false} // Ensures grayscale-to-color styling
-        />
-      ))}
-    </div>
-  </div>
-</section>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+              {past.map((event) => (
+                <EventCard 
+                  key={event.id}
+                  {...event}
+                  isUpcoming={false} 
+                />
+              ))}
+            </div>
+          </div>
+        </section>
 
         <LaserDivider />
 
