@@ -1,7 +1,20 @@
 "use client";
 import { useState, useEffect } from 'react';
+import Image from 'next/image';
+import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Loader2, Search, Filter, Calendar, History, Zap } from 'lucide-react';
+import { 
+  Loader2, 
+  Search, 
+  Calendar, 
+  History, 
+  Zap, 
+  ArrowUpRight, 
+  Instagram, 
+  Facebook, 
+  MessageCircle, 
+  MapPin 
+} from 'lucide-react';
 import EventCard from '@/components/EventCard';
 
 export default function EventsPage() {
@@ -45,7 +58,7 @@ export default function EventsPage() {
   );
 
   return (
-    <div className="bg-black min-h-screen pt-48 pb-32 px-6 lg:px-20 relative overflow-hidden">
+    <div className="bg-black min-h-screen relative overflow-hidden">
       
       {/* 1. ATMOSPHERIC BACKGROUNDS */}
       <div className="fixed inset-0 pointer-events-none z-0">
@@ -54,7 +67,7 @@ export default function EventsPage() {
         <div className="absolute inset-0 opacity-[0.02] bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
       </div>
 
-      <div className="max-w-[1600px] mx-auto relative z-10">
+      <div className="max-w-[1600px] mx-auto relative z-10 pt-48 pb-32 px-6 lg:px-20">
         
         {/* 2. HEADER & CONTROL CENTER */}
         <div className="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-12 mb-32">
@@ -67,8 +80,8 @@ export default function EventsPage() {
               <Zap size={12} className="text-brandRed" />
               <span className="text-[10px] font-black uppercase tracking-[0.2em] text-brandRed">Live Database</span>
             </div>
-            <h1 className="text-7xl md:text-9xl font-black italic uppercase tracking-tighter leading-none">
-              The <br /> <span className="text-brandRed text-outline">Lineup.</span>
+            <h1 className="text-7xl md:text-9xl font-black italic uppercase tracking-tighter leading-none text-white">
+              The <br /> <span className="text-brandRed">Lineup.</span>
             </h1>
           </motion.div>
           
@@ -102,7 +115,7 @@ export default function EventsPage() {
           </motion.div>
         </div>
 
-        {/* 3. UPCOMING SECTION (High Energy) */}
+        {/* 3. UPCOMING SECTION */}
         <EventSection 
           title="Upcoming Experiences" 
           subtitle="Join the next gathering of the tribe"
@@ -112,7 +125,7 @@ export default function EventsPage() {
           cols="lg:grid-cols-3" 
         />
 
-        {/* 4. ARCHIVE SECTION (Moody / Grayscale-ready) */}
+        {/* 4. ARCHIVE SECTION */}
         <div className="mt-40">
           <EventSection 
             title="The Archive" 
@@ -124,6 +137,118 @@ export default function EventsPage() {
           />
         </div>
       </div>
+
+      {/* 6. FOOTER - Moved outside main max-w container to span full width */}
+      <footer className="py-20 bg-black relative border-t border-white/5 overflow-hidden">
+        <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-brandRed/5 blur-[120px] rounded-full pointer-events-none" />
+        
+        <div className="max-w-7xl mx-auto px-6 relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-16 mb-16">
+            
+            <div className="lg:col-span-5 space-y-8">
+              <div className="relative inline-block group">
+                <Link href="/">
+                  <Image 
+                    src="/logo.png" 
+                    alt="Puneri Mallus" 
+                    width={300} 
+                    height={100} 
+                    className="h-16 w-auto object-contain transition-all duration-500 group-hover:drop-shadow-[0_0_20px_rgba(255,0,0,0.4)]" 
+                  />
+                </Link>
+              </div>
+
+              <h2 className="text-4xl font-black uppercase italic tracking-tighter leading-tight max-w-xs text-white">
+                Kerala's <span className="text-brandRed">Heart</span>, <br /> 
+                Pune's Soul.
+              </h2>
+
+              <div className="flex gap-3">
+                {[
+                  { icon: Instagram, href: "#" },
+                  { icon: Facebook, href: "#" },
+                  { icon: MessageCircle, href: "#" }
+                ].map((social, i) => (
+                  <Link 
+                    key={i} 
+                    href={social.href} 
+                    className="w-12 h-12 flex items-center justify-center rounded-xl bg-zinc-900/50 border border-white/5 text-zinc-500 hover:text-brandRed hover:border-brandRed/50 hover:bg-brandRed/5 transition-all duration-500"
+                  >
+                    <social.icon size={20} />
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            <div className="lg:col-span-7 grid grid-cols-2 md:grid-cols-3 gap-10">
+              <div className="space-y-6">
+                <h4 className="text-brandRed font-black uppercase text-[10px] tracking-[0.3em]">Navigation</h4>
+                <ul className="space-y-4">
+                  {['Home', 'About Us', 'Events', 'Community'].map((item) => (
+                    <li key={item}>
+                      <Link 
+                        href={item === 'About Us' ? '/about' : (item === 'Events' ? '/events' : '/community')} 
+                        className="text-sm font-bold text-zinc-500 hover:text-white transition-colors flex items-center group w-fit"
+                      >
+                        {item}
+                        <ArrowUpRight size={12} className="ml-1 opacity-0 group-hover:opacity-100 transition-all text-brandRed -translate-y-1" />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="space-y-6">
+                <h4 className="text-brandRed font-black uppercase text-[10px] tracking-[0.3em]">Connect</h4>
+                <ul className="space-y-4">
+                  {['Mallu Dial', 'Contact', 'Join Tribe', 'Admin'].map((item) => (
+                    <li key={item}>
+                      <Link 
+                        href={item === 'Admin' ? '/admin' : '#'} 
+                        className="text-sm font-bold text-zinc-500 hover:text-white transition-colors flex items-center group w-fit"
+                      >
+                        {item}
+                        <ArrowUpRight size={12} className="ml-1 opacity-0 group-hover:opacity-100 transition-all text-brandRed -translate-y-1" />
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              <div className="col-span-2 md:col-span-1 space-y-6">
+                <h4 className="text-zinc-500 font-black uppercase text-[10px] tracking-[0.3em]">The Hub</h4>
+                <p className="text-[10px] text-zinc-600 font-bold uppercase leading-relaxed tracking-widest">
+                  Sign up to get notified about the next drop.
+                </p>
+                <div className="flex gap-2">
+                  <input 
+                    type="email" 
+                    placeholder="EMAIL" 
+                    className="bg-zinc-900 border border-white/5 rounded-lg px-4 py-2 text-[10px] w-full focus:outline-none focus:border-brandRed/50 transition-all text-white placeholder:text-zinc-700"
+                  />
+                  <button className="bg-brandRed p-2 rounded-lg hover:bg-white hover:text-black transition-all">
+                    <Zap size={14} fill="currentColor" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="pt-8 border-t border-white/5 flex flex-col md:flex-row justify-between items-center gap-6 text-[9px] font-black uppercase tracking-[0.4em] text-zinc-700">
+            <div className="flex items-center gap-6">
+              <p>© 2026 PM Community</p>
+              <Link href="#" className="hover:text-zinc-400 transition-colors">Privacy</Link>
+              <Link href="#" className="hover:text-zinc-400 transition-colors">Terms</Link>
+            </div>
+            <div className="flex gap-6 items-center">
+              <div className="flex gap-2 items-center">
+                <MapPin size={12} className="text-brandRed" />
+                <span className="text-zinc-400 tracking-widest">Pune, IN</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 }
@@ -133,8 +258,7 @@ function EventSection({ title, subtitle, icon, items, isUpcoming, cols }: any) {
   
   return (
     <div className="mb-24">
-      {/* SECTION HEADER */}
-      <div className="flex flex-col gap-2 mb-12 border-l-2 border-brandRed/20 pl-6">
+      <div className="flex flex-col gap-2 mb-12 border-l-2 border-brandRed/20 pl-6 text-white">
         <div className="flex items-center gap-3">
           {icon}
           <h2 className={`text-3xl font-black uppercase italic tracking-tighter ${isUpcoming ? 'text-white' : 'text-zinc-800'}`}>
@@ -144,7 +268,6 @@ function EventSection({ title, subtitle, icon, items, isUpcoming, cols }: any) {
         <p className="text-zinc-600 text-[10px] font-black uppercase tracking-[0.3em] ml-8">{subtitle}</p>
       </div>
 
-      {/* GRID */}
       <div className={`grid grid-cols-1 md:grid-cols-2 ${cols} gap-10`}>
         <AnimatePresence mode='popLayout'>
           {items.map((item: any, index: number) => (
