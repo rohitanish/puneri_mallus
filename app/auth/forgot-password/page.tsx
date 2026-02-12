@@ -16,10 +16,23 @@ export default function ForgotPassword() {
   );
 
   const handleReset = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
+  e.preventDefault();
+  setLoading(true);
+  setError('');
 
+  try {
+    // 1. Verify existence in Supabase Auth via our new API
+    // Change this line:
+const checkRes = await fetch(`/api/profile/check-email?email=${encodeURIComponent(email)}`);
+    const data = await checkRes.json();
+
+    if (!data.exists) {
+      setError("This email is not registered with the Puneri Mallus tribe.");
+      setLoading(false);
+      return;
+    }
+
+    // 2. Email exists, proceed with reset
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/auth/update-password`,
     });
@@ -29,8 +42,12 @@ export default function ForgotPassword() {
     } else {
       setSubmitted(true);
     }
+  } catch (err) {
+    setError("API Issue.");
+  } finally {
     setLoading(false);
-  };
+  }
+};
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center px-6">
