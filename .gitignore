@@ -6,7 +6,7 @@
 .pnp.*
 .yarn/*
 !.yarn/patches
-!.yarn/plugins
+!.yarn/pluginsgit push -u origin codespaces --force
 !.yarn/releases
 !.yarn/versions
 
