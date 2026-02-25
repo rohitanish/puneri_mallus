@@ -87,7 +87,7 @@ const LaserDivider = () => (
               <div className="p-6 bg-zinc-950 border border-white/5 rounded-3xl space-y-3">
                 <Globe className="text-brandRed" size={20} />
                 <h4 className="text-[10px] font-black uppercase tracking-widest text-zinc-600">Global Reach</h4>
-                <p className="text-2xl font-black italic uppercase">Zero <span className="text-xs text-brandRed">Divides</span></p>
+                <p className="text-2xl font-black italic uppercase">Zero <span className="text-xs text-brandRed">Divide</span></p>
               </div>
             </div>
 

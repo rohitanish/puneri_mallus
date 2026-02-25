@@ -15,6 +15,9 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  // This helps prevent "Infinite redirect" loops if middleware 
+  // and Supabase redirects collide
+  skipTrailingSlashRedirect: true, 
 };
 
 export default nextConfig;

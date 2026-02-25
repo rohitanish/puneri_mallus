@@ -7,11 +7,26 @@
   --foreground: #ffffff;
 }
 
+html {
+  overflow-x: hidden;
+  width: 100%;
+  background-color: #000000;
+}
+
 body {
   color: var(--foreground);
-  background: var(--background);
-  /* This creates a hard-coded dark red atmospheric glow */
-  background: radial-gradient(circle at 50% 0%, #220000 0%, #000000 70%);
-  background-attachment: fixed;
+  background: #000000;
+  overflow-x: hidden;
+  width: 100%;
   min-height: 100vh;
+}
+
+/* Atmospheric red glow — on a pseudo-element so it never interferes with fixed positioning */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: radial-gradient(circle at 50% 0%, #220000 0%, #000000 70%);
+  z-index: -1;
+  pointer-events: none;
 }

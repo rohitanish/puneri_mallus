@@ -107,7 +107,7 @@ export default function LoginPage() {
               href="/auth/signup" 
               className="text-[9px] font-black uppercase tracking-widest text-zinc-500 hover:text-brandRed transition-colors"
             >
-              New here? Register membership
+              New here? Sign Up
             </Link>
           </div>
         </div>

@@ -102,7 +102,7 @@ export default function SignupPage() {
               disabled={loading} 
               className="w-full py-5 bg-brandRed text-white font-black uppercase tracking-[0.3em] rounded-2xl hover:bg-white hover:text-black transition-all shadow-lg active:scale-95 text-[10px] flex items-center justify-center gap-2"
             >
-              {loading ? 'Processing...' : 'Secure Membership'} <ArrowRight size={16} />
+              {loading ? 'Processing...' : 'Sign Up'} <ArrowRight size={16} />
             </button>
           </form>
 

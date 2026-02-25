@@ -96,9 +96,12 @@ export default function EventCard({
           />
           <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/20 to-transparent z-10" />
           
-          <span className="absolute top-6 left-6 bg-brandRed text-white font-black text-[8px] px-4 py-2 rounded-xl tracking-[0.2em] uppercase z-20 shadow-2xl border border-white/10">
-            {category || "Tribe Node"}
-          </span>
+          {/* CATEGORY BADGE - MOVED TO TOP-RIGHT */}
+          {category && (
+            <span className="absolute top-6 right-6 bg-brandRed text-white font-black text-[10px] px-5 py-2.5 rounded-full tracking-[0.2em] uppercase z-20 shadow-[0_0_20px_rgba(255,0,0,0.4)] border border-white/10 animate-pulse">
+              {category}
+            </span>
+          )}
 
           {isUpcoming && isLive && (
             <div className="absolute inset-0 bg-black/70 flex items-center justify-center backdrop-blur-md opacity-0 group-hover:opacity-100 transition-all duration-700 z-30">
@@ -152,7 +155,6 @@ export default function EventCard({
             </div>
           </div>
 
-          {/* DYNAMIC DESCRIPTION - Converts '-' into pointer list */}
           <div className="mb-10 relative pl-5 before:content-[''] before:absolute before:left-0 before:top-1 before:bottom-1 before:w-[2px] before:bg-brandRed/30">
             <ul className="space-y-2">
               {description?.split('-').map((segment, idx) => {
