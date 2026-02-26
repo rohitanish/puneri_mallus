@@ -80,7 +80,7 @@ export default function Preloader() {
                     y: percent > (i * 30) ? 0 : 10 
                   }}
                   className={`text-[12px] md:text-sm font-black uppercase tracking-[0.8em] transition-all duration-700 ${
-                    text === "ZERO DIVIDES" ? "text-brandRed drop-shadow-[0_0_10px_rgba(255,0,0,0.5)]" : "text-white/30"
+                    text === "ZERO DIVIDE" ? "text-brandRed drop-shadow-[0_0_10px_rgba(255,0,0,0.5)]" : "text-white/30"
                   }`}
                 >
                   {text}
