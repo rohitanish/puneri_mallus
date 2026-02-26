@@ -100,33 +100,44 @@ export default function Navbar() {
           </div>
 
           {/* AUTH + HAMBURGER */}
-          <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-            {/* Desktop auth */}
-            <div className="hidden lg:flex items-center gap-4">
-              {user ? (
-                <div className="flex items-center gap-4 relative group">
-                  <Link
-                    href="/profile"
-                    className="flex items-center gap-3 bg-white/5 backdrop-blur-md border border-white/10 p-1.5 pr-4 xl:pr-5 rounded-full hover:border-brandRed transition-all"
-                  >
-                    <div className="w-8 h-8 xl:w-9 xl:h-9 bg-brandRed rounded-full flex items-center justify-center shadow-[0_0_15px_rgba(255,0,0,0.4)]">
-                      <User size={14} className="text-white" />
-                    </div>
-                    <div className="flex flex-col text-left">
-                      <span className="text-[7px] font-black text-zinc-500 uppercase tracking-widest leading-none mb-1">Active Member</span>
-                      <span className="text-[10px] font-black text-white uppercase italic leading-none truncate max-w-[100px]">
-                        {user.user_metadata?.full_name || 'Tribe User'}
-                      </span>
-                    </div>
-                  </Link>
-                  <button
-                    onClick={handleLogout}
-                    className="absolute -bottom-12 right-0 bg-zinc-900 border border-white/10 px-4 py-2 rounded-xl text-[9px] font-black uppercase text-zinc-400 hover:text-brandRed opacity-0 group-hover:opacity-100 transition-all flex items-center gap-2 whitespace-nowrap"
-                  >
-                    <LogOut size={12} /> Sign Out
-                  </button>
-                </div>
-              ) : (
+<div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+  {/* Desktop auth */}
+  <div className="hidden lg:flex items-center gap-4">
+    {user ? (
+      <div className="flex items-center gap-4 relative group">
+        <Link
+          href="/profile"
+          className="flex items-center gap-3 bg-white/5 backdrop-blur-md border border-white/10 p-1.5 pr-4 xl:pr-5 rounded-full hover:border-brandRed transition-all"
+        >
+          {/* PROFILE IMAGE OR DEFAULT ICON */}
+          <div className="w-8 h-8 xl:w-9 xl:h-9 bg-brandRed rounded-full flex items-center justify-center shadow-[0_0_15px_rgba(255,0,0,0.4)] overflow-hidden">
+            {user.user_metadata?.avatar_url ? (
+              <img 
+                src={user.user_metadata.avatar_url} 
+                alt="Profile" 
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <User size={14} className="text-white" />
+            )}
+          </div>
+          
+          <div className="flex flex-col text-left">
+            <span className="text-[7px] font-black text-zinc-500 uppercase tracking-widest leading-none mb-1">Active Member</span>
+            <span className="text-[10px] font-black text-white uppercase italic leading-none truncate max-w-[100px]">
+              {/* SHOWING ONLY THE FIRST NAME */}
+              {user.user_metadata?.full_name?.split(' ')[0] || 'Tribe User'}
+            </span>
+          </div>
+        </Link>
+        <button
+          onClick={handleLogout}
+          className="absolute -bottom-12 right-0 bg-zinc-900 border border-white/10 px-4 py-2 rounded-xl text-[9px] font-black uppercase text-zinc-400 hover:text-brandRed opacity-0 group-hover:opacity-100 transition-all flex items-center gap-2 whitespace-nowrap"
+        >
+          <LogOut size={12} /> Sign Out
+        </button>
+      </div>
+    ) : (
                 <Link href="/auth/login">
                   <button className="px-6 xl:px-8 py-2.5 xl:py-3 rounded-full bg-brandRed text-white font-black uppercase text-[10px] tracking-widest hover:bg-white hover:text-black transition-all duration-300 shadow-[0_0_20px_rgba(255,0,0,0.3)] active:scale-95 whitespace-nowrap">
                     Join Tribe

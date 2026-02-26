@@ -16,7 +16,6 @@ import {
   Instagram,
   Facebook,
   MessageCircle
-
 } from 'lucide-react';
 
 const LaserDivider = () => (
@@ -28,88 +27,92 @@ const LaserDivider = () => (
 );
 
 export default function AboutPage() {
-// 1. Define the cycle state
   const [cycle, setCycle] = useState(false);
   const fullText = "THE JAMMING SESSIONS"; 
   const [displayText, setDisplayText] = useState("");
   const [textIndex, setTextIndex] = useState(0);
-  const [startTypewriter, setStartTypewriter] = useState(false); // New Trigger
+  const [startTypewriter, setStartTypewriter] = useState(false);
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
-  // Intersection Observer to detect scroll
+
   useEffect(() => {
-  async function fetchGallery() {
-    try {
-      const res = await fetch('/api/settings/gallery?t=' + Date.now());
-      const data = await res.json();
-      
-      if (data && Array.isArray(data.images) && data.images.length > 0) {
-        setGalleryImages(data.images);
-      } else {
-        // Fallback if DB is empty
+    async function fetchGallery() {
+      try {
+        const res = await fetch('/api/settings/gallery?t=' + Date.now());
+        const data = await res.json();
+        if (data && Array.isArray(data.images) && data.images.length > 0) {
+          setGalleryImages(data.images);
+        } else {
+          setGalleryImages(['/gallery/img1.jpg', '/gallery/img2.jpg', '/gallery/img3.jpg', '/gallery/img4.jpg', '/gallery/img5.jpg', '/gallery/img6.jpg']);
+        }
+      } catch (err) {
+        console.error("Gallery Sync Error:", err);
         setGalleryImages(['/gallery/img1.jpg', '/gallery/img2.jpg', '/gallery/img3.jpg', '/gallery/img4.jpg', '/gallery/img5.jpg', '/gallery/img6.jpg']);
       }
-    } catch (err) {
-      console.error("Gallery Sync Error:", err);
-      setGalleryImages(['/gallery/img1.jpg', '/gallery/img2.jpg', '/gallery/img3.jpg', '/gallery/img4.jpg', '/gallery/img5.jpg', '/gallery/img6.jpg']);
     }
-  }
-  fetchGallery();
-}, []);
+    fetchGallery();
+  }, []);
 
-// 3. EXISTING: Intersection Observer (Unchanged)
-useEffect(() => {
-  const observer = new IntersectionObserver(
-    ([entry]) => {
-      if (entry.isIntersecting) {
-        setStartTypewriter(true);
-      }
-    },
-    { threshold: 0.3 }
-  );
-
-  const element = document.getElementById('jamming-section');
-  if (element) observer.observe(element);
-
-  return () => {
-    if (element) observer.unobserve(element);
-  };
-}, []);
-
-// 4. EXISTING: Visual Loop & Typewriter (Refined)
-useEffect(() => {
-  const interval = setInterval(() => {
-    setCycle((prev) => !prev);
-  }, 4000); 
-
-  if (startTypewriter && textIndex < fullText.length) {
-    const timeout = setTimeout(() => {
-      setDisplayText((prev) => prev + fullText[textIndex]);
-      setTextIndex((prev) => prev + 1);
-    }, 60); 
-    
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setStartTypewriter(true);
+        }
+      },
+      { threshold: 0.3 }
+    );
+    const element = document.getElementById('jamming-section');
+    if (element) observer.observe(element);
     return () => {
-      clearInterval(interval);
-      clearTimeout(timeout);
+      if (element) observer.unobserve(element);
     };
-  }
-  
-  return () => clearInterval(interval);
-}, [textIndex, startTypewriter]);
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCycle((prev) => !prev);
+    }, 4000); 
+
+    if (startTypewriter && textIndex < fullText.length) {
+      const timeout = setTimeout(() => {
+        setDisplayText((prev) => prev + fullText[textIndex]);
+        setTextIndex((prev) => prev + 1);
+      }, 60); 
+      return () => {
+        clearInterval(interval);
+        clearTimeout(timeout);
+      };
+    }
+    return () => clearInterval(interval);
+  }, [textIndex, startTypewriter]);
+
   return (
-    <main className="min-h-screen bg-black text-white pt-40 pb-20 px-6 relative overflow-hidden">
+    <main className="min-h-screen bg-[#030303] text-white pt-40 pb-20 px-6 relative selection:bg-brandRed/30">
       
-      {/* 0. RICH BACKGROUND AMBIENCE */}
-      <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-brandRed/5 blur-[150px] rounded-full" />
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-brandRed/5 blur-[120px] rounded-full" />
-        <div className="absolute inset-0 opacity-[0.03] bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+      {/* 1. FIXED BRANDED BACKGROUND (SYNCED WITH EVENTS PAGE) */}
+      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+        <Image 
+          src="/events/about.jpg" 
+          alt="About Background"
+          fill
+          className="object-cover object-center opacity-25 brightness-[0.5] saturate-[0.8]"
+          priority
+        />
+        {/* ATMOSPHERIC OVERLAYS */}
+        <div className="absolute inset-0 bg-gradient-radial from-transparent via-[#030303]/40 to-[#030303]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#030303]" />
+        
+        {/* Subtle Brand Glows */}
+        <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-brandRed/10 blur-[150px] rounded-full opacity-30" />
+        
+        {/* Filmic Grain */}
+        <div className="absolute inset-0 opacity-[0.03] bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay" />
       </div>
 
       <div className="relative z-10">
-        
         {/* 1. HERO: THE ORIGIN STORY */}
         <section className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-20 items-center mb-40">
-          <div className="relative aspect-square rounded-[40px] overflow-hidden border border-white/10 group shadow-[0_0_60px_rgba(0,0,0,0.5)]">
+          <div className="relative aspect-square rounded-[40px] overflow-hidden border border-white/10 group shadow-2xl bg-zinc-950">
             <Image 
               src="/about/community.jpeg" 
               alt="Community" 
@@ -155,80 +158,74 @@ useEffect(() => {
 
         <LaserDivider />
 
-        {/* 3. JAMMING SESSIONS (Scroll-Triggered) */}
-      <section id="jamming-section" className="max-w-7xl mx-auto mb-40 relative">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
-          
-          <div className="lg:col-span-7 relative h-[600px] rounded-[60px] overflow-hidden border border-white/10 shadow-[0_0_80px_rgba(0,0,0,0.9)] bg-zinc-950">
-            <Image 
-              src="/about/image_1.jpeg" 
-              alt="Jamming" 
-              fill 
-              className={`object-cover transition-opacity duration-500 ease-in-out ${cycle ? 'opacity-0' : 'opacity-80'}`} 
-              priority
-            />
-            
-            <video 
-              autoPlay loop muted playsInline preload="auto"
-              className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ease-in-out ${cycle ? 'opacity-80' : 'opacity-0'}`}
-            >
-              <source src="/videos/jam.mp4" type="video/mp4" />
-            </video>
+        {/* 3. JAMMING SESSIONS */}
+        <section id="jamming-section" className="max-w-7xl mx-auto mb-40 relative">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+            <div className="lg:col-span-7 relative h-[600px] rounded-[60px] overflow-hidden border border-white/10 shadow-2xl bg-zinc-950">
+              <Image 
+                src="/about/image_1.jpeg" 
+                alt="Jamming" 
+                fill 
+                className={`object-cover transition-opacity duration-500 ease-in-out ${cycle ? 'opacity-0' : 'opacity-80'}`} 
+                priority
+              />
+              <video 
+                autoPlay loop muted playsInline preload="auto"
+                className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ease-in-out ${cycle ? 'opacity-80' : 'opacity-0'}`}
+              >
+                <source src="/videos/jam.mp4" type="video/mp4" />
+              </video>
+              <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-90" />
+            </div>
 
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-90" />
-          </div>
-
-          <div className="lg:col-span-5 flex flex-col justify-center relative min-h-[400px]">
-            {/* GHOST TEXT */}
-            <h2 className="text-8xl md:text-[140px] font-black uppercase italic tracking-tighter leading-[0.7] text-white/[0.03] select-none absolute -translate-x-10 lg:-translate-x-20 top-1/2 -translate-y-1/2 -z-10">
-              RHYTHM
-            </h2>
-
-            <div className="space-y-8 relative z-10">
-              <div className="flex items-center gap-4 text-brandRed">
-                <Music size={24} className="animate-pulse" />
-                <span className="font-mono uppercase tracking-[0.4em] text-[10px] font-black opacity-60">
-                  Transmitting...
-                </span>
+            <div className="lg:col-span-5 flex flex-col justify-center relative min-h-[400px]">
+              <h2 className="text-8xl md:text-[140px] font-black uppercase italic tracking-tighter leading-[0.7] text-white/[0.03] select-none absolute -translate-x-10 lg:-translate-x-20 top-1/2 -translate-y-1/2 -z-10">
+                RHYTHM
+              </h2>
+              <div className="space-y-8 relative z-10">
+                <div className="flex items-center gap-4 text-brandRed">
+                  <Music size={24} className="animate-pulse" />
+                  <span className="font-mono uppercase tracking-[0.4em] text-[10px] font-black opacity-60">
+                    Transmitting...
+                  </span>
+                </div>
+                <h3 className="text-6xl md:text-8xl font-black uppercase italic tracking-tighter leading-[0.85] min-h-[160px]">
+                  <span className="text-white">
+                    {displayText.includes("THE") ? "THE " : ""}
+                  </span>
+                  <span className="text-brandRed drop-shadow-[0_0_15px_rgba(255,0,0,0.5)]">
+                    {displayText.replace("THE ", "").split(" ")[0]}
+                  </span> 
+                  <br />
+                  <span className="text-white">
+                    {displayText.split(" ").slice(2).join(" ")}
+                  </span>
+                  <span className="inline-block w-3 h-12 bg-brandRed ml-3 animate-pulse align-middle" />
+                </h3>
+                <p className="text-xl text-zinc-500 italic leading-relaxed border-l-2 border-brandRed/20 pl-6 max-w-sm">
+                  Raw musical energy recreating the magic of Kerala unplugged.
+                </p>
               </div>
-              
-              <h3 className="text-6xl md:text-8xl font-black uppercase italic tracking-tighter leading-[0.85] min-h-[160px]">
-                <span className="text-white">
-                  {displayText.includes("THE") ? "THE " : ""}
-                </span>
-                <span className="text-brandRed drop-shadow-[0_0_15px_rgba(255,0,0,0.5)]">
-                  {displayText.replace("THE ", "").split(" ")[0]}
-                </span> 
-                <br />
-                <span className="text-white">
-                  {displayText.split(" ").slice(2).join(" ")}
-                </span>
-                <span className="inline-block w-3 h-12 bg-brandRed ml-3 animate-pulse align-middle" />
-              </h3>
-
-              <p className="text-xl text-zinc-500 italic leading-relaxed border-l-2 border-brandRed/20 pl-6 max-w-sm">
-                Raw musical energy recreating the magic of Kerala unplugged.
-              </p>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
+
         <LaserDivider />
 
-        {/* 4. BEAUTY PAGEANT (Visual Cycle) */}
+        {/* 4. BEAUTY PAGEANT */}
         <section className="max-w-7xl mx-auto mb-40">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-24 items-center">
             <div className="space-y-8">
-               <div className="flex items-center gap-3">
-                   <span className="w-12 h-px bg-brandRed" />
-                   <span className="text-brandRed font-black uppercase text-[10px] tracking-[0.5em]">Annual Glamour</span>
-                </div>
+                <div className="flex items-center gap-3">
+                    <span className="w-12 h-px bg-brandRed" />
+                    <span className="text-brandRed font-black uppercase text-[10px] tracking-[0.5em]">Annual Glamour</span>
+                 </div>
               <h2 className="text-6xl md:text-8xl font-black uppercase italic tracking-tighter leading-none">
                 The <span className="text-brandRed">Beauty</span> <br />Pageant Pune.
               </h2>
               <p className="text-xl text-zinc-400 italic font-medium">Elegance, culture, and identity on a single stage.</p>
             </div>
-            <div className="relative h-[650px] w-full rounded-[60px] overflow-hidden border border-white/10 shadow-[0_0_60px_rgba(255,0,0,0.1)]">
+            <div className="relative h-[650px] w-full rounded-[60px] overflow-hidden border border-white/10 shadow-2xl">
               <Image 
                 src="/about/beauty.jpeg" 
                 alt="Pageant" 
@@ -270,57 +267,41 @@ useEffect(() => {
 
         <LaserDivider />
 
-        {/* 6. CONCISE GALLERY SECTION - DYNAMIC */}
-<section className="max-w-[90%] mx-auto mb-40 relative">
-  <div className="flex flex-col md:flex-row items-baseline gap-6 mb-12">
-    <h2 className="text-5xl md:text-7xl font-black uppercase italic tracking-tighter">
-      The <span className="text-brandRed">Archive</span>
-    </h2>
-    <p className="text-zinc-500 font-bold uppercase tracking-[0.3em] text-[10px]">
-      Visual Legacy // 2026
-    </p>
-  </div>
+        {/* 6. CONCISE GALLERY SECTION */}
+        <section className="max-w-[90%] mx-auto mb-40 relative">
+          <div className="flex flex-col md:flex-row items-baseline gap-6 mb-12">
+            <h2 className="text-5xl md:text-7xl font-black uppercase italic tracking-tighter text-white">
+              The <span className="text-brandRed">Archive</span>
+            </h2>
+            <p className="text-zinc-500 font-bold uppercase tracking-[0.3em] text-[10px]">
+              Visual Legacy // 2026
+            </p>
+          </div>
 
-  {/* COMPACT GRID: 3 columns, 2 rows */}
-  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-    {/* Logic: 
-       1. If galleryImages has data, use it. 
-       2. If not, map through 6 slots using local placeholders.
-    */}
-    {(galleryImages.length > 0 ? galleryImages : [1, 2, 3, 4, 5, 6]).map((item, idx) => {
-      // Determine the source: is it a URL from state or a local path?
-      const src = typeof item === 'string' ? item : `/gallery/img${item}.jpg`;
-
-      return (
-        <div 
-          key={idx} 
-          className="relative aspect-video md:aspect-[4/3] rounded-2xl overflow-hidden border border-white/5 group bg-zinc-900 shadow-2xl"
-        >
-          <Image 
-            src={src} 
-            alt={`Archive Legacy ${idx + 1}`} 
-            fill 
-            sizes="(max-width: 768px) 50vw, 33vw"
-            className="object-cover transition-all duration-700 grayscale group-hover:grayscale-0 group-hover:scale-110" 
-            priority={idx < 3} // Optimize loading for top row
-          />
-          
-          {/* Subtle Red Overlay on Hover */}
-          <div className="absolute inset-0 bg-brandRed/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-          
-          {/* Corner Accent */}
-          <div className="absolute top-4 right-4 w-6 h-[1px] bg-white/20 group-hover:bg-brandRed transition-colors" />
-          <div className="absolute top-4 right-4 h-6 w-[1px] bg-white/20 group-hover:bg-brandRed transition-colors" />
-        </div>
-      );
-    })}
-  </div>
-</section>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {(galleryImages.length > 0 ? galleryImages : [1, 2, 3, 4, 5, 6]).map((item, idx) => {
+              const src = typeof item === 'string' ? item : `/gallery/img${item}.jpg`;
+              return (
+                <div key={idx} className="relative aspect-video md:aspect-[4/3] rounded-2xl overflow-hidden border border-white/5 group bg-zinc-900 shadow-2xl">
+                  <Image 
+                    src={src} 
+                    alt={`Archive Legacy ${idx + 1}`} 
+                    fill 
+                    sizes="(max-width: 768px) 50vw, 33vw"
+                    className="object-cover transition-all duration-700 grayscale group-hover:grayscale-0 group-hover:scale-110" 
+                    priority={idx < 3}
+                  />
+                  <div className="absolute inset-0 bg-brandRed/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+                  <div className="absolute top-4 right-4 w-6 h-[1px] bg-white/20 group-hover:bg-brandRed transition-colors" />
+                  <div className="absolute top-4 right-4 h-6 w-[1px] bg-white/20 group-hover:bg-brandRed transition-colors" />
+                </div>
+              );
+            })}
+          </div>
+        </section>
+        
         <LaserDivider />
-
-        {/* --- INSTAGRAM GLIMPSE SECTION --- */}
-<InstagramGlimpse />
-
+        <InstagramGlimpse />
         <LaserDivider />
         
         {/* 6. NETWORK SECTION */}
@@ -343,16 +324,15 @@ useEffect(() => {
 
         {/* 7. CTA: THE TRIBE */}
         <section className="max-w-5xl mx-auto text-center pb-40">
-          <div className="p-24 rounded-[80px] bg-gradient-to-br from-brandRed to-red-950 shadow-[0_0_100px_rgba(255,0,0,0.2)] relative overflow-hidden group">
+          <div className="p-24 rounded-[80px] bg-gradient-to-br from-brandRed to-red-950 shadow-2xl relative overflow-hidden group">
             <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20" />
-            <h2 className="text-5xl md:text-8xl font-black uppercase italic tracking-tighter mb-12 relative z-10 leading-none">Become a part <br /> of the tribe.</h2>
+            <h2 className="text-5xl md:text-8xl font-black uppercase italic tracking-tighter mb-12 relative z-10 leading-none text-white">Become a part <br /> of the tribe.</h2>
             <Link href="/auth/login" className="relative z-10 inline-flex items-center gap-4 bg-white text-black px-16 py-6 rounded-full font-black uppercase tracking-widest text-sm hover:scale-110 transition shadow-2xl">
               Join Us Now <ArrowRight size={20} />
             </Link>
           </div>
         </section>
-        
-
+        <LaserDivider />
       </div>
     </main>
   );

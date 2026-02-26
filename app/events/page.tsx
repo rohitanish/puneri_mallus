@@ -1,16 +1,8 @@
 "use client";
 import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
-import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Loader2, 
-  Search, 
-  Calendar, 
-  History, 
-  Zap, 
-  ArrowUpRight 
-} from 'lucide-react';
+import { Loader2, Search, Calendar, History, Sparkles, ArrowRight } from 'lucide-react';
 import EventCard from '@/components/EventCard';
 
 export default function EventsPage() {
@@ -24,7 +16,6 @@ export default function EventsPage() {
       try {
         const res = await fetch('/api/events');
         const data = await res.json();
-        // The API now returns 'isUpcoming' automatically
         setEvents(data);
       } catch (error) {
         console.error("Pulse Sync Failed:", error);
@@ -35,13 +26,18 @@ export default function EventsPage() {
     fetchEvents();
   }, []);
 
-  // --- DYNAMIC FILTERING LOGIC ---
-  const { upcoming, past } = useMemo(() => {
-    const filtered = events.filter(e => 
-      (filter === 'ALL' || e.category?.toUpperCase() === filter) && 
-      e.title.toLowerCase().includes(search.toLowerCase())
-    );
+  const categories = useMemo(() => {
+    const cats = new Set(['ALL']);
+    events.forEach(e => { if (e.category) cats.add(e.category.toUpperCase()); });
+    return Array.from(cats);
+  }, [events]);
 
+  const { upcoming, past } = useMemo(() => {
+    const filtered = events.filter(e => {
+      const matchesFilter = filter === 'ALL' || e.category?.toUpperCase() === filter;
+      const matchesSearch = e.title.toLowerCase().includes(search.toLowerCase());
+      return matchesFilter && matchesSearch;
+    });
     return {
       upcoming: filtered.filter(e => e.isUpcoming),
       past: filtered.filter(e => !e.isUpcoming)
@@ -49,64 +45,69 @@ export default function EventsPage() {
   }, [events, filter, search]);
 
   if (loading) return (
-    <div className="min-h-screen bg-black flex flex-col items-center justify-center">
-      <div className="relative">
-        <Loader2 className="text-brandRed animate-spin mb-6" size={50} strokeWidth={1} />
-        <div className="absolute inset-0 bg-brandRed/20 blur-[40px] rounded-full animate-pulse" />
-      </div>
-      <p className="text-zinc-500 text-[10px] font-black uppercase tracking-[0.4em]">Retrieving Tribe Lineup...</p>
+    <div className="min-h-screen bg-black flex items-center justify-center">
+      <Loader2 className="text-brandRed animate-spin" size={30} strokeWidth={1} />
     </div>
   );
 
   return (
-    <div className="bg-black min-h-screen relative overflow-hidden selection:bg-brandRed/30">
+    <div className="bg-[#030303] min-h-screen relative selection:bg-brandRed/30">
       
-      {/* 1. ATMOSPHERIC BACKGROUNDS */}
-      <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute top-[10%] left-[-5%] w-[40%] h-[40%] bg-brandRed/5 blur-[120px] rounded-full" />
-        <div className="absolute bottom-[10%] right-[-5%] w-[30%] h-[30%] bg-brandRed/5 blur-[100px] rounded-full opacity-50" />
+      {/* 1. FIXED BRANDED BACKGROUND - VISIBILITY BOOSTED */}
+      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
+        <Image 
+          src="/events/eventsback.jpg" 
+          alt="Event Background"
+          fill
+          className="object-cover object-center opacity-30 brightness-[0.6] saturate-[0.9]" // Increased Opacity/Brightness
+          priority
+        />
+        {/* Subtle radial mask so it doesn't just cut off */}
+        <div className="absolute inset-0 bg-gradient-radial from-transparent via-[#030303]/40 to-[#030303]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#030303]" />
       </div>
 
-      <div className="max-w-[1600px] mx-auto relative z-10 pt-48 pb-32 px-6 lg:px-20">
+      {/* 2. MAIN CONTENT WRAPPER */}
+      {/* Added z-10 and pb-40 to ensure Footer visibility */}
+      <div className="max-w-[1400px] mx-auto relative z-10 pt-40 pb-48 px-6 lg:px-12">
         
-        {/* 2. HEADER & CONTROL CENTER */}
-        <div className="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-12 mb-32">
+        {/* HEADER SECTION */}
+        <div className="flex flex-col xl:flex-row justify-between items-start xl:items-end gap-12 mb-24">
           <motion.div 
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: 1, x: 0 }}
+            initial={{ opacity: 0, y: 15 }}
+            animate={{ opacity: 1, y: 0 }}
             className="space-y-4"
           >
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-brandRed/10 border border-brandRed/20 rounded-full">
-              <Zap size={12} className="text-brandRed" />
-              <span className="text-[10px] font-black uppercase tracking-[0.2em] text-brandRed">Live Database Sync</span>
-            </div>
-            <h1 className="text-7xl md:text-9xl font-black italic uppercase tracking-tighter leading-none text-white">
+            <h1 className="text-6xl md:text-8xl font-black italic uppercase tracking-tighter leading-[0.85] text-white">
               The <br /> <span className="text-brandRed">Lineup.</span>
             </h1>
           </motion.div>
           
           <motion.div 
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="flex flex-col md:flex-row gap-4 w-full xl:w-auto"
+            initial={{ opacity: 0, scale: 0.98 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="flex flex-col md:flex-row gap-3 w-full xl:w-auto"
           >
-            {/* SEARCH BOX */}
             <div className="relative group">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-brandRed transition-colors" size={16} />
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-700 group-focus-within:text-brandRed transition-colors" size={16} />
               <input 
-                placeholder="SEARCH EXPERIENCES..." 
-                className="bg-zinc-950 border border-white/5 p-5 pl-12 rounded-2xl text-[10px] font-black tracking-widest outline-none focus:border-brandRed/50 transition-all text-white w-full md:w-80 shadow-2xl" 
+                placeholder="FIND AN EXPERIENCE..." 
+                className="bg-zinc-950/60 backdrop-blur-xl border border-white/10 p-4 pl-12 rounded-full text-[9px] font-black tracking-widest outline-none focus:border-brandRed/50 transition-all text-white w-full md:w-80 shadow-2xl" 
                 onChange={e => setSearch(e.target.value)} 
+                value={search}
               />
             </div>
 
-            {/* FILTER TOGGLE */}
-            <div className="flex bg-zinc-950 p-1.5 rounded-2xl border border-white/5 shadow-2xl">
-              {['ALL', 'CULTURAL', 'JAMMING', 'WORKSHOP'].map(c => (
+            <div className="flex flex-wrap items-center gap-2 p-1 bg-zinc-950/40 backdrop-blur-xl rounded-full border border-white/10">
+              {categories.map(c => (
                 <button 
                   key={c} 
                   onClick={() => setFilter(c)} 
-                  className={`px-8 py-3 rounded-xl text-[9px] font-black tracking-widest transition-all ${filter === c ? 'bg-brandRed text-white shadow-lg shadow-brandRed/20' : 'text-zinc-600 hover:text-zinc-300'}`}
+                  className={`px-6 py-2.5 rounded-full text-[8px] font-black uppercase tracking-widest transition-all duration-300 ${
+                    filter === c 
+                    ? 'bg-brandRed text-white shadow-lg shadow-brandRed/30' 
+                    : 'text-zinc-500 hover:text-white'
+                  }`}
                 >
                   {c}
                 </button>
@@ -115,32 +116,35 @@ export default function EventsPage() {
           </motion.div>
         </div>
 
-        {/* 3. UPCOMING SECTION (AUTOMATICALLY POPULATED) */}
-        <EventSection 
-          title="Upcoming Experiences" 
-          subtitle="Join the next gathering of the tribe"
-          icon={<Calendar className="text-brandRed" size={20} />}
-          items={upcoming} 
-          isUpcoming={true} 
-          cols="lg:grid-cols-3" 
-        />
+        {/* SECTIONS */}
+        <div className="space-y-40">
+          <EventSection 
+            title="Next Pulse" 
+            subtitle="Secure your spot in the movement"
+            icon={<Sparkles className="text-brandRed" size={20} />}
+            items={upcoming} 
+            isUpcoming={true} 
+            cols="lg:grid-cols-3" 
+          />
 
-        {/* 4. ARCHIVE SECTION (AUTOMATICALLY ARCHIVED) */}
-        <div className="mt-40">
           <EventSection 
             title="The Archive" 
-            subtitle="Memories forged in the heart of Pune"
-            icon={<History className="text-zinc-700" size={20} />}
+            subtitle="Historical gatherings of the tribe"
+            icon={<History className="text-white" size={20} />}
             items={past} 
             isUpcoming={false} 
             cols="lg:grid-cols-4" 
+            richVariant={true}
           />
         </div>
 
-        {/* 5. EMPTY STATE */}
+        {/* EMPTY STATE */}
         {upcoming.length === 0 && past.length === 0 && (
-          <div className="py-40 text-center">
-            <p className="text-zinc-800 font-black italic text-4xl uppercase tracking-widest">No Matches Found in Tribe Database</p>
+          <div className="py-32 text-center">
+            <h2 className="text-zinc-900 font-black italic text-4xl uppercase tracking-tighter">No Matches Found</h2>
+            <button onClick={() => {setFilter('ALL'); setSearch('');}} className="mt-6 text-brandRed font-mono text-[10px] tracking-[0.4em] uppercase flex items-center gap-2 mx-auto hover:gap-4 transition-all">
+              Reset <ArrowRight size={12} />
+            </button>
           </div>
         )}
       </div>
@@ -148,33 +152,38 @@ export default function EventsPage() {
   );
 }
 
-function EventSection({ title, subtitle, icon, items, isUpcoming, cols }: any) {
+function EventSection({ title, subtitle, icon, items, isUpcoming, cols, richVariant }: any) {
   if (items.length === 0) return null;
-  
   return (
-    <div className="mb-24">
-      <div className="flex flex-col gap-2 mb-12 border-l-2 border-brandRed/20 pl-6 text-white">
+    <div className="relative">
+      <div className="flex flex-col gap-2 mb-16 relative z-10">
         <div className="flex items-center gap-3">
-          {icon}
-          <h2 className={`text-3xl font-black uppercase italic tracking-tighter ${isUpcoming ? 'text-white' : 'text-zinc-800'}`}>
+          <div className={`p-2 rounded-xl border ${richVariant ? 'bg-white/5 border-white/10' : 'bg-brandRed/5 border-brandRed/10'}`}>
+            {icon}
+          </div>
+          <h2 className="text-3xl md:text-5xl font-black uppercase italic tracking-tighter text-white">
             {title}
           </h2>
         </div>
-        <p className="text-zinc-600 text-[10px] font-black uppercase tracking-[0.3em] ml-8">{subtitle}</p>
+        <p className="text-zinc-500 text-[9px] font-black uppercase tracking-[0.4em] ml-14">{subtitle}</p>
       </div>
 
-      <div className={`grid grid-cols-1 md:grid-cols-2 ${cols} gap-10`}>
+      <div className={`grid grid-cols-1 md:grid-cols-2 ${cols} gap-8 relative z-10`}>
         <AnimatePresence mode='popLayout'>
           {items.map((item: any, index: number) => (
             <motion.div
               key={item._id || item.id}
               layout
-              initial={{ opacity: 0, y: 30 }}
+              initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ delay: index * 0.05, duration: 0.5 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ delay: index * 0.05, duration: 0.4 }}
+              className={richVariant ? "hover:z-20 group" : ""}
             >
-              <EventCard {...item} isUpcoming={isUpcoming} />
+              <div className={richVariant ? "relative p-[1px] rounded-[45px] transition-all duration-500 group-hover:bg-gradient-to-br group-hover:from-white/20 group-hover:to-transparent" : ""}>
+                <EventCard {...item} isUpcoming={isUpcoming} />
+              </div>
             </motion.div>
           ))}
         </AnimatePresence>

@@ -86,345 +86,317 @@ export default function Home() {
   );
 
   return (
-    // overflow-x-hidden on root prevents ANY child from causing horizontal scroll
-    <div className="flex flex-col min-h-screen bg-black text-white selection:bg-brandRed/30 relative overflow-x-hidden w-full">
+    <div className="flex flex-col min-h-screen bg-[#030303] text-white selection:bg-brandRed/30 relative overflow-x-hidden w-full">
       
-      {/* 1. HERO SECTION */}
-      <section className="relative h-screen w-full overflow-hidden bg-black flex flex-col items-center justify-center">
+      {/* 1. FIXED BRANDED BACKGROUND - PINNED TO GLASS */}
+<div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-black">
+  <Image 
+    src="/events/main4.jpg" 
+    alt="Branded Atmosphere"
+    fill
+    priority
+    className="object-cover object-center opacity-[0.28] brightness-[0.85] saturate-[1.1] contrast-[1.05]" 
+  />
+  
+  {/* Subtle Vignette to blend into the bottom of the page */}
+  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#030303] z-[1]" />
+  
+  {/* Noise Texture */}
+  <div className="absolute inset-0 opacity-[0.03] bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay z-[2]" />
+</div>
+      <div className="relative z-10">
         
-        {slides.length > 0 ? (
-          slides.map((slide, index) => (
-            <div 
-              key={index} 
-              className={`absolute inset-0 transition-all duration-1000 ease-in-out 
-                ${index === currentSlide 
-                  ? 'opacity-100 scale-100 z-20 pointer-events-auto' 
-                  : 'opacity-0 scale-110 z-0 pointer-events-none'
-                }`}
-            >
+        {/* HERO SECTION */}
+        <section className="relative h-screen w-full overflow-hidden bg-[#030303] z-20 flex flex-col items-center justify-center">
+          {slides.length > 0 ? (
+            slides.map((slide, index) => (
+  <div 
+    key={index} 
+    className={`absolute inset-0 transition-all duration-1000 ease-in-out 
+      ${index === currentSlide 
+        ? 'opacity-100 scale-100 z-20 pointer-events-auto' 
+        : 'opacity-0 scale-110 z-0 pointer-events-none'
+      }`}
+  >
+    {/* BACKGROUND MEDIA LAYER */}
+    <div className="absolute inset-0 z-0">
+      {isVideo(slide.mediaUrl) ? (
+        <video 
+          autoPlay 
+          loop 
+          muted 
+          playsInline 
+          className="w-full h-full object-cover transition-opacity duration-700"
+          
+          style={{ 
+            opacity: (slide.visibility || 60) / 100, 
+            objectPosition: `50% ${slide.vOffset || 50}%` 
+          }}
+        >
+          <source src={slide.mediaUrl} type="video/mp4" />
+        </video>
+      ) : (
+        <Image 
+          src={slide.mediaUrl} 
+          alt="Slide" 
+          fill 
+          
+          className="object-cover transition-opacity duration-700" 
+          style={{ 
+            opacity: (slide.visibility || 60) / 100, 
+            objectPosition: `50% ${slide.vOffset || 50}%` 
+          }}
+          priority={index === 0} 
+        />
+      )}
+      {/* GRADIENT OVERLAY (Keep this to ensure text contrast) */}
+      <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black z-10" />
+    </div>
+
+                <div className="relative z-30 h-full flex flex-col items-center justify-center text-center px-4 sm:px-6">
+                  <div className="space-y-4 sm:space-y-6 max-w-5xl w-full">
+                    <h1 className="text-3xl sm:text-4xl md:text-6xl font-black uppercase tracking-tighter text-white/90">{slide.title}</h1>
+                    <h2 className="text-4xl sm:text-5xl md:text-8xl font-black uppercase tracking-tighter italic text-brandRed drop-shadow-[0_0_25px_rgba(255,0,0,0.4)]">{slide.subtitle}</h2>
+                    <p className="text-base sm:text-lg md:text-2xl text-zinc-500 font-bold uppercase tracking-[0.3em] sm:tracking-[0.5em] pt-2 sm:pt-4">{slide.description}</p>
+                    
+                    {slide.buttonText && (
+                      <div className="pt-8 sm:pt-12">
+                        <Link href={slide.buttonLink || "/about"} className="relative z-50 inline-block">
+                          <button className="cursor-pointer group relative bg-brandRed text-white px-10 sm:px-16 py-4 sm:py-6 rounded-full font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] text-xs sm:text-sm hover:scale-110 transition-all shadow-[0_0_60px_rgba(255,0,0,0.4)] active:scale-95">
+                            <span className="relative z-10 flex items-center gap-3">
+                              {slide.buttonText}
+                              <ArrowUpRight size={18} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
+                            </span>
+                            <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300 pointer-events-none rounded-full" />
+                          </button>
+                        </Link>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div className="relative w-full h-full flex flex-col items-center justify-center">
               <div className="absolute inset-0 z-0">
-                {isVideo(slide.mediaUrl) ? (
-                  <video autoPlay loop muted playsInline className="w-full h-full object-cover opacity-60">
-                    <source src={slide.mediaUrl} type="video/mp4" />
+                <Image
+                  src="/hero-bg.jpeg"
+                  alt="Puneri Mallus Background"
+                  fill
+                  className={`object-cover grayscale-[20%] transition-opacity duration-1000 ${heroVideo ? 'opacity-0' : 'opacity-60'}`}
+                  priority
+                />
+                {heroVideo && (
+                  <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover opacity-60 grayscale-[10%] animate-in fade-in duration-1000">
+                    <source src="/videos/hero-video.mp4" type="video/mp4" />
                   </video>
-                ) : (
-                  <Image 
-                    src={slide.mediaUrl} 
-                    alt="Slide" 
-                    fill 
-                    className="object-cover opacity-60 grayscale-[10%]" 
-                    priority={index === 0} 
-                  />
                 )}
                 <div className="absolute inset-0 bg-gradient-to-b from-black via-transparent to-black z-10" />
               </div>
 
-              <div className="relative z-30 h-full flex flex-col items-center justify-center text-center px-4 sm:px-6">
-                <div className="space-y-4 sm:space-y-6 max-w-5xl w-full">
-                  <h1 className="text-3xl sm:text-4xl md:text-6xl font-black uppercase tracking-tighter text-white/90">{slide.title}</h1>
-                  <h2 className="text-4xl sm:text-5xl md:text-8xl font-black uppercase tracking-tighter italic text-brandRed drop-shadow-[0_0_25px_rgba(255,0,0,0.4)]">{slide.subtitle}</h2>
-                  <p className="text-base sm:text-lg md:text-2xl text-zinc-500 font-bold uppercase tracking-[0.3em] sm:tracking-[0.5em] pt-2 sm:pt-4">{slide.description}</p>
-                  
-                  {slide.buttonText && (
-                    <div className="pt-8 sm:pt-12">
-                      <Link href={slide.buttonLink || "/about"} className="relative z-50 inline-block">
-                        <button className="cursor-pointer group relative bg-brandRed text-white px-10 sm:px-16 py-4 sm:py-6 rounded-full font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] text-xs sm:text-sm hover:scale-110 transition-all shadow-[0_0_60px_rgba(255,0,0,0.4)] active:scale-95">
-                          <span className="relative z-10 flex items-center gap-3">
-                            {slide.buttonText}
-                            <ArrowUpRight size={18} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-                          </span>
-                          <div className="absolute inset-0 bg-white opacity-0 group-hover:opacity-20 transition-opacity duration-300 pointer-events-none rounded-full" />
-                        </button>
-                      </Link>
-                    </div>
-                  )}
+              <div className="relative z-20 text-center space-y-8 sm:space-y-12 px-4 sm:px-6 w-full">
+                <div className="space-y-4 sm:space-y-6">
+                  <div className="flex flex-col items-center space-y-3">
+                    <h1 className="text-3xl sm:text-4xl md:text-6xl font-black uppercase tracking-tighter leading-none text-white/90">
+                      One Community <span className="text-brandRed">.</span> Many Dreams
+                    </h1>
+                    <h2 className="text-4xl sm:text-5xl md:text-8xl font-black uppercase tracking-tighter leading-none italic">
+                      <span className="text-brandRed drop-shadow-[0_0_25px_rgba(255,0,0,0.6)]">Zero Divides</span>
+                    </h2>
+                    <p className="text-base sm:text-lg md:text-2xl text-zinc-500 font-bold uppercase tracking-[0.3em] sm:tracking-[0.7em] pt-2 sm:pt-4">
+                      Together For Growth
+                    </p>
+                  </div>
                 </div>
-              </div>
-            </div>
-          ))
-        ) : (
-          <div className="relative w-full h-full flex flex-col items-center justify-center">
-            <div className="absolute inset-0 z-0">
-              <Image
-                src="/hero-bg.jpeg"
-                alt="Puneri Mallus Background"
-                fill
-                className={`object-cover grayscale-[20%] transition-opacity duration-1000 ${heroVideo ? 'opacity-0' : 'opacity-60'}`}
-                priority
-              />
-              {heroVideo && (
-                <video autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover opacity-60 grayscale-[10%] animate-in fade-in duration-1000">
-                  <source src="/videos/hero-video.mp4" type="video/mp4" />
-                </video>
-              )}
-              <div className="absolute inset-0 bg-gradient-to-b from-black via-transparent to-black z-10" />
-            </div>
-
-            <div className="relative z-20 text-center space-y-8 sm:space-y-12 px-4 sm:px-6 w-full">
-              <div className="space-y-4 sm:space-y-6">
-                <div className="flex flex-col items-center space-y-3">
-                  <h1 className="text-3xl sm:text-4xl md:text-6xl font-black uppercase tracking-tighter leading-none text-white/90">
-                    One Community <span className="text-brandRed">.</span> Many Dreams
-                  </h1>
-                  <h2 className="text-4xl sm:text-5xl md:text-8xl font-black uppercase tracking-tighter leading-none italic">
-                    <span className="text-brandRed drop-shadow-[0_0_25px_rgba(255,0,0,0.6)]">Zero Divides</span>
-                  </h2>
-                  <p className="text-base sm:text-lg md:text-2xl text-zinc-500 font-bold uppercase tracking-[0.3em] sm:tracking-[0.7em] pt-2 sm:pt-4">
-                    Together For Growth
-                  </p>
-                </div>
-              </div>
-              <div className="pt-4 sm:pt-8">
-                <Link href="/about" className="relative z-50">
-                  <button className="cursor-pointer group relative bg-brandRed text-white px-10 sm:px-16 py-4 sm:py-6 rounded-full font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] text-xs sm:text-sm overflow-hidden transition-all hover:scale-110 shadow-[0_0_60px_rgba(255,0,0,0.4)]">
-                    <span className="relative z-10 flex items-center gap-3">
-                      Know More <ArrowUpRight size={18} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
-                    </span>
-                    <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
-                  </button>
-                </Link>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {slides.length > 1 && (
-          <div className="absolute bottom-8 sm:bottom-12 left-1/2 -translate-x-1/2 z-50 flex gap-3 sm:gap-4 pointer-events-auto">
-            {slides.map((_, i) => (
-              <button 
-                key={i} 
-                onClick={() => setCurrentSlide(i)} 
-                className={`cursor-pointer h-1.5 transition-all duration-500 rounded-full ${i === currentSlide ? 'w-10 sm:w-12 bg-brandRed' : 'w-3 sm:w-4 bg-white/20'}`} 
-              />
-            ))}
-          </div>
-        )}
-      </section>
-
-      <LaserDivider />
-
-     
-        {/* 2. UPCOMING EXPERIENCE SPOTLIGHT */}
-<section className="relative py-16 sm:py-24 md:py-32 bg-black overflow-hidden">
-
-  {/* Ghost number background */}
-  <span
-    aria-hidden
-    className="hidden lg:block pointer-events-none select-none absolute -top-8 right-0 text-[22vw] font-black leading-none text-white/[0.03] tracking-tighter"
-  >
-    01
-  </span>
-
-  <div className="max-w-[1400px] mx-auto px-4 sm:px-6 lg:px-12 relative">
-    
-    <div className="flex items-center gap-4 sm:gap-6 mb-4">
-      <span className="text-brandRed font-mono text-[10px] tracking-[0.4em] sm:tracking-[0.5em] uppercase">
-        §&nbsp;upcoming
-      </span>
-      <div className="flex-1 h-px bg-white/10" />
-      <span className="text-white/20 font-mono text-[10px] tracking-widest hidden sm:block">
-        2026 / SERIES
-      </span>
-    </div>
-
-    <h2 className="text-5xl sm:text-6xl md:text-8xl font-black uppercase italic leading-[0.82] tracking-tighter text-white mb-12 sm:mb-24">
-      Next<br />
-      <span className="text-brandRed">Experience</span>
-    </h2>
-
-    {upcoming.length > 0 ? (
-      upcoming.map(event => (
-        <div
-          key={event.id || event._id}
-          className="group relative grid grid-cols-1 lg:grid-cols-[1fr_auto_1fr] gap-0 items-start"
-        >
-          {/* LEFT: Card Area */}
-          <div className="relative">
-            <div className="relative overflow-hidden rounded-[4px]
-                            before:content-[''] before:absolute before:inset-0 before:z-10
-                            before:bg-gradient-to-br before:from-brandRed/20 before:to-transparent
-                            before:opacity-0 before:transition-opacity before:duration-500
-                            group-hover:before:opacity-100">
-              {/* The Badge is now handled INSIDE EventCard automatically */}
-              <EventCard {...event} isUpcoming={true} />
-            </div>
-          </div>
-
-          {/* MIDDLE: Vertical divider */}
-          <div className="hidden lg:flex flex-col items-center mx-12 pt-6 gap-3 self-stretch">
-            <div className="w-px flex-1 bg-gradient-to-b from-transparent via-white/20 to-transparent" />
-            <span className="text-white/20 font-mono text-[9px]">×</span>
-            <div className="w-px flex-1 bg-gradient-to-b from-transparent via-white/20 to-transparent" />
-          </div>
-
-          {/* RIGHT: Copy Area */}
-          <div className="flex flex-col justify-between gap-8 sm:gap-10 pt-8 lg:pt-0 min-h-auto lg:min-h-[340px]">
-            <div className="flex items-center gap-3">
-              <div className="w-2 h-2 rounded-full bg-brandRed animate-ping" />
-              <span className="text-white/40 font-mono text-[10px] tracking-[0.3em] sm:tracking-[0.4em] uppercase">
-                Live Event · Pulse Active
-              </span>
-            </div>
-
-            <div className="space-y-6">
-              <h3 className="text-4xl sm:text-5xl xl:text-7xl font-black uppercase italic leading-[0.88]
-                             tracking-tighter text-white group-hover:text-brandRed transition-colors duration-500">
-                {event.title}
-              </h3>
-              
-              {/* DESCRIPTION POINTER LOGIC */}
-              <ul className="space-y-3 md:space-y-4 max-w-xl">
-                {event.description?.split('-').map((segment: string, idx: number) => {
-                  const trimmed = segment.trim();
-                  if (!trimmed) return null;
-                  return (
-                    <li key={idx} className="flex items-start gap-3 group/item">
-                      <span className="mt-2 h-1.5 w-1.5 rounded-full bg-brandRed shadow-[0_0_8px_#FF0000] shrink-0" />
-                      <span className="text-zinc-400 text-base md:text-lg leading-relaxed font-light group-hover/item:text-zinc-200 transition-colors">
-                        {trimmed}
+                <div className="pt-4 sm:pt-8">
+                  <Link href="/about" className="relative z-50">
+                    <button className="cursor-pointer group relative bg-brandRed text-white px-10 sm:px-16 py-4 sm:py-6 rounded-full font-black uppercase tracking-[0.2em] sm:tracking-[0.3em] text-xs sm:text-sm overflow-hidden transition-all hover:scale-110 shadow-[0_0_60px_rgba(255,0,0,0.4)]">
+                      <span className="relative z-10 flex items-center gap-3">
+                        Know More <ArrowUpRight size={18} className="group-hover:translate-x-1 group-hover:-translate-y-1 transition-transform" />
                       </span>
-                    </li>
-                  );
-                })}
-              </ul>
+                      <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300" />
+                    </button>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {slides.length > 1 && (
+            <div className="absolute bottom-8 sm:bottom-12 left-1/2 -translate-x-1/2 z-50 flex gap-3 sm:gap-4 pointer-events-auto">
+              {slides.map((_, i) => (
+                <button 
+                  key={i} 
+                  onClick={() => setCurrentSlide(i)} 
+                  className={`cursor-pointer h-1.5 transition-all duration-500 rounded-full ${i === currentSlide ? 'w-10 sm:w-12 bg-brandRed' : 'w-3 sm:w-4 bg-white/20'}`} 
+                />
+              ))}
+            </div>
+          )}
+        </section>
+
+        <LaserDivider />
+
+        {/* 2. UPCOMING EXPERIENCE SPOTLIGHT */}
+        <section className="relative py-24 sm:py-32 md:py-40 overflow-hidden">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 relative z-20">
+            <div className="text-center mb-12 sm:mb-16">
+                <div className="flex items-center justify-center gap-4 mb-6">
+                    <div className="h-px w-8 bg-brandRed/50" />
+                    <span className="text-brandRed font-mono text-[9px] tracking-[0.5em] uppercase">upcoming pulse</span>
+                    <div className="h-px w-8 bg-brandRed/50" />
+                </div>
+                <h2 className="text-6xl sm:text-7xl md:text-[120px] font-black uppercase italic leading-[0.75] tracking-[-0.05em] text-white">
+                    Next<br /><span className="text-brandRed">Experience</span>
+                </h2>
             </div>
 
-            <div className="flex items-center gap-4 sm:gap-6 flex-wrap">
-              <Link href="/events">
-                <button className="relative px-8 sm:px-10 py-3 sm:py-4 bg-brandRed text-white font-black uppercase
-                                   text-[10px] tracking-[0.3em] sm:tracking-[0.35em] rounded-full overflow-hidden
-                                   shadow-xl shadow-brandRed/20 transition-transform duration-200 active:scale-95">
-                  Secure Your Spot
-                </button>
+            {upcoming.length > 0 ? (
+              upcoming.map(event => (
+                <div key={event.id} className="group relative flex flex-col items-center gap-12">
+                  <div className="w-full max-w-[550px] relative">
+                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 bg-black border border-white/10 px-4 py-2 rounded-full shadow-2xl">
+                      <div className="w-1.5 h-1.5 rounded-full bg-brandRed animate-ping" />
+                      <span className="text-white font-mono text-[8px] tracking-[0.3em] uppercase whitespace-nowrap">
+                        {event.title} · Live 2026
+                      </span>
+                    </div>
+
+                    <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-zinc-950/60 backdrop-blur-xl shadow-2xl group-hover:border-brandRed/30 transition-all duration-500">
+                      <EventCard {...event} isUpcoming={true} showDescription={true} />
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col items-center gap-6 mt-4">
+                    <div className="w-12 h-px bg-white/10" />
+                    <Link href="/events" className="group/link text-white/20 hover:text-white font-mono text-[10px] tracking-[0.4em] uppercase transition-colors duration-300 flex items-center gap-3">
+                      Explore Full Series <span className="group-hover:translate-x-2 transition-transform duration-300 text-brandRed">→</span>
+                    </Link>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="text-center py-20">
+                <span className="text-white/5 font-black italic text-9xl uppercase tracking-tighter">Soon</span>
+              </div>
+            )}
+          </div>
+        </section>
+
+        <LaserDivider />
+
+        {/* 3. EVENT GLIMPSE SECTION */}
+        <section className="py-16 sm:py-24 md:py-40 relative overflow-hidden">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-20">
+            <div className="flex justify-between items-end mb-10 sm:mb-20">
+              <h2 className="text-4xl sm:text-5xl md:text-7xl font-black uppercase italic tracking-tighter text-white drop-shadow-2xl">
+                Event <span className="text-brandRed">Glimpse</span>
+              </h2>
+              <Link href="/events" className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-500 hover:text-brandRed transition-all whitespace-nowrap ml-4">
+                View All Series
               </Link>
-              <Link href="/events"
-                className="text-white/30 hover:text-white font-mono text-[10px] tracking-[0.3em] uppercase
-                           transition-colors duration-300 flex items-center gap-2">
-                View All <span>→</span>
-              </Link>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8 relative z-30">
+              {past.map((event) => (
+                <div key={event.id} className="relative transition-transform duration-500 hover:-translate-y-4">
+                  <div className="absolute inset-0 bg-brandRed/5 blur-[60px] rounded-full opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="bg-zinc-950/60 backdrop-blur-xl rounded-[40px] border border-white/5 overflow-hidden">
+                    <EventCard {...event} isUpcoming={false} />
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
-        </div>
-      ))
-    ) : (
-      <div className="relative flex flex-col items-center justify-center py-24 sm:py-40 border border-white/5 rounded-[2px] overflow-hidden">
-        <span className="text-white/10 font-black italic text-6xl sm:text-[10vw] uppercase tracking-tighter leading-none">Soon</span>
-      </div>
-    )}
-  </div>
-</section>
+        </section>
 
-      <LaserDivider />
+        <LaserDivider />
 
-      {/* 3. EVENT GLIMPSE SECTION */}
-      <section className="py-16 sm:py-24 md:py-40 bg-black relative">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="flex justify-between items-end mb-10 sm:mb-20">
-            <h2 className="text-4xl sm:text-5xl md:text-7xl font-black uppercase italic tracking-tighter">
-              Event <span className="text-brandRed">Glimpse</span>
+        {/* 4. RECENT RECAPS */}
+        <section className="py-16 sm:py-24 md:py-40 relative overflow-hidden">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-20">
+            <div className="mb-10 sm:mb-20">
+              <div className="flex items-center gap-3 mb-4">
+                <Zap size={16} className="text-brandRed fill-brandRed" />
+                <h2 className="text-sm font-black uppercase tracking-[0.4em] sm:tracking-[0.5em] text-brandRed">Live Energy</h2>
+              </div>
+              <h3 className="text-4xl sm:text-5xl md:text-7xl font-black uppercase tracking-tighter text-white">
+                High <span className="text-zinc-800 italic">Frequency</span>
+              </h3>
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-10 relative z-30">
+              <div className="group relative p-8 sm:p-12 rounded-[24px] sm:rounded-[40px] bg-zinc-950/60 backdrop-blur-xl border border-white/5 hover:border-brandRed/40 transition-all duration-700 overflow-hidden hover:-translate-y-2 shadow-2xl">
+                <div className="absolute inset-0 z-0 opacity-20 group-hover:opacity-60 transition-opacity duration-1000">
+                  <video autoPlay loop muted playsInline className="w-full h-full object-cover grayscale group-hover:grayscale-0">
+                    <source src="/videos/agam-recap.mp4" type="video/mp4" />
+                  </video>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+                </div>
+                <div className="relative z-10">
+                  <span className="text-zinc-600 font-mono text-xs tracking-widest uppercase">Jan 2026</span>
+                  <h4 className="text-3xl sm:text-4xl font-black uppercase mt-4 sm:mt-6 mb-3 sm:mb-4 tracking-tight group-hover:text-brandRed transition-colors">Agam Live Recap</h4>
+                  <p className="text-zinc-500 text-base sm:text-lg font-medium leading-relaxed italic group-hover:text-zinc-300">Experience the night Carnatic Progressive Rock met the heart of Pune.</p>
+                </div>
+              </div>
+
+              <div className="group relative p-8 sm:p-12 rounded-[24px] sm:rounded-[40px] bg-zinc-950/60 backdrop-blur-xl border border-white/5 hover:border-brandRed/40 transition-all duration-700 overflow-hidden hover:-translate-y-2 shadow-2xl">
+                <div className="absolute inset-0 z-0 opacity-20 group-hover:opacity-60 transition-opacity duration-1000">
+                  <video autoPlay loop muted playsInline className="w-full h-full object-cover grayscale group-hover:grayscale-0">
+                    <source src="/videos/jam.mp4" type="video/mp4" />
+                  </video>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+                </div>
+                <div className="relative z-10">
+                  <span className="text-zinc-600 font-mono text-xs tracking-widest uppercase">Feb 2026</span>
+                  <h4 className="text-3xl sm:text-4xl font-black uppercase mt-4 sm:mt-6 mb-3 sm:mb-4 tracking-tight group-hover:text-brandRed transition-colors">Jamming Session</h4>
+                  <p className="text-zinc-500 text-base sm:text-lg font-medium leading-relaxed italic group-hover:text-zinc-300">Our unplugged community jams bringing the raw soul of Kerala to the city streets.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <LaserDivider />
+
+        {/* 5. FOUNDERS SECTION */}
+        <section className="py-16 sm:py-24 md:py-40 relative overflow-hidden">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center relative z-10">
+            <h2 className="text-4xl sm:text-5xl md:text-8xl font-black uppercase italic tracking-tighter mb-12 sm:mb-24 text-white">
+              Meet The <span className="text-brandRed">Founders</span>
             </h2>
-            <Link href="/events" className="text-xs font-black uppercase tracking-widest text-zinc-500 hover:text-brandRed transition-all whitespace-nowrap ml-4">
-              View All
-            </Link>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8">
-            {past.map((event) => (
-              <EventCard 
-                key={event.id}
-                {...event}
-                isUpcoming={false} 
-              />
-            ))}
-          </div>
-        </div>
-      </section>
-
-      <LaserDivider />
-
-      {/* 4. RECENT RECAPS */}
-      <section className="py-16 sm:py-24 md:py-40 bg-black relative">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="mb-10 sm:mb-20">
-            <div className="flex items-center gap-3 mb-4">
-              <Zap size={16} className="text-brandRed fill-brandRed" />
-              <h2 className="text-sm font-black uppercase tracking-[0.4em] sm:tracking-[0.5em] text-brandRed">Live Energy</h2>
-            </div>
-            <h3 className="text-4xl sm:text-5xl md:text-7xl font-black uppercase tracking-tighter">
-              High <span className="text-zinc-800 italic">Frequency</span>
-            </h3>
-          </div>
-          
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-10">
-            <div className="group relative p-8 sm:p-12 rounded-[24px] sm:rounded-[40px] bg-zinc-950 border border-white/5 hover:border-brandRed/40 transition-all duration-700 overflow-hidden">
-              <div className="absolute inset-0 z-0 opacity-20 group-hover:opacity-60 transition-opacity duration-1000">
-                <video autoPlay loop muted playsInline className="w-full h-full object-cover grayscale group-hover:grayscale-0">
-                  <source src="/videos/agam-recap.mp4" type="video/mp4" />
-                </video>
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+            <div className="flex flex-wrap justify-center gap-10 sm:gap-16 lg:gap-32">
+              <div className="group w-full max-w-[260px] sm:max-w-[340px]">
+                <div className="aspect-[3/4] bg-zinc-950/60 backdrop-blur-md rounded-[32px] sm:rounded-[50px] mb-6 sm:mb-8 overflow-hidden border border-white/10 group-hover:border-brandRed transition-all duration-700 shadow-2xl relative">
+                  <Image src="/founders/suchi.jpg" alt="Suchi" fill className="object-cover group-hover:scale-105 transition-all duration-700" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                </div>
+                <h4 className="text-2xl sm:text-3xl font-black uppercase tracking-tighter text-white">Sucheendran K.C</h4>
+                <p className="text-brandRed font-black uppercase text-[10px] tracking-[0.4em] sm:tracking-[0.5em] mt-2 sm:mt-3">Founder</p>
               </div>
-              <div className="relative z-10">
-                <span className="text-zinc-600 font-mono text-xs tracking-widest uppercase">Jan 2026</span>
-                <h4 className="text-3xl sm:text-4xl font-black uppercase mt-4 sm:mt-6 mb-3 sm:mb-4 tracking-tight group-hover:text-brandRed transition-colors">Agam Live Recap</h4>
-                <p className="text-zinc-500 text-base sm:text-lg font-medium leading-relaxed italic group-hover:text-zinc-300">Experience the night Carnatic Progressive Rock met the heart of Pune.</p>
+
+              <div className="group w-full max-w-[260px] sm:max-w-[340px]">
+                <div className="aspect-[3/4] bg-zinc-950/60 backdrop-blur-md rounded-[32px] sm:rounded-[50px] mb-6 sm:mb-8 overflow-hidden border border-white/10 group-hover:border-brandRed transition-all duration-700 shadow-2xl relative">
+                  <Image src="/founders/shehanas.jpg" alt="Shena" fill className="object-cover group-hover:scale-105 transition-all duration-700" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
+                </div>
+                <h4 className="text-2xl sm:text-3xl font-black uppercase tracking-tighter text-white">Shena</h4>
+                <p className="text-brandRed font-black uppercase text-[10px] tracking-[0.4em] sm:tracking-[0.5em] mt-2 sm:mt-3">Co-Founder</p>
               </div>
             </div>
-
-            <div className="group relative p-8 sm:p-12 rounded-[24px] sm:rounded-[40px] bg-zinc-950 border border-white/5 hover:border-brandRed/40 transition-all duration-700 overflow-hidden">
-              <div className="absolute inset-0 z-0 opacity-20 group-hover:opacity-60 transition-opacity duration-1000">
-                <video autoPlay loop muted playsInline className="w-full h-full object-cover grayscale group-hover:grayscale-0">
-                  <source src="/videos/jam.mp4" type="video/mp4" />
-                </video>
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
-              </div>
-              <div className="relative z-10">
-                <span className="text-zinc-600 font-mono text-xs tracking-widest uppercase">Feb 2026</span>
-                <h4 className="text-3xl sm:text-4xl font-black uppercase mt-4 sm:mt-6 mb-3 sm:mb-4 tracking-tight group-hover:text-brandRed transition-colors">Jamming Session</h4>
-                <p className="text-zinc-500 text-base sm:text-lg font-medium leading-relaxed italic group-hover:text-zinc-300">Our unplugged community jams bringing the raw soul of Kerala to the city streets.</p>
-              </div>
+            
+            <div className="mt-16 sm:mt-28">
+              <Link href="/about" className="group/btn relative inline-flex items-center gap-4 sm:gap-6 px-10 sm:px-14 py-5 sm:py-6 rounded-full border border-white/10 overflow-hidden hover:border-brandRed transition-all duration-500">
+                <div className="absolute inset-0 bg-brandRed translate-y-full group-hover/btn:translate-y-0 transition-transform duration-500" />
+                <span className="relative z-10 text-[10px] sm:text-xs font-black uppercase tracking-[0.3em] sm:tracking-[0.4em] group-hover/btn:text-white">Know More About Our Journey</span>
+                <ArrowUpRight className="relative z-10 group-hover/btn:rotate-45 transition-transform flex-shrink-0" size={16} />
+              </Link>
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      <LaserDivider />
-
-      {/* 5. FOUNDERS SECTION */}
-      <section className="py-16 sm:py-24 md:py-40 bg-black relative overflow-hidden">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 text-center relative z-10">
-          <h2 className="text-4xl sm:text-5xl md:text-8xl font-black uppercase italic tracking-tighter mb-12 sm:mb-24">
-            Meet The <span className="text-brandRed">Founders</span>
-          </h2>
-          <div className="flex flex-wrap justify-center gap-10 sm:gap-16 lg:gap-32">
-            <div className="group w-full max-w-[260px] sm:max-w-[340px]">
-              <div className="aspect-[3/4] bg-zinc-950 rounded-[32px] sm:rounded-[50px] mb-6 sm:mb-8 overflow-hidden border border-white/10 group-hover:border-brandRed transition-all duration-700 shadow-2xl relative">
-                <Image src="/founders/suchi.jpg" alt="Suchi" fill className="object-cover grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-              </div>
-              <h4 className="text-2xl sm:text-3xl font-black uppercase tracking-tighter">Sucheendran K.C</h4>
-              <p className="text-brandRed font-black uppercase text-[10px] tracking-[0.4em] sm:tracking-[0.5em] mt-2 sm:mt-3">Founder</p>
-            </div>
-            <div className="group w-full max-w-[260px] sm:max-w-[340px]">
-              <div className="aspect-[3/4] bg-zinc-950 rounded-[32px] sm:rounded-[50px] mb-6 sm:mb-8 overflow-hidden border border-white/10 group-hover:border-brandRed transition-all duration-700 shadow-2xl relative">
-                <Image src="/founders/shehanas.jpg" alt="Shena" fill className="object-cover grayscale group-hover:grayscale-0 group-hover:scale-105 transition-all duration-700" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-              </div>
-              <h4 className="text-2xl sm:text-3xl font-black uppercase tracking-tighter">Shena</h4>
-              <p className="text-brandRed font-black uppercase text-[10px] tracking-[0.4em] sm:tracking-[0.5em] mt-2 sm:mt-3">Co-Founder</p>
-            </div>
-          </div>
-          <div className="mt-16 sm:mt-28">
-            <Link href="/about" className="group/btn relative inline-flex items-center gap-4 sm:gap-6 px-10 sm:px-14 py-5 sm:py-6 rounded-full border border-white/10 overflow-hidden hover:border-brandRed transition-all duration-500">
-              <div className="absolute inset-0 bg-brandRed translate-y-full group-hover/btn:translate-y-0 transition-transform duration-500" />
-              <span className="relative z-10 text-[10px] sm:text-xs font-black uppercase tracking-[0.3em] sm:tracking-[0.4em] group-hover/btn:text-white">Know More About Our Journey</span>
-              <ArrowUpRight className="relative z-10 group-hover/btn:rotate-45 transition-transform flex-shrink-0" size={16} />
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      <LaserDivider />
-
+        <LaserDivider />
+      </div>
     </div>
   );
 }

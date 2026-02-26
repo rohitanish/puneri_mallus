@@ -21,11 +21,12 @@ export default function Footer() {
   const socials = [
     { icon: Instagram, href: 'https://instagram.com/puneri_mallus', label: 'Instagram' },
     { icon: Facebook, href: 'https://facebook.com/punerimallus', label: 'Facebook' },
-    { icon: MessageCircle, href: 'https://whatsapp.com', label: 'WhatsApp' },
+    { icon: MessageCircle, href: 'https://chat.whatsapp.com/JUmbCVtCCZE27JAXsYw0bU?mode=gi_t', label: 'WhatsApp' },
   ];
 
   return (
-    <footer className="bg-gradient-to-t from-black via-black/95 to-transparent">
+    /* FIXED: Changed gradient to solid black and added high z-index */
+    <footer className="relative z-50 bg-black border-t border-white/5">
       <div className="max-w-7xl mx-auto px-6 md:px-10 pt-20 pb-10">
 
         {/* TOP ROW — Logo + Tagline left, Nav right */}
@@ -34,7 +35,6 @@ export default function Footer() {
           {/* Logo + tagline */}
           <div className="flex flex-col gap-5">
             <Link href="/" className="inline-block group">
-              {/* INCREASED SIZE: Height from h-36 to h-48 and width from w-[420px] to w-[540px] */}
               <div className="relative h-48 w-[540px]">
                 <Image
                   src="/logo.png"
@@ -66,7 +66,7 @@ export default function Footer() {
         </div>
 
         {/* BOTTOM ROW */}
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 pt-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 pt-6 border-t border-white/5">
 
           <div className="flex flex-col gap-1.5">
             <span className="text-[11px] font-semibold uppercase tracking-[0.35em] text-zinc-600">
@@ -78,7 +78,7 @@ export default function Footer() {
           </div>
 
           <div className="flex items-center gap-8">
-            {/* Social icons — bigger */}
+            {/* Social icons */}
             <div className="flex items-center gap-5">
               {socials.map((s) => (
                 <a

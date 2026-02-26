@@ -9,6 +9,7 @@ import {
 import Link from 'next/link';
 import OnboardingForm from '@/components/community/OnboardingForm';
 import { useAlert } from '@/context/AlertContext';
+import { Trash2 } from 'lucide-react'; // Ensure Trash2 is imported
 export default function ProfilePage() {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -125,6 +126,39 @@ export default function ProfilePage() {
     }
     setUpdating(false);
   };
+  const deleteAvatar = async () => {
+    try {
+      setUploading(true);
+      const url = user?.user_metadata?.avatar_url;
+      
+      if (url) {
+        // 1. Extract the file path from the URL
+        const path = url.split('/avatars/')[1];
+        if (path) {
+          await supabase.storage.from('avatars').remove([path]);
+        }
+      }
+
+      // 2. Update Supabase Auth to remove the URL
+      const { error } = await supabase.auth.updateUser({
+        data: { avatar_url: null }
+      });
+
+      if (error) throw error;
+
+      // 3. Update local state
+      setUser((prev: any) => ({
+        ...prev,
+        user_metadata: { ...prev.user_metadata, avatar_url: null }
+      }));
+      
+      setMessage({ type: 'success', text: 'Tribe portrait removed.' });
+    } catch (error: any) {
+      setMessage({ type: 'error', text: error.message });
+    } finally {
+      setUploading(false);
+    }
+  };
 
   const handleDeleteAccount = async () => {
     setShowDeleteModal(false);
@@ -188,31 +222,53 @@ export default function ProfilePage() {
       )}
 
       <div className="max-w-4xl mx-auto relative z-10">
-        {/* PROFILE HEADER */}
-        <div className="flex flex-col md:flex-row items-center gap-10 mb-12 bg-zinc-950/50 p-10 rounded-[50px] border border-white/5 backdrop-blur-2xl relative overflow-hidden group">
-          <div className="absolute top-0 right-0 w-64 h-64 bg-brandRed/5 blur-[100px] -z-10" />
-          <div className="relative">
-            <div className="w-36 h-36 rounded-full bg-zinc-900 border-2 border-brandRed/30 overflow-hidden flex items-center justify-center shadow-2xl">
-              {uploading ? (
-                <Loader2 className="animate-spin text-brandRed" size={32} />
-              ) : user?.user_metadata?.avatar_url ? (
-                <img src={user.user_metadata.avatar_url} alt="Profile" className="w-full h-full object-cover" />
-              ) : (
-                <User size={60} className="text-zinc-800" />
-              )}
-            </div>
-            <label className="absolute bottom-1 right-1 bg-brandRed p-3 rounded-2xl cursor-pointer hover:scale-110 transition-all border-4 border-black shadow-2xl">
-              <Camera size={18} className="text-white" />
-              <input type="file" className="hidden" accept="image/*" onChange={uploadAvatar} disabled={uploading} />
-            </label>
-          </div>
-          <div className="text-center md:text-left">
-            <h1 className="text-5xl font-black italic uppercase tracking-tighter mb-2 leading-none">{fullName || "Tribe Member"}</h1>
-            <p className="text-zinc-600 font-bold uppercase tracking-[0.3em] text-[10px] flex items-center justify-center md:justify-start gap-2">
-              <Mail size={12} className="text-brandRed" /> {user?.email}
-            </p>
-          </div>
-        </div>
+  {/* PROFILE HEADER */}
+  <div className="flex flex-col md:flex-row items-center gap-10 mb-12 bg-zinc-950/50 p-10 rounded-[50px] border border-white/5 backdrop-blur-2xl relative overflow-hidden group">
+    <div className="absolute top-0 right-0 w-64 h-64 bg-brandRed/5 blur-[100px] -z-10" />
+    
+    <div className="relative">
+      {/* PROFILE IMAGE CIRCLE */}
+      <div className="w-36 h-36 rounded-full bg-zinc-900 border-2 border-brandRed/30 overflow-hidden flex items-center justify-center shadow-2xl transition-transform duration-500 group-hover:scale-[1.02]">
+        {uploading ? (
+          <Loader2 className="animate-spin text-brandRed" size={32} />
+        ) : user?.user_metadata?.avatar_url ? (
+          <img src={user.user_metadata.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+        ) : (
+          <User size={60} className="text-zinc-800" />
+        )}
+      </div>
+
+      {/* ACTION BUTTONS */}
+      <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 flex items-center gap-2">
+        {/* UPLOAD BUTTON */}
+        <label className="bg-brandRed p-3 rounded-2xl cursor-pointer hover:scale-110 active:scale-95 transition-all border-4 border-black shadow-2xl group/camera">
+          <Camera size={18} className="text-white" />
+          <input type="file" className="hidden" accept="image/*" onChange={uploadAvatar} disabled={uploading} />
+        </label>
+
+        {/* DELETE BUTTON (Only visible if an image exists) */}
+        {user?.user_metadata?.avatar_url && (
+          <button 
+            onClick={deleteAvatar}
+            disabled={uploading}
+            className="bg-zinc-900 p-3 rounded-2xl cursor-pointer hover:scale-110 active:scale-95 hover:text-brandRed transition-all border-4 border-black shadow-2xl text-zinc-500"
+            title="Delete Portrait"
+          >
+            <Trash2 size={18} />
+          </button>
+        )}
+      </div>
+    </div>
+
+    <div className="text-center md:text-left">
+      <h1 className="text-5xl font-black italic uppercase tracking-tighter mb-2 leading-none">
+        {fullName || "Tribe Member"}
+      </h1>
+      <p className="text-zinc-600 font-bold uppercase tracking-[0.3em] text-[10px] flex items-center justify-center md:justify-start gap-2">
+        <Mail size={12} className="text-brandRed" /> {user?.email}
+      </p>
+    </div>
+  </div>
 
         {/* FEEDBACK MESSAGE */}
         {message.text && (

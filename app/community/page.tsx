@@ -15,7 +15,6 @@ const LaserDivider = () => (
   </div>
 );
 
-// Helper function to render correct icon based on category string
 const CategoryIcon = ({ category }: { category: string }) => {
   const cat = category?.toUpperCase();
   if (cat?.includes('MUSIC') || cat?.includes('JAM')) return <Music size={20} />;
@@ -29,8 +28,6 @@ const CategoryIcon = ({ category }: { category: string }) => {
 export default function CommunityPage() {
   const [circles, setCircles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  
-  // SEARCH & FILTER STATES
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("ALL");
 
@@ -49,13 +46,11 @@ export default function CommunityPage() {
     fetchCircles();
   }, []);
 
-  // 1. DYNAMIC CATEGORY EXTRACTION
   const categories = useMemo(() => {
     const cats = circles.map(c => c.category?.toUpperCase() || "TRIBE");
     return ["ALL", ...Array.from(new Set(cats))];
   }, [circles]);
 
-  // 2. FILTERING LOGIC
   const filteredCircles = useMemo(() => {
     return circles.filter(circle => {
       const matchesSearch = 
@@ -68,31 +63,38 @@ export default function CommunityPage() {
 
   if (loading) return (
     <div className="min-h-screen bg-black flex items-center justify-center">
-      <Loader2 className="animate-spin text-brandRed" size={40} />
+      <Loader2 className="animate-spin text-brandRed" size={30} strokeWidth={1} />
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-black text-white relative selection:bg-brandRed/30 overflow-x-hidden">
+    <div className="min-h-screen bg-[#030303] text-white relative selection:bg-brandRed/30 overflow-x-hidden">
       
-      {/* BACKGROUND EFFECTS */}
-      <div className="fixed inset-0 pointer-events-none z-0">
-        <div className="absolute top-[10%] left-[-10%] w-[600px] h-[600px] bg-brandRed/10 blur-[120px] rounded-full animate-pulse" />
-        <div className="absolute top-[40%] right-[-5%] w-[500px] h-[500px] bg-white/5 blur-[100px] rounded-full" />
-        <div className="absolute inset-0 opacity-[0.02] bg-[url('https://grainy-gradients.vercel.app/noise.svg')]" />
+      {/* 1. FIXED BRANDED BACKGROUND - DILKAR ILLUSTRATION */}
+      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-[#030303]">
+        <Image 
+          src="/events/community.jpg" 
+          alt="Branded Atmosphere"
+          fill
+          priority
+          className="object-cover object-center opacity-[0.28] brightness-[0.85] saturate-[1.1] contrast-[1.05]" 
+        />
+        <div className="absolute inset-0 bg-gradient-radial from-transparent via-zinc-950/20 to-[#030303] z-[1]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#030303] z-[1]" />
+        <div className="absolute inset-0 opacity-[0.03] bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay z-[2]" />
       </div>
 
       <div className="max-w-7xl mx-auto relative z-10 pt-40 pb-20 px-6">
         
         {/* HEADER */}
         <div className="text-center mb-16 space-y-6">
-          <div className="inline-flex items-center gap-3 px-5 py-2 bg-zinc-900 border border-white/5 rounded-full">
+          <div className="inline-flex items-center gap-3 px-5 py-2 bg-zinc-950/60 backdrop-blur-xl border border-white/10 rounded-full">
             <Zap size={14} className="text-brandRed" />
             <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">
-              Community // <span className="text-white">Nodes</span>
+              Community // <span className="text-white">Circle</span>
             </span>
           </div>
-          <h1 className="text-6xl md:text-9xl font-black italic uppercase tracking-tighter leading-none">
+          <h1 className="text-6xl md:text-9xl font-black italic uppercase tracking-tighter leading-none text-white">
             Our <span className="text-brandRed">Circles .</span>
           </h1>
           <p className="text-zinc-500 font-bold uppercase tracking-[0.5em] text-sm md:text-xl">
@@ -100,10 +102,9 @@ export default function CommunityPage() {
           </p>
         </div>
 
-        {/* SEARCH & DISCOVERY BAR */}
+        {/* SEARCH & FILTER MODULE */}
         <div className="mb-20 space-y-8">
           <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-            {/* SEARCH */}
             <div className="relative w-full md:max-w-md group">
               <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-brandRed transition-colors" size={18} />
               <input 
@@ -111,7 +112,7 @@ export default function CommunityPage() {
                 placeholder="FIND YOUR INTEREST..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-zinc-900/50 border border-white/5 rounded-2xl py-5 pl-14 pr-6 text-[10px] font-black tracking-widest uppercase focus:outline-none focus:border-brandRed/50 transition-all placeholder:text-zinc-700 backdrop-blur-md"
+                className="w-full bg-zinc-950/40 border border-white/10 rounded-2xl py-5 pl-14 pr-6 text-[10px] font-black tracking-widest uppercase focus:outline-none focus:border-brandRed/50 transition-all placeholder:text-zinc-700 backdrop-blur-xl"
               />
               {searchQuery && (
                 <button onClick={() => setSearchQuery("")} className="absolute right-5 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-white">
@@ -120,7 +121,6 @@ export default function CommunityPage() {
               )}
             </div>
 
-            {/* FILTER CHIPS */}
             <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2 w-full md:w-auto">
               <Filter size={14} className="text-brandRed shrink-0 mr-2" />
               {categories.map((cat) => (
@@ -130,7 +130,7 @@ export default function CommunityPage() {
                   className={`px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${
                     activeCategory === cat 
                     ? 'bg-brandRed border-brandRed text-white shadow-[0_0_20px_rgba(255,0,0,0.3)]' 
-                    : 'bg-zinc-900/50 border-white/5 text-zinc-500 hover:border-white/20'
+                    : 'bg-zinc-950/40 border-white/10 text-zinc-500 hover:text-white backdrop-blur-md'
                   }`}
                 >
                   {cat}
@@ -138,39 +138,40 @@ export default function CommunityPage() {
               ))}
             </div>
           </div>
-          <div className="h-px bg-gradient-to-r from-brandRed/50 via-transparent to-transparent w-full" />
         </div>
 
         {/* CIRCLES GRID */}
         {filteredCircles.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mb-32">
             {filteredCircles.map((circle) => (
-              <div key={circle._id} className="group relative bg-zinc-950/40 border border-white/5 rounded-[40px] overflow-hidden transition-all duration-700 hover:border-brandRed/40 hover:bg-zinc-950/60 shadow-2xl backdrop-blur-xl">
+              <div key={circle._id} className="group relative bg-zinc-950/30 border border-white/5 rounded-[40px] overflow-hidden transition-all duration-700 hover:border-brandRed/40 shadow-2xl backdrop-blur-2xl">
                 
-                <div className="relative w-full h-80 overflow-hidden">
+                {/* SPOTLIGHT EFFECT */}
+                <div className="absolute -inset-px bg-gradient-radial from-brandRed/15 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none z-0" />
+
+                <div className="relative w-full h-80 overflow-hidden z-10">
                   <Image 
                     src={circle.image || "/about/placeholder.jpeg"} 
                     alt={circle.title}
                     fill
                     className="object-cover grayscale group-hover:grayscale-0 group-hover:scale-110 transition-all duration-1000"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/40 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/20 to-transparent" />
                   
-                  {/* DYNAMIC ICON BOX */}
                   <div className="absolute top-8 left-8 bg-brandRed p-4 rounded-2xl shadow-2xl z-20 group-hover:scale-110 group-hover:rotate-6 transition-all duration-500 border border-white/10">
                     <CategoryIcon category={circle.category} />
                   </div>
                 </div>
 
-                <div className="p-10 space-y-8 relative z-10 text-left">
+                <div className="p-10 space-y-8 relative z-20 text-left">
                   <div className="space-y-3">
-                    <span className="text-brandRed font-black uppercase text-[10px] tracking-[0.4em] block">
+                    <span className="text-brandRed font-black uppercase text-[10px] tracking-[0.3em] block">
                       {circle.category?.toUpperCase() || "TRIBE"} // {circle.tagline}
                     </span>
-                    <h2 className="text-4xl font-black italic uppercase tracking-tighter group-hover:text-brandRed transition-colors duration-500">
+                    <h2 className="text-4xl font-black italic uppercase tracking-tighter group-hover:text-white transition-colors duration-500">
                       {circle.title}
                     </h2>
-                    <p className="text-zinc-500 text-[13px] font-medium italic leading-relaxed min-h-[48px]">
+                    <p className="text-zinc-500 text-[13px] font-medium italic leading-relaxed min-h-[48px] group-hover:text-zinc-300 transition-colors">
                       {circle.description}
                     </p>
                   </div>
@@ -195,13 +196,18 @@ export default function CommunityPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* HOVER ACCENT */}
+                <div className="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-2 group-hover:translate-y-0 pointer-events-none">
+                  <ArrowUpRight className="text-brandRed" size={20} />
+                </div>
               </div>
             ))}
           </div>
         ) : (
           <div className="h-96 flex flex-col items-center justify-center border border-white/5 rounded-[40px] bg-zinc-950/20 mb-32 backdrop-blur-md">
             <Search size={40} className="text-zinc-800 mb-4" />
-            <p className="text-zinc-500 font-black uppercase tracking-[0.3em] text-[10px]">No Circles found in this node</p>
+            <p className="text-zinc-500 font-black uppercase tracking-[0.3em] text-[10px]">No Circles found</p>
             <button onClick={() => { setSearchQuery(""); setActiveCategory("ALL"); }} className="mt-4 text-brandRed font-black uppercase text-[9px] hover:underline tracking-widest">Reset Radar</button>
           </div>
         )}
