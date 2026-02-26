@@ -43,19 +43,21 @@ export default function Home() {
         }
 
         const upcomingNodes = allEvents
-          .filter((e: any) => e.isUpcoming === true)
-          .sort((a: any, b: any) => (b.featured === a.featured) ? 0 : b.featured ? 1 : -1);
+  .filter((e: any) => e.isUpcoming === true && e.featured === true)
+  // Sort by date so the closest event appears first
+  .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-        const pastFeatured = allEvents
-          .filter((e: any) => e.isUpcoming === false && e.featured === true);
+const pastFeatured = allEvents
+  .filter((e: any) => e.isUpcoming === false && e.featured === true);
 
-        const format = (list: any[]) => list.map(e => ({ 
-          ...e, 
-          id: e._id || e.id
-        }));
+const format = (list: any[]) => list.map(e => ({ 
+  ...e, 
+  id: e._id || e.id
+}));
 
-        setUpcoming(format(upcomingNodes).slice(0, 1));
-        setPast(format(pastFeatured).slice(0, 3));
+// 2. Apply the specific limits for the Home Page layout
+setUpcoming(format(upcomingNodes).slice(0, 2)); // Now shows up to 2
+setPast(format(pastFeatured).slice(0, 3));      // Shows up to 3
 
       } catch (err) {
         console.error("Pulse Link Interrupted:", err);
@@ -237,53 +239,65 @@ export default function Home() {
 
         <LaserDivider />
 
-        {/* 2. UPCOMING EXPERIENCE SPOTLIGHT */}
-        <section className="relative py-24 sm:py-32 md:py-40 overflow-hidden">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 relative z-20">
-            <div className="text-center mb-12 sm:mb-16">
-                <div className="flex items-center justify-center gap-4 mb-6">
-                    <div className="h-px w-8 bg-brandRed/50" />
-                    <span className="text-brandRed font-mono text-[9px] tracking-[0.5em] uppercase">upcoming pulse</span>
-                    <div className="h-px w-8 bg-brandRed/50" />
+        
+       
+{/* 2. UPCOMING EXPERIENCE SPOTLIGHT */}
+<section className="relative py-24 sm:py-32 md:py-40 overflow-hidden">
+  <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-20">
+    <div className="text-center mb-16 sm:mb-24">
+        <div className="flex items-center justify-center gap-4 mb-6">
+            <div className="h-px w-8 bg-brandRed/50" />
+            <span className="text-brandRed font-mono text-[9px] tracking-[0.5em] uppercase">upcoming pulse</span>
+            <div className="h-px w-8 bg-brandRed/50" />
+        </div>
+        <h2 className="text-6xl sm:text-7xl md:text-[120px] font-black uppercase italic leading-[0.75] tracking-[-0.05em] text-white">
+            Next<br /><span className="text-brandRed">Experience</span>
+        </h2>
+    </div>
+
+    {upcoming.length > 0 ? (
+      <div className="space-y-24">
+        {/* FLEX WRAP + JUSTIFY-CENTER: 
+            This ensures 1 card is centered, while 2 cards go left/right 
+        */}
+        <div className="flex flex-wrap justify-center gap-12 lg:gap-16 items-start">
+          {upcoming.map((event) => (
+            <div key={event.id} className="group relative flex flex-col items-center w-full lg:w-[calc(50%-32px)] max-w-[550px]">
+              <div className="w-full relative">
+                {/* Status Badge */}
+                <div className="absolute -top-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 bg-black border border-white/10 px-4 py-2 rounded-full shadow-2xl">
+                  <div className="w-1.5 h-1.5 rounded-full bg-brandRed animate-ping" />
+                  <span className="text-white font-mono text-[8px] tracking-[0.3em] uppercase whitespace-nowrap">
+                    {event.title} · Live 2026
+                  </span>
                 </div>
-                <h2 className="text-6xl sm:text-7xl md:text-[120px] font-black uppercase italic leading-[0.75] tracking-[-0.05em] text-white">
-                    Next<br /><span className="text-brandRed">Experience</span>
-                </h2>
-            </div>
 
-            {upcoming.length > 0 ? (
-              upcoming.map(event => (
-                <div key={event.id} className="group relative flex flex-col items-center gap-12">
-                  <div className="w-full max-w-[550px] relative">
-                    <div className="absolute -top-6 left-1/2 -translate-x-1/2 z-30 flex items-center gap-2 bg-black border border-white/10 px-4 py-2 rounded-full shadow-2xl">
-                      <div className="w-1.5 h-1.5 rounded-full bg-brandRed animate-ping" />
-                      <span className="text-white font-mono text-[8px] tracking-[0.3em] uppercase whitespace-nowrap">
-                        {event.title} · Live 2026
-                      </span>
-                    </div>
-
-                    <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-zinc-950/60 backdrop-blur-xl shadow-2xl group-hover:border-brandRed/30 transition-all duration-500">
-                      <EventCard {...event} isUpcoming={true} showDescription={true} />
-                    </div>
-                  </div>
-
-                  <div className="flex flex-col items-center gap-6 mt-4">
-                    <div className="w-12 h-px bg-white/10" />
-                    <Link href="/events" className="group/link text-white/20 hover:text-white font-mono text-[10px] tracking-[0.4em] uppercase transition-colors duration-300 flex items-center gap-3">
-                      Explore Full Series <span className="group-hover:translate-x-2 transition-transform duration-300 text-brandRed">→</span>
-                    </Link>
-                  </div>
+                {/* Event Card Wrapper */}
+                <div className="relative overflow-hidden rounded-3xl border border-white/10 bg-zinc-950/60 backdrop-blur-xl shadow-2xl group-hover:border-brandRed/30 transition-all duration-500">
+                  <EventCard {...event} isUpcoming={true} showDescription={true} />
                 </div>
-              ))
-            ) : (
-              <div className="text-center py-20">
-                <span className="text-white/5 font-black italic text-9xl uppercase tracking-tighter">Soon</span>
               </div>
-            )}
-          </div>
-        </section>
+            </div>
+          ))}
+        </div>
 
-        <LaserDivider />
+        {/* Explore Link: Centered below the cards */}
+        <div className="flex flex-col items-center gap-6">
+          <div className="w-12 h-px bg-white/10" />
+          <Link href="/events" className="group/link text-white/20 hover:text-white font-mono text-[10px] tracking-[0.4em] uppercase transition-colors duration-300 flex items-center gap-3">
+            Explore Full Series <span className="group-hover:translate-x-2 transition-transform duration-300 text-brandRed">→</span>
+          </Link>
+        </div>
+      </div>
+    ) : (
+      <div className="text-center py-20">
+        <span className="text-white/5 font-black italic text-9xl uppercase tracking-tighter">Soon</span>
+      </div>
+    )}
+  </div>
+</section>
+
+<LaserDivider />
 
         {/* 3. EVENT GLIMPSE SECTION */}
         <section className="py-16 sm:py-24 md:py-40 relative overflow-hidden">

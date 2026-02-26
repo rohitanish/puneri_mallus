@@ -19,7 +19,7 @@ interface TribeEvent {
   time: string;
   location: string;
   mapUrl?: string;
-  ticketUrl?: string; // Added field
+  ticketUrl?: string;
   category: string;
   image: string;
   featured: boolean;
@@ -145,7 +145,39 @@ export default function AdminEventsPage() {
     }
   };
 
+  // --- FEATURED GATEKEEPER LOGIC ---
   const toggleFeatured = async (event: TribeEvent) => {
+    // 1. If we are unstarring, always allow
+    if (event.featured) {
+      executeToggle(event);
+      return;
+    }
+
+    // 2. Identify if the event belongs to Upcoming or Past
+    const now = new Date();
+    const eventDateTime = new Date(`${event.date} ${event.time}`);
+    const isUpcoming = isNaN(eventDateTime.getTime()) || eventDateTime >= now;
+
+    // 3. Strict Validation for Limits
+    if (isUpcoming) {
+      const currentFeaturedUpcoming = upcoming.filter(e => e.featured).length;
+      if (currentFeaturedUpcoming >= 2) {
+        showAlert("LIMIT REACHED: Max 2 Featured Upcoming events allowed.", "error");
+        return;
+      }
+    } else {
+      const currentFeaturedPast = past.filter(e => e.featured).length;
+      if (currentFeaturedPast >= 3) {
+        showAlert("LIMIT REACHED: Max 3 Featured Past events allowed.", "error");
+        return;
+      }
+    }
+
+    // 4. Proceed if within limits
+    executeToggle(event);
+  };
+
+  const executeToggle = async (event: TribeEvent) => {
     try {
       const res = await fetch('/api/events/manage', {
         method: 'POST',
@@ -249,7 +281,6 @@ export default function AdminEventsPage() {
                 </div>
               </div>
 
-              {/* TICKET URL BLOCK */}
               <div className="space-y-1 text-[10px]">
                 <label className="font-black uppercase tracking-[0.3em] text-zinc-600 ml-2">Ticket / Booking URL</label>
                 <div className="relative">
@@ -344,9 +375,15 @@ export default function AdminEventsPage() {
           </div>
 
           <section className="space-y-8">
+            {/* CAPACITY BADGE FOR UPCOMING */}
             <h3 className="text-[10px] font-black uppercase tracking-[0.5em] text-zinc-600 flex items-center gap-4">
-              Upcoming Events <div className="h-px flex-1 bg-zinc-900" />
+              Upcoming Events 
+              <span className={`px-3 py-1 rounded-full border text-[9px] ${upcoming.filter(e => e.featured).length >= 2 ? 'border-brandRed text-brandRed animate-pulse' : 'border-zinc-800 text-zinc-500'}`}>
+                Featured: {upcoming.filter(e => e.featured).length} / 2
+              </span>
+              <div className="h-px flex-1 bg-zinc-900" />
             </h3>
+
             {upcoming.length > 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
                 {upcoming.map(event => (
@@ -366,9 +403,15 @@ export default function AdminEventsPage() {
           </section>
 
           <section className="space-y-8 pt-10">
+            {/* CAPACITY BADGE FOR PAST */}
             <h3 className="text-[10px] font-black uppercase tracking-[0.5em] text-zinc-600 flex items-center gap-4">
-              Past Archive <div className="h-px flex-1 bg-zinc-900" />
+              Past Archive 
+              <span className={`px-3 py-1 rounded-full border text-[9px] ${past.filter(e => e.featured).length >= 3 ? 'border-brandRed text-brandRed animate-pulse' : 'border-zinc-800 text-zinc-500'}`}>
+                Featured: {past.filter(e => e.featured).length} / 3
+              </span>
+              <div className="h-px flex-1 bg-zinc-900" />
             </h3>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10 opacity-60 grayscale hover:grayscale-0 hover:opacity-100 transition-all duration-500">
               {past.map(event => (
                 <div key={event._id} className="relative group">
