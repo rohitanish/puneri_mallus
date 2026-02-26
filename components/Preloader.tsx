@@ -21,7 +21,7 @@ export default function Preloader() {
     return () => clearInterval(interval);
   }, []);
 
-  const mantra = ["ONE COMMUNITY", "MANY DREAMS", "ZERO DIVIDES"];
+  const mantra = ["ONE COMMUNITY", "MANY DREAMS", "ZERO DIVIDE"];
 
   return (
     <AnimatePresence>
