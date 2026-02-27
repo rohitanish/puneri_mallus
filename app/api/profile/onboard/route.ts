@@ -36,22 +36,28 @@ export async function POST(request: Request) {
       email: user.email,
       full_name: user.user_metadata?.full_name || "Tribe Member",
       avatar_url: user.user_metadata?.avatar_url || null,
-      profession: profession.toUpperCase(),
-      bio,
-      interests, // Array from the multi-select
+      profession: profession?.trim().toUpperCase() || "MEMBER",
+      bio: bio?.trim(),
+      interests: Array.isArray(interests) ? interests : [], // Ensure it's an array
       onboarded: true,
       updatedAt: new Date(),
     };
 
+    
+
+    // 5. Atomic Upsert
     await db.collection("profiles").updateOne(
       { supabase_id: user.id },
-      { $set: profileData },
-      { upsert: true } // Create if doesn't exist, update if it does
+      { 
+        $set: profileData,
+        $setOnInsert: { createdAt: new Date() } // Only set creation date once
+      },
+      { upsert: true }
     );
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true, message: "Welcome to the Tribe!" });
   } catch (error: any) {
     console.error("Onboarding Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Onboarding failed. Please try again." }, { status: 500 });
   }
 }

@@ -1,19 +1,22 @@
 import { NextResponse } from 'next/server';
 import clientPromise from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export async function POST(req: Request) {
   try {
     const client = await clientPromise;
-    const db = client.db("puneri_mallus");
+    const db = client.db("punerimallus");
     const data = await req.json();
 
-    // 1. Separate ID from the rest of the payload
     const { _id, ...body } = data;
 
-    // 2. Data Sanitization (Optional but recommended)
-    // We ensure that even if the frontend sends extra fields, 
-    // we only keep what we need, and clean the WhatsApp string.
     const sanitizedPartner = {
       name: body.name,
       category: body.category,
@@ -23,12 +26,24 @@ export async function POST(req: Request) {
       image: body.image,
       email: body.email?.toLowerCase().trim(),
       instagram: body.instagram?.replace('@', '').trim(),
-      whatsapp: body.whatsapp?.replace(/\D/g, ''), // Store only digits
+      whatsapp: body.whatsapp?.replace(/\D/g, ''), 
       updated_at: new Date()
     };
 
     if (_id) {
-      // UPDATE EXISTING ALLY
+      // 1. Fetch the existing partner to check for image replacement
+      const oldPartner = await db.collection("partners").findOne({ _id: new ObjectId(_id) });
+
+      // 2. If the image has changed, delete the old one from Supabase
+      if (oldPartner?.image && oldPartner.image !== sanitizedPartner.image) {
+        const fileName = oldPartner.image.split('/').pop();
+        if (fileName) {
+          // Using 'partners' bucket - ensure this matches your Supabase setup
+          await supabase.storage.from('partners').remove([fileName]);
+        }
+      }
+
+      // 3. UPDATE EXISTING ALLY
       const result = await db.collection("partners").updateOne(
         { _id: new ObjectId(_id) },
         { $set: sanitizedPartner }

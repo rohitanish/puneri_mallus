@@ -1,24 +1,32 @@
 import { NextResponse } from 'next/server';
 import clientPromise from '@/lib/mongodb';
+import { createClient } from '@supabase/supabase-js';
 
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
+
+// --- 1. THE MISSING GET ROUTE ---
 export async function GET() {
   try {
     const client = await clientPromise;
     const db = client.db("punerimallus");
     
-    // Attempt to find the archive_gallery document
+    // Look for the archive_gallery settings
     const settings = await db.collection("site_settings").findOne({ type: "archive_gallery" });
     
-    // If nothing is found, return an empty array instead of null
+    // Return empty array if document doesn't exist yet
     return NextResponse.json({ 
       images: settings?.images || [] 
     });
-  } catch (error) {
-    console.error("Database Error:", error);
-    return NextResponse.json({ error: "Failed to fetch gallery" }, { status: 500 });
+  } catch (error: any) {
+    console.error("Gallery Fetch Error:", error);
+    return NextResponse.json({ images: [], error: error.message }, { status: 500 });
   }
 }
 
+// --- 2. THE POST ROUTE (With Cleanup) ---
 export async function POST(request: Request) {
   try {
     const { images } = await request.json();
@@ -30,7 +38,24 @@ export async function POST(request: Request) {
     const client = await clientPromise;
     const db = client.db("punerimallus");
 
-    // upsert: true creates the document if it doesn't exist
+    // Fetch current gallery to identify orphans for deletion
+    const oldSettings = await db.collection("site_settings").findOne({ type: "archive_gallery" });
+    const oldImages = oldSettings?.images || [];
+
+    const newImageUrls = new Set(images);
+    const orphans = oldImages.filter((oldUrl: string) => !newImageUrls.has(oldUrl));
+
+    if (orphans.length > 0) {
+      const filesToRemove = orphans.map((url: string) => {
+        const fileName = url.split('/').pop();
+        // Specific path for your about-gallery folder
+        return `about-gallery/${fileName}`; 
+      });
+
+      await supabase.storage.from('assets').remove(filesToRemove);
+    }
+
+    // Update MongoDB
     await db.collection("site_settings").updateOne(
       { type: "archive_gallery" },
       { 
@@ -43,8 +68,8 @@ export async function POST(request: Request) {
     );
 
     return NextResponse.json({ success: true });
-  } catch (error) {
-    console.error("Post Error:", error);
+  } catch (error: any) {
+    console.error("Gallery Post Error:", error);
     return NextResponse.json({ error: "Update failed" }, { status: 500 });
   }
 }

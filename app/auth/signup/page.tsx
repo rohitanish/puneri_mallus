@@ -1,9 +1,13 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Mail, Lock, User, ArrowRight, Eye, EyeOff, Phone, Smartphone, RefreshCcw } from 'lucide-react';
+import { 
+  Mail, Lock, User, ArrowRight, Eye, EyeOff, 
+  Phone, Smartphone, RefreshCcw, Briefcase, 
+  MapPin, Calendar as CalendarIcon 
+} from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 export default function SignupPage() {
@@ -13,20 +17,91 @@ export default function SignupPage() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
+  const [profession, setProfession] = useState('');
+  const [location, setLocation] = useState('');
+  const [dob, setDob] = useState('');
   const [otp, setOtp] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const router = useRouter();
-  // TIMER STATE
   const [timer, setTimer] = useState(0);
+  const dateInputRef = useRef<HTMLInputElement>(null);
+
+  const PUNE_AREAS = [
+  "Pune",
+  "Shivajinagar",
+  "Kothrud",
+  "Karve Nagar",
+  "Erandwane",
+  "Deccan",
+  "Sadashiv Peth",
+  "Swargate",
+  "Bibwewadi",
+  "Dhankawadi",
+  "Sahakar Nagar",
+  "Parvati",
+  "Camp",
+  "Koregaon Park",
+  "Mundhwa",
+  "Hadapsar",
+  "Magarpatta",
+  "Wanowrie",
+  "Fatima Nagar",
+  "Kondhwa",
+  "NIBM",
+  "Undri",
+  "Katraj",
+  "Sinhagad Road",
+  "Warje",
+  "Baner",
+  "Balewadi",
+  "Aundh",
+  "Pashan",
+  "Sus",
+  "Bavdhan",
+  "Model Colony",
+  "Viman Nagar",
+  "Yerwada",
+  "Kalyani Nagar",
+  "Lohegaon",
+  "Dhanori",
+  "Vishrantwadi",
+  "Khadki",
+  "Ghorpadi",
+
+  // PCMC Areas
+  "Pimpri",
+  "Chinchwad",
+  "Akurdi",
+  "Nigdi",
+  "Bhosari",
+  "Wakad",
+  "Hinjewadi",
+  "Ravet",
+  "Pimple Saudagar",
+  "Pimple Gurav",
+  "Pimple Nilakh",
+  "Kalewadi",
+  "Thergaon",
+  "Rahatani",
+  "Moshi",
+  "Chikhali",
+  "Talawade",
+  "Punawale",
+  "Tathawade",
+  "Dapodi",
+  "Sangvi",
+  "Kasarwadi",
+  "Phugewadi"
+
+  ].sort();
 
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  // Countdown Logic
   useEffect(() => {
     let interval: any;
     if (timer > 0) {
@@ -39,106 +114,74 @@ export default function SignupPage() {
     return () => clearInterval(interval);
   }, [timer]);
 
-  const startResendTimer = () => setTimer(60); // 60 seconds
+  const startResendTimer = () => setTimer(60);
 
   const handleSignup = async (e: React.FormEvent) => {
-  e.preventDefault();
-  setLoading(true);
-  setMessage('');
+    e.preventDefault();
+    setLoading(true);
+    setMessage('');
 
-  const bypassOTP = true; 
+    const bypassOTP = true; 
 
-  if (step === 1) {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      phone: phone, 
-      options: {
-        data: { 
-          first_name: firstName.toUpperCase(),
-          last_name: lastName.toUpperCase(),
-          full_name: `${firstName} ${lastName}`.toUpperCase(),
+    if (step === 1) {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        phone: phone, 
+        options: {
+          data: { 
+            first_name: firstName.toUpperCase(),
+            last_name: lastName.toUpperCase(),
+            full_name: `${firstName} ${lastName}`.toUpperCase(),
+            profession: profession.toUpperCase(),
+            location: location,
+            dob: dob,
+          },
         },
-      },
-    });
+      });
 
-    if (error) {
-      setMessage(error.message);
-      setLoading(false);
-    } else {
-      // FORCE SIGN OUT: This kills the auto-login session immediately
-      await supabase.auth.signOut();
-
-      if (bypassOTP) {
-        // Updated message to guide them back to Login
-        setMessage('REGISTRATION SUCCESSFUL! Please head back to Login.');
+      if (error) {
+        setMessage(error.message);
         setLoading(false);
-        
-        // Optional: Auto-redirect to login after 3 seconds
-        setTimeout(() => {
-          router.push('/auth/login');
-        }, 3000);
-
       } else {
-        setStep(2);
-        startResendTimer();
-        setLoading(false);
+        await supabase.auth.signOut();
+        if (bypassOTP) {
+          setMessage('REGISTRATION SUCCESSFUL! Please head back to Login.');
+          setLoading(false);
+          setTimeout(() => router.push('/auth/login'), 3000);
+        } else {
+          setStep(2);
+          startResendTimer();
+          setLoading(false);
+        }
       }
-    }
-  } else {
-    const { error } = await supabase.auth.verifyOtp({
-      phone: phone,
-      token: otp,
-      type: 'sms',
-    });
-    
-    if (error) {
-      setMessage(error.message);
     } else {
-      setMessage('WELCOME TO THE TRIBE!');
-      router.push('/'); 
+      const { error } = await supabase.auth.verifyOtp({
+        phone: phone,
+        token: otp,
+        type: 'sms',
+      });
+      if (error) setMessage(error.message);
+      else router.push('/'); 
+      setLoading(false);
     }
-    setLoading(false);
-  }
-};
-
-const handleResendOtp = async () => {
-  // Only runs if you have enabled Phone Auth in Supabase dashboard
-  if (timer > 0) return;
-  setLoading(true);
-  const { error } = await supabase.auth.signInWithOtp({ phone });
-  if (error) {
-    setMessage(error.message);
-  } else {
-    setMessage('OTP resent successfully!');
-    startResendTimer();
-  }
-  setLoading(false);
-};
+  };
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-4 relative overflow-hidden">
-      
       {/* BACKGROUND IMAGE */}
       <div className="absolute inset-0 z-0 flex items-center justify-center">
-        <Image 
-          src="/events/signup.jpg" 
-          alt="Background"
-          width={1920}
-          height={1080}
-          className="w-full h-full object-cover object-right opacity-60"
-          priority
-        />
+        <Image src="/events/signup.jpg" alt="Background" fill className="object-cover object-right opacity-60" priority />
         <div className="absolute inset-0 bg-gradient-to-r from-black via-black/40 to-transparent hidden lg:block" />
         <div className="absolute inset-0 bg-black/60 lg:hidden" />
       </div>
 
-      <div className="w-full max-w-[420px] relative z-10">
-        <div className="relative bg-white/[0.03] backdrop-blur-2xl border border-white/10 px-8 py-10 md:px-10 md:py-12 rounded-[45px] shadow-2xl overflow-hidden text-left">
+      <div className="w-full max-w-[450px] relative z-10">
+        <div className="relative bg-white/[0.03] backdrop-blur-2xl border border-white/10 px-8 py-10 rounded-[45px] shadow-2xl text-left">
           
-          <div className="flex justify-center mb-8 relative z-10">
+          <div className="flex justify-center mb-6 relative z-10">
             <Link href="/">
-              <Image src="/logo.png" alt="Logo" width={500} height={150} className="h-24 md:h-32 w-auto object-contain drop-shadow-[0_0_25px_rgba(255,0,0,0.5)]" priority />
+              <Image src="/logo.png" alt="Logo" width={500} height={150} className="h-24 w-auto object-contain drop-shadow-[0_0_25px_rgba(255,0,0,0.5)]" priority />
             </Link>
           </div>
 
@@ -147,7 +190,7 @@ const handleResendOtp = async () => {
               {step === 1 ? <>Join the <span className="text-brandRed">Tribe.</span></> : <>Verify <span className="text-brandRed">Phone.</span></>}
             </h2>
 
-            <form onSubmit={handleSignup} className="space-y-4">
+            <form onSubmit={handleSignup} className="space-y-3">
               {step === 1 ? (
                 <>
                   <div className="grid grid-cols-2 gap-3">
@@ -164,7 +207,42 @@ const handleResendOtp = async () => {
                   </div>
 
                   <div className="relative group">
-                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={16} />
+                    <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={14} />
+                    <input 
+                      type="text" placeholder="PROFESSION" required
+                      className="w-full bg-black/40 border border-white/10 p-3.5 pl-11 rounded-xl font-bold text-[11px] tracking-widest focus:border-brandRed transition-all outline-none text-white"
+                      value={profession} onChange={(e) => setProfession(e.target.value)}
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="relative group">
+                      <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={14} />
+                      <select 
+                        required
+                        className="w-full bg-black border border-white/10 p-3.5 pl-11 rounded-xl font-bold text-[10px] tracking-widest focus:border-brandRed transition-all outline-none text-white appearance-none cursor-pointer"
+                        value={location} onChange={(e) => setLocation(e.target.value)}
+                      >
+                        <option value="" disabled className="bg-zinc-900">AREA</option>
+                        {PUNE_AREAS.map(area => (
+                          <option key={area} value={area} className="bg-zinc-900">{area}</option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div className="relative group cursor-pointer" onClick={() => dateInputRef.current?.showPicker()}>
+                      <CalendarIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={14} />
+                      <input 
+                        ref={dateInputRef}
+                        type="date" required
+                        className="w-full bg-black border border-white/10 p-3.5 pl-11 rounded-xl font-bold text-[10px] tracking-widest focus:border-brandRed transition-all outline-none text-white appearance-none uppercase"
+                        value={dob} onChange={(e) => setDob(e.target.value)}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="relative group">
+                    <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={14} />
                     <input 
                       type="tel" placeholder="PHONE NUMBER" required
                       className="w-full bg-black/40 border border-white/10 p-3.5 pl-11 rounded-xl font-bold text-[11px] tracking-widest focus:border-brandRed transition-all outline-none text-white"
@@ -173,7 +251,7 @@ const handleResendOtp = async () => {
                   </div>
 
                   <div className="relative group">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={16} />
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={14} />
                     <input 
                       type="email" placeholder="EMAIL" required
                       className="w-full bg-black/40 border border-white/10 p-3.5 pl-11 rounded-xl font-bold text-[11px] tracking-widest focus:border-brandRed transition-all outline-none text-white"
@@ -182,7 +260,7 @@ const handleResendOtp = async () => {
                   </div>
 
                   <div className="relative group">
-                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={16} />
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={14} />
                     <input 
                       type={showPassword ? "text" : "password"} placeholder="PASSWORD" required
                       className="w-full bg-black/40 border border-white/10 p-3.5 pl-11 pr-11 rounded-xl font-bold text-[11px] tracking-widest focus:border-brandRed transition-all outline-none text-white"
@@ -207,27 +285,12 @@ const handleResendOtp = async () => {
                       value={otp} onChange={(e) => setOtp(e.target.value)}
                     />
                   </div>
-
-                  <div className="flex flex-col items-center gap-4">
-                    <button 
-                      type="button" 
-                      onClick={handleResendOtp}
-                      disabled={timer > 0 || loading}
-                      className={`flex items-center gap-2 text-[10px] font-black uppercase tracking-widest transition-all ${
-                        timer > 0 ? 'text-zinc-600 cursor-not-allowed' : 'text-brandRed hover:text-white'
-                      }`}
-                    >
-                      <RefreshCcw size={12} className={loading ? 'animate-spin' : ''} />
-                      {timer > 0 ? `Resend in ${timer}s` : 'Resend Code'}
-                    </button>
-                    <button type="button" onClick={() => setStep(1)} className="text-[9px] font-black text-zinc-500 uppercase hover:text-white">Change Details</button>
-                  </div>
                 </div>
               )}
 
-              {message && <p className={`text-[9px] font-black uppercase text-center py-1 ${message.includes('success') ? 'text-green-500' : 'text-brandRed'}`}>{message}</p>}
+              {message && <p className={`text-[9px] font-black uppercase text-center py-1 ${message.includes('SUCCESSFUL') ? 'text-green-500' : 'text-brandRed'}`}>{message}</p>}
 
-              <button disabled={loading} className="w-full py-4 bg-brandRed text-white font-black uppercase tracking-[0.3em] rounded-xl hover:bg-white hover:text-black transition-all shadow-xl active:scale-95 text-[10px] flex items-center justify-center gap-2">
+              <button disabled={loading} className="w-full py-4 bg-brandRed text-white font-black uppercase tracking-[0.3em] rounded-xl hover:bg-white hover:text-black transition-all shadow-xl active:scale-95 text-[10px] flex items-center justify-center gap-2 mt-4">
                 {loading ? 'Processing...' : step === 1 ? 'Tap to Verify' : 'Join Tribe'} <ArrowRight size={14} />
               </button>
             </form>

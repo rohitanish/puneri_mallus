@@ -167,7 +167,8 @@ export default function PartnerAdmin() {
   if (loading) return <div className="min-h-screen bg-black flex items-center justify-center"><Loader2 className="animate-spin text-brandRed" /></div>;
 
   return (
-    <div className="min-h-screen bg-black pt-32 pb-20 px-6 lg:px-16 text-white selection:bg-brandRed/30">
+    /* Increased top padding from pt-32 to pt-48 to clear fixed Navbar */
+    <div className="min-h-screen bg-black pt-48 pb-20 px-6 lg:px-16 text-white selection:bg-brandRed/30">
       
       <TribeConfirm 
         isOpen={confirmOpen}
@@ -256,7 +257,6 @@ export default function PartnerAdmin() {
                 </div>
               </div>
 
-              {/* RESTORED WEBSITE LINK FIELD */}
               <div className="space-y-1 text-[10px]">
                 <label className="font-black uppercase tracking-widest text-zinc-600 ml-2">Official Website URL</label>
                 <input placeholder="https://..." className="w-full bg-black border border-white/10 p-4 rounded-xl font-bold focus:border-brandRed outline-none text-brandRed" value={form.link} onChange={e => setForm({...form, link: e.target.value})} />
@@ -284,7 +284,6 @@ export default function PartnerAdmin() {
           <div className="flex justify-between items-end border-b border-white/5 pb-6">
             <h2 className="text-4xl font-black uppercase italic tracking-tighter">Current <span className="text-brandRed">Allies .</span></h2>
             
-            {/* SEARCH FILTER UI */}
             <div className="relative group w-64">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-700 group-focus-within:text-brandRed" size={14} />
               <input 

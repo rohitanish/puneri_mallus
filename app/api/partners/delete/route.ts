@@ -1,11 +1,16 @@
 import { NextResponse } from 'next/server';
 import clientPromise from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
+import { createClient } from '@supabase/supabase-js';
+
+// Initialize Supabase
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 /**
  * DELETE ROUTE: TRIBE ALLIES
- * Removes a partner from the MongoDB collection.
- * Usage: /api/partners/delete?id=65d2f...
  */
 export async function DELETE(req: Request) {
   try {
@@ -17,9 +22,22 @@ export async function DELETE(req: Request) {
     }
 
     const client = await clientPromise;
-    const db = client.db("puneri_mallus");
+    const db = client.db("punerimallus"); // Updated DB Name
 
-    // Perform the deletion
+    // 1. Find the partner to get the logo/image URL before deleting
+    const partner = await db.collection("partners").findOne({ _id: new ObjectId(id) });
+
+    if (partner?.logoUrl || partner?.image) {
+      const imageUrl = partner.logoUrl || partner.image;
+      const fileName = imageUrl.split('/').pop();
+      
+      if (fileName) {
+        // 2. Remove the file from the 'partners' bucket in Supabase
+        await supabase.storage.from('partners').remove([`${fileName}`]);
+      }
+    }
+
+    // 3. Perform the deletion in MongoDB
     const result = await db.collection("partners").deleteOne({ 
       _id: new ObjectId(id) 
     });
@@ -31,6 +49,6 @@ export async function DELETE(req: Request) {
     return NextResponse.json({ message: "Ally Removed Successfully" });
   } catch (e: any) {
     console.error("API DELETE ERROR:", e);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    return NextResponse.json({ error: e.message || "Internal Server Error" }, { status: 500 });
   }
 }

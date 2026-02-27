@@ -147,18 +147,15 @@ export default function AdminEventsPage() {
 
   // --- FEATURED GATEKEEPER LOGIC ---
   const toggleFeatured = async (event: TribeEvent) => {
-    // 1. If we are unstarring, always allow
     if (event.featured) {
       executeToggle(event);
       return;
     }
 
-    // 2. Identify if the event belongs to Upcoming or Past
     const now = new Date();
     const eventDateTime = new Date(`${event.date} ${event.time}`);
     const isUpcoming = isNaN(eventDateTime.getTime()) || eventDateTime >= now;
 
-    // 3. Strict Validation for Limits
     if (isUpcoming) {
       const currentFeaturedUpcoming = upcoming.filter(e => e.featured).length;
       if (currentFeaturedUpcoming >= 2) {
@@ -173,7 +170,6 @@ export default function AdminEventsPage() {
       }
     }
 
-    // 4. Proceed if within limits
     executeToggle(event);
   };
 
@@ -229,8 +225,15 @@ export default function AdminEventsPage() {
     setForm({ ...form, time: displayTime });
   };
 
+  if (loading) return (
+    <div className="min-h-screen bg-black flex items-center justify-center">
+      <Loader2 className="animate-spin text-brandRed" size={40} />
+    </div>
+  );
+
   return (
-    <div className="min-h-screen bg-black pt-32 pb-20 px-6 lg:px-16 text-white selection:bg-brandRed/30">
+    /* Increased top padding from pt-32 to pt-48 to clear fixed Navbar */
+    <div className="min-h-screen bg-black pt-48 pb-20 px-6 lg:px-16 text-white selection:bg-brandRed/30">
       <TribeConfirm 
         isOpen={confirmOpen}
         title="Purge Command"
@@ -375,7 +378,6 @@ export default function AdminEventsPage() {
           </div>
 
           <section className="space-y-8">
-            {/* CAPACITY BADGE FOR UPCOMING */}
             <h3 className="text-[10px] font-black uppercase tracking-[0.5em] text-zinc-600 flex items-center gap-4">
               Upcoming Events 
               <span className={`px-3 py-1 rounded-full border text-[9px] ${upcoming.filter(e => e.featured).length >= 2 ? 'border-brandRed text-brandRed animate-pulse' : 'border-zinc-800 text-zinc-500'}`}>
@@ -403,7 +405,6 @@ export default function AdminEventsPage() {
           </section>
 
           <section className="space-y-8 pt-10">
-            {/* CAPACITY BADGE FOR PAST */}
             <h3 className="text-[10px] font-black uppercase tracking-[0.5em] text-zinc-600 flex items-center gap-4">
               Past Archive 
               <span className={`px-3 py-1 rounded-full border text-[9px] ${past.filter(e => e.featured).length >= 3 ? 'border-brandRed text-brandRed animate-pulse' : 'border-zinc-800 text-zinc-500'}`}>
@@ -422,7 +423,6 @@ export default function AdminEventsPage() {
                     >
                       <Star size={16} fill={event.featured ? "currentColor" : "none"} />
                     </button>
-                    
                     <button onClick={() => startEdit(event)} className="p-4 bg-black/80 backdrop-blur-md hover:bg-blue-600 rounded-2xl transition-all border border-white/10 text-white"><Edit3 size={16}/></button>
                     <button onClick={() => {setEventToDelete({id: event._id, title: event.title}); setConfirmOpen(true);}} className="p-4 bg-black/80 backdrop-blur-md hover:bg-red-600 rounded-2xl transition-all border border-white/10 text-white"><Trash2 size={16}/></button>
                   </div>

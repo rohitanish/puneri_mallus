@@ -1,6 +1,12 @@
 import { NextResponse } from 'next/server';
 import clientPromise from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL!,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+);
 
 export async function POST(request: Request) {
   try {
@@ -13,7 +19,6 @@ export async function POST(request: Request) {
     // SANITIZATION LOGIC
     const sanitizedEvent = {
       ...eventData,
-      // Force category and title to uppercase for UI consistency
       category: eventData.category?.trim().toUpperCase() || 'GENERAL',
       title: eventData.title?.trim().toUpperCase(),
       location: eventData.location?.trim().toUpperCase(),
@@ -21,7 +26,18 @@ export async function POST(request: Request) {
     };
 
     if (_id) {
-      // UPDATE EXISTING
+      // 1. Fetch existing event to check for image replacement
+      const oldEvent = await db.collection("events").findOne({ _id: new ObjectId(_id) });
+
+      // 2. Cleanup Supabase if a new image was uploaded
+      if (oldEvent?.image && oldEvent.image !== sanitizedEvent.image) {
+        const fileName = oldEvent.image.split('/').pop();
+        if (fileName) {
+          await supabase.storage.from('events').remove([`posters/${fileName}`]);
+        }
+      }
+
+      // 3. Update MongoDB
       await db.collection("events").updateOne(
         { _id: new ObjectId(_id) },
         { $set: sanitizedEvent }

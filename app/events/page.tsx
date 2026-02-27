@@ -152,38 +152,38 @@ export default function EventsPage() {
   );
 }
 
-function EventSection({ title, subtitle, icon, items, isUpcoming, cols, richVariant }: any) {
+function EventSection({ title, subtitle, icon, items, isUpcoming }: any) {
   if (items.length === 0) return null;
+  
   return (
-    <div className="relative">
-      <div className="flex flex-col gap-2 mb-16 relative z-10">
+    <div className="mb-24 w-full">
+      <div className="flex flex-col gap-2 mb-12 border-l-2 border-brandRed/20 pl-6 text-white">
         <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-xl border ${richVariant ? 'bg-white/5 border-white/10' : 'bg-brandRed/5 border-brandRed/10'}`}>
-            {icon}
-          </div>
-          <h2 className="text-3xl md:text-5xl font-black uppercase italic tracking-tighter text-white">
+          {icon}
+          <h2 className={`text-3xl font-black uppercase italic tracking-tighter ${isUpcoming ? 'text-white' : 'text-zinc-400'}`}>
             {title}
           </h2>
         </div>
-        <p className="text-zinc-500 text-[9px] font-black uppercase tracking-[0.4em] ml-14">{subtitle}</p>
+        <p className="text-zinc-600 text-[10px] font-black uppercase tracking-[0.3em] ml-8">{subtitle}</p>
       </div>
 
-      <div className={`grid grid-cols-1 md:grid-cols-2 ${cols} gap-8 relative z-10`}>
+      {/* DYNAMIC WIDTH LOGIC:
+          - Upcoming: grid-cols-3 (Balanced)
+          - Past: grid-cols-2 (Significantly Wider)
+      */}
+      <div className={`grid grid-cols-1 md:grid-cols-2 ${isUpcoming ? 'lg:grid-cols-3' : 'lg:grid-cols-2'} gap-10 w-full max-w-[1600px] mx-auto`}>
         <AnimatePresence mode='popLayout'>
           {items.map((item: any, index: number) => (
             <motion.div
               key={item._id || item.id}
               layout
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              transition={{ delay: index * 0.05, duration: 0.4 }}
-              className={richVariant ? "hover:z-20 group" : ""}
+              transition={{ delay: index * 0.05, duration: 0.5 }}
+              className="w-full"
             >
-              <div className={richVariant ? "relative p-[1px] rounded-[45px] transition-all duration-500 group-hover:bg-gradient-to-br group-hover:from-white/20 group-hover:to-transparent" : ""}>
-                <EventCard {...item} isUpcoming={isUpcoming} />
-              </div>
+              <EventCard {...item} isUpcoming={isUpcoming} />
             </motion.div>
           ))}
         </AnimatePresence>

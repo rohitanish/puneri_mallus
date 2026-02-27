@@ -130,7 +130,8 @@ export default function SliderAdmin() {
   );
 
   return (
-    <div className="min-h-screen bg-black text-white pt-32 pb-20 px-6 selection:bg-brandRed/30">
+    /* Increased top padding from pt-32 to pt-48 to clear fixed Navbar */
+    <div className="min-h-screen bg-black text-white pt-48 pb-20 px-6 selection:bg-brandRed/30">
       
       <TribeConfirm 
         isOpen={confirmOpen}
@@ -242,7 +243,7 @@ export default function SliderAdmin() {
         </button>
       </div>
 
-      {/* --- LIVE FULLSCREEN PREVIEW MODAL (FIXED) --- */}
+      {/* --- LIVE FULLSCREEN PREVIEW MODAL --- */}
       {previewIdx !== null && (
         <div className="fixed inset-0 z-[100] bg-black flex items-center justify-center p-6 backdrop-blur-xl">
           <button onClick={() => setPreviewIdx(null)} className="absolute top-10 right-10 z-[110] p-4 bg-white/10 rounded-full hover:bg-brandRed transition-all"><X /></button>

@@ -1,8 +1,8 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { 
   Trash2, Edit3, Plus, Users, Globe, 
-  Link as LinkIcon, Loader2, Camera, Zap, RefreshCcw 
+  Link as LinkIcon, Loader2, Camera, Zap, RefreshCcw, Search, X 
 } from 'lucide-react';
 import { createBrowserClient } from '@supabase/ssr';
 import { logAdminActivity } from '@/app/admin/action';
@@ -15,6 +15,7 @@ export default function CommunityAdmin() {
   const [loading, setLoading] = useState(true);
   const [uploading, setUploading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [searchQuery, setSearchQuery] = useState(""); // Dynamic Search State
   const { showAlert } = useAlert();
 
   // Dialog States
@@ -45,6 +46,15 @@ export default function CommunityAdmin() {
   };
 
   useEffect(() => { fetchCircles(); }, []);
+
+  // --- DYNAMIC SEARCH LOGIC ---
+  const filteredCircles = useMemo(() => {
+    return circles.filter(circle => 
+      circle.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      circle.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      circle.tagline?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+  }, [circles, searchQuery]);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     try {
@@ -132,9 +142,9 @@ export default function CommunityAdmin() {
   };
 
   return (
-    <div className="min-h-screen bg-black pt-32 pb-20 px-6 lg:px-16 text-white selection:bg-cyan-400/30">
+    /* pt-48 to clear fixed navbar */
+    <div className="min-h-screen bg-black pt-48 pb-20 px-6 lg:px-16 text-white selection:bg-cyan-400/30">
       
-      {/* TRIBE CONFIRM DIALOG */}
       <TribeConfirm 
         isOpen={confirmOpen}
         title="Dissolve Circle"
@@ -163,7 +173,6 @@ export default function CommunityAdmin() {
                 <input required className="w-full bg-black border border-white/10 p-4 rounded-xl font-bold tracking-widest focus:border-cyan-400 transition-all outline-none uppercase" value={form.title} onChange={e => setForm({...form, title: e.target.value})} />
               </div>
 
-              {/* SEARCHABLE CATEGORY */}
               <div className="space-y-1 text-[10px]">
                 <label className="font-black uppercase tracking-widest text-zinc-600 ml-2">Sector // Pick or Type</label>
                 <input 
@@ -225,14 +234,29 @@ export default function CommunityAdmin() {
         <div className="lg:col-span-8 space-y-8">
           <div className="flex justify-between items-end border-b border-white/5 pb-6">
             <h2 className="text-4xl font-black uppercase italic tracking-tighter">Live <span className="text-cyan-400">Circles .</span></h2>
-            <p className="text-[10px] font-black text-zinc-600 tracking-widest uppercase">{circles.length} Active Nodes</p>
+            
+            {/* DYNAMIC SEARCH BAR */}
+            <div className="relative group w-64">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-700 group-focus-within:text-cyan-400 transition-colors" size={14} />
+              <input 
+                value={searchQuery} 
+                onChange={e => setSearchQuery(e.target.value)} 
+                placeholder="SEARCH CIRCLES..." 
+                className="w-full bg-zinc-950 border border-white/5 p-3 pl-11 rounded-full text-[10px] font-bold uppercase tracking-widest focus:border-cyan-400 outline-none transition-all" 
+              />
+              {searchQuery && (
+                <button onClick={() => setSearchQuery("")} className="absolute right-4 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-white">
+                  <X size={14} />
+                </button>
+              )}
+            </div>
           </div>
 
           {loading ? (
             <div className="h-96 flex items-center justify-center"><Loader2 className="animate-spin text-cyan-400" size={40} /></div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pb-20">
-              {circles.map((circle) => (
+              {filteredCircles.map((circle) => (
                 <div key={circle._id} className="group relative bg-zinc-950 border border-white/5 rounded-[32px] overflow-hidden hover:border-cyan-400/30 transition-all duration-500">
                   <div className="h-48 relative">
                     <img src={circle.image} className="w-full h-full object-cover grayscale group-hover:grayscale-0 transition-all duration-700" />
@@ -252,6 +276,11 @@ export default function CommunityAdmin() {
                   </div>
                 </div>
               ))}
+              {filteredCircles.length === 0 && (
+                <div className="col-span-full py-20 text-center border-2 border-dashed border-white/5 rounded-[40px]">
+                   <p className="text-[10px] font-black uppercase tracking-[0.5em] text-zinc-700">No nodes matching "{searchQuery}"</p>
+                </div>
+              )}
             </div>
           )}
         </div>

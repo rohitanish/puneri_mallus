@@ -210,7 +210,7 @@ export default function PartnersPage() {
           <div className="flex flex-col md:flex-row items-center justify-center gap-12 mt-12 opacity-40">
             <div className="flex items-center gap-3">
               <Handshake size={16} className="text-brandRed" />
-              <span className="text-[10px] font-black uppercase tracking-[0.5em]">{filteredPartners.length} Nodes Connected</span>
+              <span className="text-[10px] font-black uppercase tracking-[0.5em]">{filteredPartners.length}  Collaborators</span>
             </div>
             <div className="flex items-center gap-3">
               <Zap size={16} className="text-brandRed" />

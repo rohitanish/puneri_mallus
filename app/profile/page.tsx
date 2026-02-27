@@ -65,41 +65,47 @@ export default function ProfilePage() {
   }, []);
 
   // --- AVATAR LOGIC ---
-  const uploadAvatar = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    try {
-      setUploading(true);
-      if (!event.target.files || event.target.files.length === 0) return;
-      
-      const oldUrl = user?.user_metadata?.avatar_url;
-      if (oldUrl) {
-        const oldPath = oldUrl.split('/avatars/')[1];
-        if (oldPath) await supabase.storage.from('avatars').remove([oldPath]);
+const uploadAvatar = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  try {
+    setUploading(true);
+    if (!event.target.files || event.target.files.length === 0) return;
+    
+    // 1. CLEANUP: Delete the old avatar from storage if it exists
+    const oldUrl = user?.user_metadata?.avatar_url;
+    if (oldUrl && oldUrl.includes('/avatars/')) {
+      // Extracts everything after '/avatars/' to get the correct internal path
+      const oldPath = oldUrl.split('/avatars/')[1].split('?')[0]; 
+      if (oldPath) {
+        await supabase.storage.from('avatars').remove([oldPath]);
       }
-
-      const file = event.target.files[0];
-      const fileExt = file.name.split('.').pop();
-      const filePath = `${user.id}/avatar-${Date.now()}.${fileExt}`;
-      
-      const { error: uploadError } = await supabase.storage
-        .from('avatars')
-        .upload(filePath, file, { upsert: true });
-
-      if (uploadError) throw uploadError;
-
-      const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
-      await supabase.auth.updateUser({ data: { avatar_url: publicUrl } });
-      
-      setUser((prev: any) => ({
-        ...prev,
-        user_metadata: { ...prev.user_metadata, avatar_url: publicUrl }
-      }));
-      setMessage({ type: 'success', text: 'Tribe portrait updated!' });
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message });
-    } finally {
-      setUploading(false);
     }
-  };
+
+    // 2. UPLOAD: Add the new file
+    const file = event.target.files[0];
+    const fileExt = file.name.split('.').pop();
+    const filePath = `${user.id}/avatar-${Date.now()}.${fileExt}`;
+    
+    const { error: uploadError } = await supabase.storage
+      .from('avatars')
+      .upload(filePath, file, { upsert: true });
+
+    if (uploadError) throw uploadError;
+
+    // 3. SYNC: Update the Auth Metadata
+    const { data: { publicUrl } } = supabase.storage.from('avatars').getPublicUrl(filePath);
+    await supabase.auth.updateUser({ data: { avatar_url: publicUrl } });
+    
+    setUser((prev: any) => ({
+      ...prev,
+      user_metadata: { ...prev.user_metadata, avatar_url: publicUrl }
+    }));
+    setMessage({ type: 'success', text: 'Tribe portrait updated!' });
+  } catch (error: any) {
+    setMessage({ type: 'error', text: error.message });
+  } finally {
+    setUploading(false);
+  }
+};
 
   // --- ACCOUNT LOGIC ---
   const handleUpdateName = async () => {
@@ -126,39 +132,39 @@ export default function ProfilePage() {
     }
     setUpdating(false);
   };
-  const deleteAvatar = async () => {
-    try {
-      setUploading(true);
-      const url = user?.user_metadata?.avatar_url;
-      
-      if (url) {
-        // 1. Extract the file path from the URL
-        const path = url.split('/avatars/')[1];
-        if (path) {
-          await supabase.storage.from('avatars').remove([path]);
-        }
+const deleteAvatar = async () => {
+  try {
+    setUploading(true);
+    const url = user?.user_metadata?.avatar_url;
+    
+    if (url && url.includes('/avatars/')) {
+      // 1. Extract the file path properly
+      const path = url.split('/avatars/')[1].split('?')[0];
+      if (path) {
+        await supabase.storage.from('avatars').remove([path]);
       }
-
-      // 2. Update Supabase Auth to remove the URL
-      const { error } = await supabase.auth.updateUser({
-        data: { avatar_url: null }
-      });
-
-      if (error) throw error;
-
-      // 3. Update local state
-      setUser((prev: any) => ({
-        ...prev,
-        user_metadata: { ...prev.user_metadata, avatar_url: null }
-      }));
-      
-      setMessage({ type: 'success', text: 'Tribe portrait removed.' });
-    } catch (error: any) {
-      setMessage({ type: 'error', text: error.message });
-    } finally {
-      setUploading(false);
     }
-  };
+
+    // 2. Update Supabase Auth to set avatar_url to null
+    const { error } = await supabase.auth.updateUser({
+      data: { avatar_url: null }
+    });
+
+    if (error) throw error;
+
+    // 3. Update local UI state
+    setUser((prev: any) => ({
+      ...prev,
+      user_metadata: { ...prev.user_metadata, avatar_url: null }
+    }));
+    
+    setMessage({ type: 'success', text: 'Tribe portrait removed.' });
+  } catch (error: any) {
+    setMessage({ type: 'error', text: error.message });
+  } finally {
+    setUploading(false);
+  }
+};
 
   const handleDeleteAccount = async () => {
     setShowDeleteModal(false);

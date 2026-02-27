@@ -92,7 +92,7 @@ export default function AboutPage() {
       {/* 1. FIXED BRANDED BACKGROUND (SYNCED WITH EVENTS PAGE) */}
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden">
         <Image 
-          src="/events/about.jpg" 
+          src="/events/about5.png" 
           alt="About Background"
           fill
           className="object-cover object-center opacity-25 brightness-[0.5] saturate-[0.8]"
