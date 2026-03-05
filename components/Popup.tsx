@@ -114,12 +114,14 @@ export default function BusinessCollabAd() {
         .collab-close {
           background: rgba(255,255,255,0.04);
           border: 1px solid rgba(255,255,255,0.08);
-          transition: background 0.2s, border-color 0.2s;
+          transition: background 0.2s, border-color 0.2s, box-shadow 0.2s;
+          box-shadow: 0 0 10px rgba(255,50,50,0.4), 0 0 20px rgba(255,50,50,0.2);
         }
 
         .collab-close:hover {
-          background: rgba(255,255,255,0.1);
-          border-color: rgba(255,255,255,0.15);
+          background: rgba(255,50,50,0.15);
+          border-color: rgba(255,80,80,0.4);
+          box-shadow: 0 0 14px rgba(255,50,50,0.6), 0 0 28px rgba(255,50,50,0.3);
         }
 
         .collab-tag {
@@ -224,7 +226,7 @@ export default function BusinessCollabAd() {
       {/* COLLABORATION POPUP */}
       <AnimatePresence>
         {isPopupOpen && (
-          <div className="fixed inset-0 z-[1001] flex items-end sm:items-center justify-center sm:p-4">
+          <div className="fixed inset-0 z-[1001] flex items-center justify-center p-4 pt-24 sm:pt-16">
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -233,8 +235,8 @@ export default function BusinessCollabAd() {
               onClick={handleClose}
               className="absolute inset-0"
               style={{
-                background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.92) 0%, rgba(0,0,0,0.98) 100%)',
-                backdropFilter: 'blur(24px)'
+                background: 'radial-gradient(ellipse at center, rgba(0,0,0,0.55) 0%, rgba(0,0,0,0.72) 100%)',
+                backdropFilter: 'blur(8px)'
               }}
             />
 
@@ -243,12 +245,12 @@ export default function BusinessCollabAd() {
               animate={{ scale: 1, opacity: 1, y: 0 }}
               exit={{ scale: 0.94, opacity: 0, y: 24 }}
               transition={{ type: 'spring', stiffness: 280, damping: 26 }}
-              className="relative w-full sm:max-w-[440px] collab-modal rounded-t-[28px] sm:rounded-[32px] overflow-hidden"
+              className="relative w-full max-w-[360px] lg:max-w-[400px] collab-modal rounded-[28px] overflow-hidden"
             >
               <div className="collab-shimmer" />
 
               {/* Image section */}
-              <div className="relative h-[200px] sm:h-[260px] w-full overflow-hidden">
+              <div className="relative h-[180px] sm:h-[220px] lg:h-[200px] w-full overflow-hidden">
                 <Image
                   src={adData.imageUrl}
                   alt="Partner"
@@ -266,10 +268,10 @@ export default function BusinessCollabAd() {
                   </div>
                   <button
                     onClick={handleClose}
-                    className="collab-close p-2 rounded-full text-white/40 hover:text-white/80"
+                    className="collab-close p-2.5 rounded-full text-red-400 hover:text-red-300"
                     aria-label="Close"
                   >
-                    <X size={16} />
+                    <X size={18} />
                   </button>
                 </div>
 
@@ -287,20 +289,20 @@ export default function BusinessCollabAd() {
               </div>
 
               {/* Text content */}
-              <div className="px-6 sm:px-9 pt-6 sm:pt-8 pb-7 sm:pb-9">
+              <div className="px-6 sm:px-9 pt-5 sm:pt-6 lg:pt-5 pb-6 sm:pb-8 lg:pb-6">
                 <p className="collab-font-mono text-[8px] tracking-[0.4em] uppercase text-white/20 mb-4 sm:mb-5">
                   Sponsored · Exclusive
                 </p>
 
-                <h2 className="collab-font-display text-[30px] sm:text-[38px] font-light italic text-white leading-[0.88] tracking-tight mb-3 sm:mb-4">
+                <h2 className="collab-font-display text-[28px] sm:text-[34px] font-light italic text-white leading-[0.88] tracking-tight mb-2 sm:mb-3">
                   {adData.title}
                 </h2>
 
-                <p className="collab-font-mono text-[10px] text-white/30 tracking-wider leading-relaxed mb-6 sm:mb-8 font-light">
+                <p className="collab-font-mono text-[10px] text-white/30 tracking-wider leading-relaxed mb-4 sm:mb-6 font-light">
                   {adData.subtitle}
                 </p>
 
-                <div className="flex items-center gap-4 mb-6 sm:mb-8">
+                <div className="flex items-center gap-4 mb-4 sm:mb-6">
                   <div
                     className="h-[1px] flex-1"
                     style={{ background: 'linear-gradient(90deg, rgba(200,160,80,0.4), transparent)' }}
@@ -317,7 +319,7 @@ export default function BusinessCollabAd() {
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={handleClose}
-                  className="collab-cta group w-full py-[15px] sm:py-[18px] rounded-2xl flex items-center justify-center gap-3"
+                  className="collab-cta group w-full py-[13px] sm:py-[16px] rounded-2xl flex items-center justify-center gap-3"
                 >
                   <span className="collab-font-mono text-[10px] tracking-[0.3em] uppercase text-black font-medium">
                     View Partnership
