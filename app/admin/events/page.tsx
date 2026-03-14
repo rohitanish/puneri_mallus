@@ -10,8 +10,10 @@ import { createBrowserClient } from '@supabase/ssr';
 import { logAdminActivity } from '@/app/admin/action';
 import { useAlert } from '@/context/AlertContext';
 import TribeConfirm from '@/components/TribeConfirm';
+import TribeCalendar from '@/components/ui/TribeCalendar';
+import TribeTimePicker from '@/components/ui/TribeTimePicker'; // Import Custom Calendar
+import { AnimatePresence } from 'framer-motion';
 
-// --- TYPE DEFINITION ---
 interface TribeEvent {
   _id: string;
   title: string;
@@ -27,7 +29,6 @@ interface TribeEvent {
 }
 
 export default function AdminEventsPage() {
-  // --- STATES ---
   const [events, setEvents] = useState<TribeEvent[]>([]);
   const [isEditingId, setIsEditingId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -36,12 +37,14 @@ export default function AdminEventsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const { showAlert } = useAlert();
   
-  // --- REFS & DIALOGS ---
-  const dateInputRef = useRef<HTMLInputElement>(null);
+  // --- REFS & CALENDAR STATES ---
   const timeInputRef = useRef<HTMLInputElement>(null);
+  const dateContainerRef = useRef<HTMLDivElement>(null); // Anchor for TribeCalendar
+  const [showCalendar, setShowCalendar] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<{id: string, title: string} | null>(null);
-
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const timeContainerRef = useRef<HTMLDivElement>(null);
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -52,7 +55,6 @@ export default function AdminEventsPage() {
     ticketUrl: '', category: 'CULTURAL', image: '', featured: false, description: '' 
   });
 
-  // --- DATA HYDRATION ---
   const fetchFromMongo = async () => {
     setLoading(true);
     try {
@@ -68,10 +70,8 @@ export default function AdminEventsPage() {
 
   useEffect(() => { fetchFromMongo(); }, []);
 
-  // --- AUTOMATIC CHRONOLOGICAL & SEARCH FILTERING ---
   const { upcoming, past } = useMemo(() => {
     const now = new Date();
-
     const filtered = events.filter(event => 
       event.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (event.category && event.category.toLowerCase().includes(searchQuery.toLowerCase())) ||
@@ -80,7 +80,6 @@ export default function AdminEventsPage() {
 
     return filtered.reduce((acc, event) => {
       const eventDateTime = new Date(`${event.date} ${event.time}`);
-      
       if (isNaN(eventDateTime.getTime()) || eventDateTime >= now) {
         acc.upcoming.push(event);
       } else {
@@ -90,7 +89,6 @@ export default function AdminEventsPage() {
     }, { upcoming: [] as TribeEvent[], past: [] as TribeEvent[] });
   }, [events, searchQuery]);
 
-  // --- IMAGE LOGIC ---
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     try {
       const file = e.target.files?.[0];
@@ -109,7 +107,6 @@ export default function AdminEventsPage() {
     }
   };
 
-  // --- CRUD OPERATIONS ---
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.date || !form.time) {
@@ -145,31 +142,26 @@ export default function AdminEventsPage() {
     }
   };
 
-  // --- FEATURED GATEKEEPER LOGIC ---
   const toggleFeatured = async (event: TribeEvent) => {
     if (event.featured) {
       executeToggle(event);
       return;
     }
-
     const now = new Date();
     const eventDateTime = new Date(`${event.date} ${event.time}`);
     const isUpcoming = isNaN(eventDateTime.getTime()) || eventDateTime >= now;
 
     if (isUpcoming) {
-      const currentFeaturedUpcoming = upcoming.filter(e => e.featured).length;
-      if (currentFeaturedUpcoming >= 2) {
+      if (upcoming.filter(e => e.featured).length >= 2) {
         showAlert("LIMIT REACHED: Max 2 Featured Upcoming events allowed.", "error");
         return;
       }
     } else {
-      const currentFeaturedPast = past.filter(e => e.featured).length;
-      if (currentFeaturedPast >= 3) {
+      if (past.filter(e => e.featured).length >= 3) {
         showAlert("LIMIT REACHED: Max 3 Featured Past events allowed.", "error");
         return;
       }
     }
-
     executeToggle(event);
   };
 
@@ -205,14 +197,12 @@ export default function AdminEventsPage() {
     setIsEditingId(null);
   };
 
-  // --- DATE/TIME HELPERS ---
-  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const raw = e.target.value;
-    if (!raw) return;
-    const formatted = new Date(raw).toLocaleDateString('en-US', { 
+  const handleDateSelect = (date: string) => {
+    const formatted = new Date(date).toLocaleDateString('en-US', { 
       month: 'short', day: 'numeric', year: 'numeric'
     }).toUpperCase();
     setForm({ ...form, date: formatted });
+    setShowCalendar(false);
   };
 
   const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -232,7 +222,6 @@ export default function AdminEventsPage() {
   );
 
   return (
-    /* Increased top padding from pt-32 to pt-48 to clear fixed Navbar */
     <div className="min-h-screen bg-black pt-48 pb-20 px-6 lg:px-16 text-white selection:bg-brandRed/30">
       <TribeConfirm 
         isOpen={confirmOpen}
@@ -246,8 +235,6 @@ export default function AdminEventsPage() {
       />
 
       <div className="max-w-[1600px] mx-auto grid grid-cols-1 lg:grid-cols-12 gap-12">
-        
-        {/* LEFT: FORM INTERFACE */}
         <div className="lg:col-span-4">
           <div className="bg-zinc-950 p-8 rounded-[40px] border border-white/5 sticky top-32 shadow-2xl">
             <div className="flex justify-between items-center mb-8">
@@ -300,25 +287,57 @@ export default function AdminEventsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div className="space-y-1">
                   <label className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600 ml-2">Calendar</label>
-                  <div className="relative group h-16 cursor-pointer" onClick={() => dateInputRef.current?.showPicker()}>
-                    <div className="absolute inset-0 bg-zinc-900 border border-white/5 rounded-2xl flex items-center px-4 group-hover:border-brandRed/50 transition-all pointer-events-none z-0">
+                  <div className="relative" ref={dateContainerRef}>
+                    <div 
+                      className="bg-zinc-900 border border-white/5 rounded-2xl h-16 flex items-center px-4 cursor-pointer hover:border-brandRed/50 transition-all relative z-0" 
+                      onClick={() => setShowCalendar(!showCalendar)}
+                    >
                       <Calendar size={16} className="text-brandRed" />
                       <span className="ml-3 text-[11px] font-black uppercase tracking-widest truncate">{form.date || "SET DATE"}</span>
                     </div>
-                    <input ref={dateInputRef} type="date" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onChange={handleDateChange} />
+
+                    <AnimatePresence>
+                      {showCalendar && (
+                        <>
+                          <div className="fixed inset-0 z-[90]" onClick={() => setShowCalendar(false)} />
+                          <TribeCalendar 
+  value={form.date} 
+  onChange={handleDateSelect} 
+  onClose={() => setShowCalendar(false)}
+  anchorRef={dateContainerRef} // ✅ CORRECT PROP NAME
+/>
+                        </>
+                      )}
+                    </AnimatePresence>
                   </div>
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600 ml-2">Clock</label>
-                  <div className="relative group h-16 cursor-pointer" onClick={() => timeInputRef.current?.showPicker()}>
-                    <div className="absolute inset-0 bg-zinc-900 border border-white/5 rounded-2xl flex items-center px-4 group-hover:border-brandRed/50 transition-all pointer-events-none z-0">
-                      <Clock size={16} className="text-brandRed" />
-                      <span className="ml-3 text-[11px] font-black uppercase tracking-widest truncate">{form.time || "SET TIME"}</span>
-                    </div>
-                    <input ref={timeInputRef} type="time" className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" onChange={handleTimeChange} />
-                  </div>
-                </div>
+  <label className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600 ml-2">Clock</label>
+  <div className="relative" ref={timeContainerRef}>
+    <div 
+      className="bg-zinc-900 border border-white/5 rounded-2xl h-16 flex items-center px-4 cursor-pointer hover:border-brandRed/50 transition-all relative z-0" 
+      onClick={() => setShowTimePicker(!showTimePicker)}
+    >
+      <Clock size={16} className="text-brandRed" />
+      <span className="ml-3 text-[11px] font-black uppercase tracking-widest truncate">{form.time || "SET TIME"}</span>
+    </div>
+
+    <AnimatePresence>
+      {showTimePicker && (
+        <>
+          <div className="fixed inset-0 z-[90]" onClick={() => setShowTimePicker(false)} />
+          <TribeTimePicker 
+            value={form.time} 
+            onChange={(time) => setForm({...form, time})} 
+            onClose={() => setShowTimePicker(false)}
+            anchorRef={timeContainerRef}
+          />
+        </>
+      )}
+    </AnimatePresence>
+  </div>
+</div>
               </div>
 
               <div className="space-y-1 text-[10px]">
@@ -367,7 +386,6 @@ export default function AdminEventsPage() {
           </div>
         </div>
 
-        {/* RIGHT: DATABASE FEED */}
         <div className="lg:col-span-8 space-y-16">
           <div className="flex justify-between items-end border-b border-white/5 pb-8">
             <h2 className="text-5xl font-black uppercase italic tracking-tighter leading-none">Live <span className="text-brandRed">Terminal .</span></h2>

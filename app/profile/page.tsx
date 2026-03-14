@@ -1,11 +1,13 @@
 "use client";
-import { useEffect, useState, useRef } from 'react';
+import { useEffect, useState, useRef, useMemo } from 'react'; // Added useMemo
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
 import { 
   User, Mail, Lock, Camera, Check, AlertCircle, 
   Loader2, Shield, Trash2, MapPin, Phone, Briefcase, Calendar, AlertTriangle
 } from 'lucide-react';
+import TribeCalendar from '@/components/ui/TribeCalendar';
+import { AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 
 export default function ProfilePage() {
@@ -29,8 +31,28 @@ export default function ProfilePage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isPurging, setIsPurging] = useState(false);
 
+  // UI STATES
   const router = useRouter();
-  const dateInputRef = useRef<HTMLInputElement>(null);
+  const [showCalendar, setShowCalendar] = useState(false);
+  const dateContainerRef = useRef<HTMLDivElement>(null);
+
+  // --- AGE LOGIC START ---
+  const maxDobDate = useMemo(() => {
+    const date = new Date();
+    date.setFullYear(date.getFullYear() - 16);
+    return date.toISOString().split("T")[0];
+  }, []);
+
+  const isAdult = useMemo(() => {
+    if (!dob) return false;
+    const birthDate = new Date(dob);
+    const today = new Date();
+    let age = today.getFullYear() - birthDate.getFullYear();
+    const m = today.getMonth() - birthDate.getMonth();
+    if (m < 0 || (m === 0 && today.getDate() < birthDate.getDate())) age--;
+    return age >= 16;
+  }, [dob]);
+  // --- AGE LOGIC END ---
 
   const PUNE_AREAS = [
     "Pune", "Shivajinagar", "Kothrud", "Karve Nagar", "Erandwane", "Deccan", 
@@ -78,7 +100,17 @@ export default function ProfilePage() {
     fetchUserData();
   }, []);
 
+  const handleDateSelect = (date: string) => {
+    setDob(date);
+    setShowCalendar(false);
+  };
+
   const handleUpdateProfile = async () => {
+    if (dob && !isAdult) {
+      setMessage({ type: 'error', text: 'UPDATE DENIED: YOU MUST BE 16 OR OLDER.' });
+      return;
+    }
+
     setUpdating(true);
     setMessage({ type: '', text: '' });
     const isEmailChanged = email !== user.email;
@@ -203,13 +235,11 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-black text-white pt-32 pb-32 px-6 relative overflow-hidden">
       
-      {/* 40% OPACITY BACKGROUND */}
       <div className="absolute inset-0 z-0">
         <Image src="/events/signup.jpg" alt="BG" fill className="object-cover opacity-40" priority />
         <div className="absolute inset-0 bg-black/60" />
       </div>
 
-      {/* DELETE MODAL */}
       {showDeleteModal && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 backdrop-blur-md">
           <div className="absolute inset-0 bg-black/80" onClick={() => setShowDeleteModal(false)} />
@@ -247,7 +277,6 @@ export default function ProfilePage() {
 
       <div className="max-w-4xl mx-auto relative z-10">
         
-        {/* PROFILE HEADER CARD */}
         <div className="flex flex-col md:flex-row items-center gap-10 mb-12 bg-white/[0.03] backdrop-blur-3xl p-10 rounded-[50px] border border-white/10 relative group">
           <div className="relative">
             <div className="w-36 h-36 rounded-full bg-zinc-900 border-2 border-brandRed/30 overflow-hidden flex items-center justify-center shadow-2xl transition-transform duration-500 group-hover:scale-[1.02]">
@@ -273,7 +302,6 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* MESSAGES */}
         {message.text && (
           <div className={`mb-8 p-5 rounded-2xl flex items-center gap-3 font-black uppercase text-[10px] tracking-widest border animate-in fade-in slide-in-from-top-4 ${message.type === 'success' ? 'bg-green-500/10 text-green-400 border-green-500/20' : 'bg-brandRed/10 text-brandRed border-brandRed/20'}`}>
             {message.type === 'success' ? <Check size={18} /> : <AlertCircle size={18} />}
@@ -281,7 +309,6 @@ export default function ProfilePage() {
           </div>
         )}
 
-        {/* SETTINGS FORM */}
         <div className="bg-white/[0.03] backdrop-blur-3xl p-10 rounded-[50px] border border-white/10 shadow-2xl">
           <h2 className="text-2xl font-black italic uppercase tracking-tighter mb-8 flex items-center gap-3">
             <span className="w-8 h-[2px] bg-brandRed" /> Update Identity
@@ -332,20 +359,51 @@ export default function ProfilePage() {
 
             <div className="space-y-1.5">
               <label className="text-[9px] font-black uppercase tracking-widest text-zinc-500 ml-2">Birth Date</label>
-              <div className="relative bg-black/40 border border-white/10 p-5 rounded-2xl flex items-center gap-3 cursor-pointer group" onClick={() => dateInputRef.current?.showPicker()}>
-                <Calendar size={14} className="text-brandRed group-hover:scale-110 transition-transform" />
-                <span className={`font-bold text-sm ${dob ? "text-white" : "text-zinc-600"}`}>{dob || "DD-MM-YYYY"}</span>
-                <input ref={dateInputRef} type="date" className="absolute inset-0 opacity-0 cursor-pointer" value={dob} onChange={(e) => setDob(e.target.value)} />
+              <div className="relative" ref={dateContainerRef}>
+                <div 
+                  className={`relative bg-black/40 border p-5 rounded-2xl flex items-center gap-3 cursor-pointer group transition-all ${!isAdult && dob ? 'border-brandRed/50' : 'border-white/10'}`} 
+                  onClick={() => setShowCalendar(!showCalendar)}
+                >
+                  <Calendar size={14} className="text-brandRed group-hover:scale-110 transition-transform" />
+                  <span className={`font-bold text-sm ${dob ? "text-white" : "text-zinc-600"}`}>
+                    {dob ? new Date(dob).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "NOT SET"}
+                  </span>
+                </div>
+
+                <AnimatePresence>
+                  {showCalendar && (
+                    <>
+                      <div className="fixed inset-0 z-[90]" onClick={() => setShowCalendar(false)} />
+                      <TribeCalendar 
+                        value={dob} 
+                        onChange={handleDateSelect} 
+                        onClose={() => setShowCalendar(false)}
+                        anchorRef={dateContainerRef}
+                        maxDate={maxDobDate} // Restricted to 16+ years
+                      />
+                    </>
+                  )}
+                </AnimatePresence>
               </div>
+              
+              {/* WARNING TEXT */}
+              {!isAdult && dob && (
+                <p className="text-[8px] font-black uppercase text-brandRed tracking-widest ml-4 mt-2 animate-pulse">
+                  Restriction: Membership requires age 16+
+                </p>
+              )}
             </div>
           </div>
 
-          <button onClick={handleUpdateProfile} disabled={updating} className="w-full mt-12 py-6 bg-brandRed text-white font-black uppercase tracking-[0.4em] rounded-3xl hover:bg-white hover:text-black transition-all shadow-xl active:scale-[0.98] text-[12px] disabled:opacity-50">
+          <button 
+            onClick={handleUpdateProfile} 
+            disabled={updating || (!isAdult && dob ? true : false)}
+            className="w-full mt-12 py-6 bg-brandRed text-white font-black uppercase tracking-[0.4em] rounded-3xl hover:bg-white hover:text-black transition-all shadow-xl active:scale-[0.98] text-[12px] disabled:opacity-50 disabled:cursor-not-allowed"
+          >
             {updating ? 'SYNCING DATA...' : 'Update Profile'}
           </button>
         </div>
 
-        {/* SECURITY & DELETE */}
         <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-8">
            <div className="bg-white/[0.03] backdrop-blur-3xl p-10 rounded-[40px] border border-white/10 shadow-xl">
               <h3 className="text-xs font-black uppercase tracking-[0.3em] mb-6 flex items-center gap-2">

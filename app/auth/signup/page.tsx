@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-
+import TribeCalendar from '@/components/ui/TribeCalendar';
 // --- DUAL TESTING TOGGLES ---
 const DEV_MODE_PHONE = true; // Set to false for real SMS OTP
 const DEV_MODE_EMAIL = true; // Set to false to force Email Activation link
@@ -34,7 +34,8 @@ export default function SignupPage() {
   const [timer, setTimer] = useState(0);
   const router = useRouter();
   const dateInputRef = useRef<HTMLInputElement>(null);
-
+  const [showCalendar, setShowCalendar] = useState(false);
+  const dateContainerRef = useRef<HTMLDivElement>(null);
   const PUNE_AREAS = [
     "Pune", "Shivajinagar", "Kothrud", "Karve Nagar", "Erandwane", "Deccan", 
     "Sadashiv Peth", "Swargate", "Bibwewadi", "Dhankawadi", "Sahakar Nagar", 
@@ -137,7 +138,7 @@ export default function SignupPage() {
     setLoading(false);
   };
 
-  const handleSignup = async (e: React.FormEvent) => {
+ const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!isPhoneVerified) {
@@ -153,7 +154,8 @@ export default function SignupPage() {
     setLoading(true);
     setMessage('');
 
-    const { error } = await supabase.auth.signUp({
+    // Destructure 'data' along with 'error' to check identities
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       phone: `+91${phone}`,
@@ -177,6 +179,15 @@ export default function SignupPage() {
       }
       setLoading(false);
     } else {
+      // --- DUPLICATE ACCOUNT CHECK ---
+      // If Supabase returns a user but the identities array is empty, 
+      // it means the email or phone is already registered.
+      if (data.user && data.user.identities && data.user.identities.length === 0) {
+        setMessage("ACCOUNT ALREADY EXISTS. PLEASE SIGN IN INSTEAD.");
+        setLoading(false);
+        return;
+      }
+
       if (DEV_MODE_EMAIL) {
         setMessage('REGISTRATION SUCCESSFUL! ENTERING...');
         setTimeout(() => router.push('/auth/login'), 2500);
@@ -246,32 +257,46 @@ export default function SignupPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="relative group">
-                  <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={14} />
-                  <input 
-                    type="text" placeholder="PROFESSION" required
-                    className="w-full bg-black/40 border border-white/10 p-4 pl-11 rounded-xl font-bold text-[10px] tracking-widest focus:border-brandRed transition-all outline-none text-white"
-                    value={profession} onChange={(e) => setProfession(e.target.value)}
-                  />
-                </div>
+  <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={14} />
+  <input 
+    type="text" 
+    placeholder="PROFESSION" 
+    required
+    
+    className="w-full bg-black/40 border border-white/10 p-4 pl-11 rounded-xl font-bold text-[10px] tracking-widest focus:border-brandRed transition-all outline-none text-white uppercase"
+    value={profession} 
+    
+    onChange={(e) => setProfession(e.target.value.toUpperCase())}
+  />
+</div>
                 
-                <div 
-                  className="relative group cursor-pointer bg-black/40 border border-white/10 p-4 rounded-xl flex items-center gap-3 focus-within:border-brandRed transition-all"
-                  onClick={() => dateInputRef.current?.showPicker()}
-                >
-                  <CalendarIcon size={14} className={dob ? "text-brandRed" : "text-white/20"} />
-                  <span className={`font-bold text-[9px] tracking-widest uppercase truncate ${dob ? "text-white" : "text-zinc-500"}`}>
-                    {dob ? new Date(dob).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "BIRTH DATE"}
-                  </span>
-                  <input 
-                    ref={dateInputRef}
-                    type="date" 
-                    required
-                    max={maxDobDate} 
-                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
-                    value={dob} 
-                    onChange={(e) => setDob(e.target.value)}
-                  />
-                </div>
+                <div className="relative" ref={dateContainerRef}>
+  <div 
+    className="relative group cursor-pointer bg-black/40 border border-white/10 p-4 rounded-xl flex items-center gap-3 focus-within:border-brandRed transition-all"
+    onClick={() => setShowCalendar(!showCalendar)}
+  >
+    <CalendarIcon size={14} className={dob ? "text-brandRed" : "text-white/20"} />
+    <span className={`font-bold text-[9px] tracking-widest uppercase truncate ${dob ? "text-white" : "text-zinc-500"}`}>
+      {dob ? new Date(dob).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "BIRTH DATE"}
+    </span>
+  </div>
+
+  <AnimatePresence>
+    {showCalendar && (
+      <>
+        <div className="fixed inset-0 z-[9998]" onClick={() => setShowCalendar(false)} />
+        <TribeCalendar 
+          value={dob} 
+          onChange={(date) => setDob(date)} 
+          onClose={() => setShowCalendar(false)} 
+          maxDate={maxDobDate}
+          // Pass the position of the input field
+          anchorRef={dateContainerRef}
+        />
+      </>
+    )}
+  </AnimatePresence>
+</div>
               </div>
 
               <div className="relative group">

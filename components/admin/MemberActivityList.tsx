@@ -5,7 +5,7 @@ import { useState, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { revokeAdminAccess } from '@/app/admin/action';
 import { useAlert } from '@/context/AlertContext'; 
-import TribeConfirm from '@/components/TribeConfirm'; // Ensure this component is created
+import TribeConfirm from '@/components/TribeConfirm';
 
 interface AuditLog {
   target_email: string;
@@ -28,7 +28,6 @@ export default function MemberActivityList({ admins }: { admins: Admin[] }) {
   const [searchQuery, setSearchQuery] = useState("");
   const [isRevoking, setIsRevoking] = useState<string | null>(null);
   
-  // States for the Dialog Box
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [targetEmail, setTargetEmail] = useState("");
 
@@ -38,7 +37,6 @@ export default function MemberActivityList({ admins }: { admins: Admin[] }) {
     );
   }, [admins, searchQuery]);
 
-  // Step 1: Open the Dialog
   const initiateRevoke = (email: string) => {
     if (FOUNDER_EMAILS.includes(email)) {
       showAlert("Root operators cannot be revoked via this terminal.", "error");
@@ -48,7 +46,6 @@ export default function MemberActivityList({ admins }: { admins: Admin[] }) {
     setConfirmOpen(true);
   };
 
-  // Step 2: Execute after Dialog Confirmation
   const handleRevokeExecute = async () => {
     setConfirmOpen(false);
     setIsRevoking(targetEmail);
@@ -72,7 +69,6 @@ export default function MemberActivityList({ admins }: { admins: Admin[] }) {
   return (
     <div className="space-y-8 relative">
       
-      {/* TRIBE DIALOG BOX */}
       <TribeConfirm 
         isOpen={confirmOpen}
         title="Revoke Access"
@@ -139,9 +135,12 @@ export default function MemberActivityList({ admins }: { admins: Admin[] }) {
                     <h4 className="text-sm font-black text-white truncate max-w-[150px] tracking-tight">{admin.email}</h4>
                     {isFounder && <span className="text-[7px] bg-amber-500/10 border border-amber-500/20 text-amber-500 px-2 py-0.5 rounded-full font-black uppercase tracking-widest">Founder</span>}
                   </div>
-                  <div className="flex items-center gap-2 text-zinc-600">
-                    <Clock size={10} />
-                    <span className="text-[8px] font-bold uppercase tracking-widest" suppressHydrationWarning>Node Linked {new Date(admin.created_at).toLocaleDateString()}</span>
+                  <div className="flex items-center gap-2 text-zinc-400 mt-1"> {/* Increased contrast */}
+                    <Clock size={12} className="text-brandRed" />
+                    {/* UPDATED DATE SIZE */}
+                    <span className="text-[10px] font-black uppercase tracking-widest" suppressHydrationWarning>
+                      Node Linked {new Date(admin.created_at).toLocaleDateString()}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -172,8 +171,15 @@ export default function MemberActivityList({ admins }: { admins: Admin[] }) {
                         <p className={`text-[10px] font-bold uppercase leading-tight ${config.color}`}>
                           {config.label} <span className="text-white ml-2">{log.target_email}</span>
                         </p>
-                        <p className="text-[7px] text-zinc-600 font-black mt-2 uppercase tracking-tighter" suppressHydrationWarning>
-                          {new Date(log.created_at).toLocaleString()}
+                        {/* UPDATED LOG DATE SIZE & VISIBILITY */}
+                        <p className="text-[10px] text-zinc-400 font-bold mt-2 uppercase tracking-tight" suppressHydrationWarning>
+                          {new Date(log.created_at).toLocaleString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric', 
+                            hour: '2-digit', 
+                            minute: '2-digit',
+                            hour12: true 
+                          })}
                         </p>
                       </div>
                     );

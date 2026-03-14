@@ -38,7 +38,7 @@ export default function Navbar() {
   useEffect(() => {
     const checkEvents = async () => {
       try {
-        const res = await fetch('/api/events/manage'); // Calling the GET method we added
+        const res = await fetch('/api/events/manage');
         const data = await res.json();
         setHasUpcoming(data.hasUpcoming);
       } catch (e) {
@@ -73,7 +73,6 @@ export default function Navbar() {
 }`}>
         <div className="w-full pl-4 pr-4 sm:px-5 md:px-8 xl:px-10 flex items-center justify-between gap-3 py-3">
 
-          {/* LOGO — inside the row, no overflow possible */}
           <Link href="/" className="block group flex-shrink-0 py-2">
             <Image
               src="/logo.png"
@@ -83,14 +82,13 @@ export default function Navbar() {
               className={`object-contain object-left transition-all duration-300 group-hover:scale-105
                 drop-shadow-[0_0_20px_rgba(255,0,0,0.4)] w-auto ${
                 scrolled
-                  ? 'h-20 sm:h-24 md:h-28' // Increased height when scrolling
-                : 'h-24 sm:h-28 md:h-32 lg:h-36' // Original height when at the top
+                  ? 'h-20 sm:h-24 md:h-28'
+                : 'h-24 sm:h-28 md:h-32 lg:h-36'
               }`}
               priority
             />
           </Link>
 
-          {/* DESKTOP LINKS — centered */}
           <div className="hidden lg:flex items-center gap-5 xl:gap-8 2xl:gap-10 flex-1 justify-center">
             {navLinks.map((link) => {
               const isActive = pathname === link.href;
@@ -101,7 +99,6 @@ export default function Navbar() {
                   }`}>
                     {link.name}
                   </span>
-                  {/* DYNAMIC NOTIFICATION DOT */}
       {link.name === 'Events' && hasUpcoming && (
         <span className="absolute -top-0.5 -right-2 flex h-2 w-2">
           <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brandRed opacity-75"></span>
@@ -119,9 +116,7 @@ export default function Navbar() {
             })}
           </div>
 
-          {/* AUTH + HAMBURGER */}
 <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
-  {/* Desktop auth */}
   <div className="hidden lg:flex items-center gap-4">
     {user ? (
       <div className="flex items-center gap-4 relative group">
@@ -129,7 +124,6 @@ export default function Navbar() {
           href="/profile"
           className="flex items-center gap-3 bg-white/5 backdrop-blur-md border border-white/10 p-1.5 pr-4 xl:pr-5 rounded-full hover:border-brandRed transition-all"
         >
-          {/* PROFILE IMAGE OR DEFAULT ICON */}
           <div className="w-8 h-8 xl:w-9 xl:h-9 bg-brandRed rounded-full flex items-center justify-center shadow-[0_0_15px_rgba(255,0,0,0.4)] overflow-hidden">
             {user.user_metadata?.avatar_url ? (
               <img 
@@ -145,7 +139,6 @@ export default function Navbar() {
           <div className="flex flex-col text-left">
             <span className="text-[7px] font-black text-zinc-500 uppercase tracking-widest leading-none mb-1">Active Member</span>
             <span className="text-[10px] font-black text-white uppercase italic leading-none truncate max-w-[100px]">
-              {/* SHOWING ONLY THE FIRST NAME */}
               {user.user_metadata?.full_name?.split(' ')[0] || 'Tribe User'}
             </span>
           </div>
@@ -166,7 +159,6 @@ export default function Navbar() {
               )}
             </div>
 
-            {/* Mobile: Join button (not logged in) */}
             {!user && (
               <Link href="/auth/login" className="lg:hidden">
                 <button className="px-3 py-2 rounded-full bg-brandRed text-white font-black uppercase text-[9px] tracking-widest active:scale-95 whitespace-nowrap">
@@ -175,7 +167,6 @@ export default function Navbar() {
               </Link>
             )}
 
-            {/* HAMBURGER */}
             <button
               onClick={() => setIsMobileMenuOpen(true)}
               className="lg:hidden flex items-center justify-center w-9 h-9 sm:w-11 sm:h-11 bg-zinc-900 rounded-xl border border-white/20 text-white hover:text-brandRed hover:border-brandRed transition-all active:scale-95 flex-shrink-0 mr-1"
@@ -188,7 +179,6 @@ export default function Navbar() {
         </div>
       </nav>
 
-      {/* MOBILE SIDEBAR */}
       <AnimatePresence>
         {isMobileMenuOpen && (
           <>
@@ -209,7 +199,7 @@ export default function Navbar() {
                 </button>
               </div>
 
-              <div className="flex flex-col gap-5 sm:gap-6 flex-1">
+              <div className="flex flex-col gap-5 sm:gap-6 flex-1 overflow-y-auto">
                 {navLinks.map((link) => {
                   const isActive = pathname === link.href;
                   return (
@@ -221,7 +211,6 @@ export default function Navbar() {
                       }`}
                     >
                       {link.name.toUpperCase()}
-                     {/* GLOWING LINE INDICATOR FOR MOBILE */}
   {link.name === 'Events' && hasUpcoming && (
     <motion.div 
       animate={{ opacity: [0.4, 1, 0.4] }}
@@ -234,14 +223,35 @@ export default function Navbar() {
                 })}
               </div>
 
-              <div className="pt-6 sm:pt-8 border-t border-white/10 space-y-4">
+              <div className="pt-6 sm:pt-8 border-t border-white/10 space-y-5">
                 {user ? (
-                  <button
-                    onClick={handleLogout}
-                    className="flex items-center gap-2 text-[10px] font-black uppercase text-zinc-400 hover:text-brandRed transition-all"
-                  >
-                    <LogOut size={14} /> Sign Out
-                  </button>
+                  <div className="flex flex-col gap-4">
+                    {/* MOBILE PROFILE LINK */}
+                    <Link 
+                      href="/profile" 
+                      onClick={() => setIsMobileMenuOpen(false)}
+                      className="flex items-center gap-4 bg-white/5 p-4 rounded-2xl border border-white/10"
+                    >
+                      <div className="w-10 h-10 bg-brandRed rounded-full flex items-center justify-center overflow-hidden">
+                        {user.user_metadata?.avatar_url ? (
+                          <img src={user.user_metadata.avatar_url} alt="Profile" className="w-full h-full object-cover" />
+                        ) : (
+                          <User size={18} className="text-white" />
+                        )}
+                      </div>
+                      <div className="flex flex-col">
+                        <span className="text-[8px] font-black text-zinc-500 uppercase tracking-widest">Active Member</span>
+                        <span className="text-sm font-black text-white uppercase italic">{user.user_metadata?.full_name || 'Tribe User'}</span>
+                      </div>
+                    </Link>
+
+                    <button
+                      onClick={handleLogout}
+                      className="flex items-center gap-2 text-[10px] font-black uppercase text-zinc-500 hover:text-brandRed transition-all px-2"
+                    >
+                      <LogOut size={14} /> Sign Out
+                    </button>
+                  </div>
                 ) : (
                   <Link href="/auth/login" onClick={() => setIsMobileMenuOpen(false)}>
                     <button className="w-full py-3 rounded-full bg-brandRed text-white font-black uppercase text-[10px] tracking-widest">
@@ -249,12 +259,12 @@ export default function Navbar() {
                     </button>
                   </Link>
                 )}
-                <div className="flex gap-4 pt-2">
+                <div className="flex gap-4 pt-2 px-2">
                   <Instagram size={20} className="text-zinc-500 hover:text-brandRed cursor-pointer transition-colors" />
                   <Facebook size={20} className="text-zinc-500 hover:text-brandRed cursor-pointer transition-colors" />
                   <MessageCircle size={20} className="text-zinc-500 hover:text-brandRed cursor-pointer transition-colors" />
                 </div>
-                <p className="text-[8px] font-black text-zinc-700 tracking-[0.3em] uppercase">© 2026 Puneri Mallus Hub</p>
+                <p className="text-[8px] font-black text-zinc-700 tracking-[0.3em] uppercase px-2">© 2026 Puneri Mallus Hub</p>
               </div>
             </motion.div>
           </>

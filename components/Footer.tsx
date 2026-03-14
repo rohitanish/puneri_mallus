@@ -1,11 +1,53 @@
 "use client";
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { Instagram, Facebook, MessageCircle, ArrowUpRight } from 'lucide-react';
+import { Instagram, Facebook, MessageCircle, ArrowUpRight, Shield } from 'lucide-react';
+import { createBrowserClient } from '@supabase/ssr';
 
 export default function Footer() {
   const pathname = usePathname();
+  const [isAuthorized, setIsAuthorized] = useState(false);
+  
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
+  useEffect(() => {
+    // Helper function to check the whitelist
+    const checkEmail = async (email: string | undefined) => {
+      if (!email) {
+        setIsAuthorized(false);
+        return;
+      }
+      
+      const { data, error } = await supabase
+        .from('authorized_admins')
+        .select('email')
+        .eq('email', email.toLowerCase())
+        .single();
+
+      setIsAuthorized(!!data && !error);
+    };
+
+    // 1. Initial Check
+    supabase.auth.getUser().then(({ data }) => {
+      if (data?.user?.email) checkEmail(data.user.email);
+    });
+
+    // 2. Real-time Listener (Handles page loads and logins instantly)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user?.email) {
+        checkEmail(session.user.email);
+      } else {
+        setIsAuthorized(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [supabase]);
 
   if (pathname.startsWith('/admin')) return null;
 
@@ -25,14 +67,9 @@ export default function Footer() {
   ];
 
   return (
-    /* FIXED: Changed gradient to solid black and added high z-index */
     <footer className="relative z-50 bg-black border-t border-white/5">
       <div className="max-w-7xl mx-auto px-6 md:px-10 pt-20 pb-10">
-
-        {/* TOP ROW — Logo + Tagline left, Nav right */}
         <div className="flex flex-col md:flex-row justify-between gap-12 md:gap-8 pb-12">
-
-          {/* Logo + tagline */}
           <div className="flex flex-col gap-5">
             <Link href="/" className="inline-block group">
               <div className="relative h-48 w-[540px]">
@@ -51,8 +88,7 @@ export default function Footer() {
             </p>
           </div>
 
-          {/* Nav links */}
-          <nav className="grid grid-cols-2 sm:grid-cols-3 md:flex md:items-start gap-x-10 gap-y-4 md:pt-2">
+          <nav className="grid grid-cols-2 sm:grid-cols-3 md:flex md:items-start gap-x-10 gap-y-6 md:pt-2">
             {navLinks.map((link) => (
               <Link
                 key={link.name}
@@ -62,23 +98,31 @@ export default function Footer() {
                 {link.name}
               </Link>
             ))}
+            
+            {/* DYNAMIC TERMINAL LINK */}
+            {isAuthorized && (
+              <Link
+                href="/admin"
+                className="flex items-center gap-2 text-[12px] font-black uppercase tracking-[0.2em] text-brandRed hover:text-white transition-all group"
+              >
+                <Shield size={14} className="group-hover:scale-110 transition-transform" />
+                Terminal
+              </Link>
+            )}
           </nav>
         </div>
 
-        {/* BOTTOM ROW */}
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-6 pt-6 border-t border-white/5">
-
           <div className="flex flex-col gap-1.5">
             <span className="text-[11px] font-semibold uppercase tracking-[0.35em] text-zinc-600">
               © 2026 Puneri Mallus Hub
             </span>
             <span className="text-[12px] uppercase tracking-[0.3em] text-white">
-  Built by Rohit Anish
-</span>
+              Built by Rohit Anish
+            </span>
           </div>
 
           <div className="flex items-center gap-8">
-            {/* Social icons */}
             <div className="flex items-center gap-5">
               {socials.map((s) => (
                 <a
@@ -94,7 +138,6 @@ export default function Footer() {
               ))}
             </div>
 
-            {/* Legal links */}
             <div className="flex items-center gap-5">
               <Link href="/privacy" className="text-[10px] uppercase tracking-[0.25em] text-zinc-600 hover:text-white transition-colors">
                 Privacy
@@ -104,7 +147,6 @@ export default function Footer() {
               </Link>
             </div>
 
-            {/* Back to top */}
             <button
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
               className="hidden sm:flex items-center gap-1.5 text-[10px] uppercase tracking-[0.25em] text-zinc-600 hover:text-white transition-colors group"

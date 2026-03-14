@@ -17,7 +17,6 @@ export default async function MembersPage() {
     }
   );
 
-  // 1. Fetch data including 'action_type' for the activity history
   const { data: admins, error } = await supabase
     .from('authorized_admins')
     .select(`
@@ -30,17 +29,11 @@ export default async function MembersPage() {
       )
     `)
     .order('created_at', { ascending: false })
-  // 2. IMPORTANT: Order the NESTED logs by their creation date
-  .order('created_at', { referencedTable: 'admin_audit_logs', ascending: false });
-  // Debugging log for your terminal
-  console.log("MEMBERS_FETCH_DEBUG:", { 
-    count: admins?.length, 
-    firstLogType: admins?.[0]?.admin_audit_logs?.[0]?.action_type,
-    error 
-  });
+    .order('created_at', { referencedTable: 'admin_audit_logs', ascending: false });
 
   return (
-    <div className="min-h-screen bg-black text-white pt-40 pb-20 px-6 selection:bg-brandRed/30">
+    /* Increased top padding from pt-40 to pt-56 to clear Navbar */
+    <div className="min-h-screen bg-black text-white pt-56 pb-20 px-6 selection:bg-brandRed/30">
       <div className="max-w-7xl mx-auto">
         
         {/* Navigation & Header */}
@@ -81,6 +74,7 @@ export default async function MembersPage() {
                   </p>
                </div>
             ) : (
+              /* The logic for visible date size lives inside this component */
               <MemberActivityList admins={admins || []} />
             )}
           </div>
