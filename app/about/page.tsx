@@ -15,9 +15,16 @@ import {
   ArrowUpRight,
   Instagram,
   Facebook,
-  MessageCircle
+  MessageCircle,
+  Target, // NEW
+  Eye,    // NEW
+  Diamond // NEW
 } from 'lucide-react';
-
+interface TeamMember {
+  name: string;
+  role: string;
+  image: string;
+}
 const LaserDivider = () => (
   <div className="relative w-full h-px flex items-center justify-center overflow-visible my-32">
     <div className="absolute inset-x-0 h-px bg-gradient-to-r from-transparent via-brandRed/40 to-transparent" />
@@ -33,23 +40,48 @@ export default function AboutPage() {
   const [textIndex, setTextIndex] = useState(0);
   const [startTypewriter, setStartTypewriter] = useState(false);
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
-
+  const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   useEffect(() => {
-    async function fetchGallery() {
+    async function initializeTribeData() {
+      const timestamp = Date.now();
+      
       try {
-        const res = await fetch('/api/settings/gallery?t=' + Date.now());
-        const data = await res.json();
-        if (data && Array.isArray(data.images) && data.images.length > 0) {
-          setGalleryImages(data.images);
+        // Parallel Fetching for maximum performance
+        const [galleryRes, teamRes] = await Promise.all([
+          fetch(`/api/settings/gallery?t=${timestamp}`),
+          fetch(`/api/team?t=${timestamp}`)
+        ]);
+
+        // 1. Process Gallery Data
+        const galleryData = await galleryRes.json();
+        if (galleryData && Array.isArray(galleryData.images) && galleryData.images.length > 0) {
+          setGalleryImages(galleryData.images);
         } else {
-          setGalleryImages(['/gallery/img1.jpg', '/gallery/img2.jpg', '/gallery/img3.jpg', '/gallery/img4.jpg', '/gallery/img5.jpg', '/gallery/img6.jpg']);
+          // Fallback if MongoDB is empty
+          setGalleryImages([
+            '/gallery/img1.jpg', '/gallery/img2.jpg', '/gallery/img3.jpg', 
+            '/gallery/img4.jpg', '/gallery/img5.jpg', '/gallery/img6.jpg'
+          ]);
         }
+
+        // 2. Process Team Data
+        const teamData = await teamRes.json();
+        if (Array.isArray(teamData) && teamData.length > 0) {
+          setTeamMembers(teamData);
+        }
+
       } catch (err) {
-        console.error("Gallery Sync Error:", err);
-        setGalleryImages(['/gallery/img1.jpg', '/gallery/img2.jpg', '/gallery/img3.jpg', '/gallery/img4.jpg', '/gallery/img5.jpg', '/gallery/img6.jpg']);
+        console.error("Archive Synchronization Failure:", err);
+        
+        // Final fallback for gallery on network error
+        setGalleryImages([
+          '/gallery/img1.jpg', '/gallery/img2.jpg', '/gallery/img3.jpg', 
+          '/gallery/img4.jpg', '/gallery/img5.jpg', '/gallery/img6.jpg'
+        ]);
       }
     }
-    fetchGallery();
+
+    initializeTribeData();
   }, []);
 
   useEffect(() => {
@@ -128,6 +160,56 @@ export default function AboutPage() {
             <p className="text-2xl text-zinc-400 font-medium leading-relaxed italic max-w-xl">
               The heartbeat of the Kerala diaspora in Pune. A cultural bridge, a support system, and a family away from home.
             </p>
+          </div>
+        </section>
+
+        <LaserDivider />
+
+        {/* 2. CORE DIRECTIVES (MISSION, VISION, VALUES) */}
+        <section className="max-w-7xl mx-auto mb-40 px-6">
+          <div className="flex flex-col items-center mb-20 text-center">
+            <h2 className="text-5xl md:text-7xl font-black uppercase italic tracking-tighter">
+              Core <span className="text-brandRed">Directives</span>
+            </h2>
+            <div className="w-24 h-1 bg-brandRed mt-4 shadow-[0_0_20px_#FF0000]" />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-10">
+            {/* Mission */}
+            <div className="bg-zinc-950 border border-white/5 p-10 md:p-12 rounded-[40px] hover:border-brandRed/40 transition-all duration-500 shadow-2xl relative group overflow-hidden flex flex-col items-start text-left">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-brandRed/5 blur-[50px] opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+              <div className="p-5 bg-black border border-white/5 rounded-2xl mb-8 group-hover:scale-110 group-hover:border-brandRed/30 transition-all duration-500 shadow-xl">
+                <Target className="text-brandRed" size={32} />
+              </div>
+              <h3 className="text-3xl font-black uppercase italic mb-4 text-white group-hover:text-brandRed transition-colors">Mission</h3>
+              <p className="text-zinc-400 font-medium leading-relaxed italic">
+                To unite the Kerala diaspora in Pune through cultural celebrations, creating an unbreakable home away from home where our traditions thrive.
+              </p>
+            </div>
+
+            {/* Vision */}
+            <div className="bg-zinc-950 border border-white/5 p-10 md:p-12 rounded-[40px] hover:border-brandRed/40 transition-all duration-500 shadow-2xl relative group overflow-hidden flex flex-col items-start text-left">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-brandRed/5 blur-[50px] opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+              <div className="p-5 bg-black border border-white/5 rounded-2xl mb-8 group-hover:scale-110 group-hover:border-brandRed/30 transition-all duration-500 shadow-xl">
+                <Eye className="text-brandRed" size={32} />
+              </div>
+              <h3 className="text-3xl font-black uppercase italic mb-4 text-white group-hover:text-brandRed transition-colors">Vision</h3>
+              <p className="text-zinc-400 font-medium leading-relaxed italic">
+                To build the most dynamic, supportive, and culturally vibrant Malayali community network across Maharashtra, setting the benchmark for diaspora collectives.
+              </p>
+            </div>
+
+            {/* Values */}
+            <div className="bg-zinc-950 border border-white/5 p-10 md:p-12 rounded-[40px] hover:border-brandRed/40 transition-all duration-500 shadow-2xl relative group overflow-hidden flex flex-col items-start text-left">
+              <div className="absolute top-0 right-0 w-40 h-40 bg-brandRed/5 blur-[50px] opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+              <div className="p-5 bg-black border border-white/5 rounded-2xl mb-8 group-hover:scale-110 group-hover:border-brandRed/30 transition-all duration-500 shadow-xl">
+                <Diamond className="text-brandRed" size={32} />
+              </div>
+              <h3 className="text-3xl font-black uppercase italic mb-4 text-white group-hover:text-brandRed transition-colors">Values</h3>
+              <p className="text-zinc-400 font-medium leading-relaxed italic">
+                Uncompromising authenticity, mutual growth, creative expression, and a fierce dedication to preserving our roots while evolving our future.
+              </p>
+            </div>
           </div>
         </section>
 
@@ -244,27 +326,58 @@ export default function AboutPage() {
 
         <LaserDivider />
 
-        {/* 5. ARCHITECTS (Founders) */}
-        <section className="max-w-7xl mx-auto text-center mb-40">
-          <h2 className="text-5xl md:text-8xl font-black uppercase italic tracking-tighter mb-24">The <span className="text-brandRed">Architects</span></h2>
-          <div className="flex flex-wrap justify-center gap-24">
-            <div className="group w-full max-w-[320px]">
-              <div className="aspect-[3/4] rounded-[50px] overflow-hidden border border-white/10 mb-8 bg-zinc-950 shadow-2xl transition-all group-hover:border-brandRed group-hover:scale-105 duration-700">
-                <Image src="/founders/suchi.jpg" alt="Sucheendran" width={400} height={533} className="object-cover w-full h-full grayscale group-hover:grayscale-0 transition-all duration-700" />
+       {/* 5. DYNAMIC TEAM SECTION (2-COLUMN MOBILE GRID) */}
+        <section className="max-w-[90%] md:max-w-7xl mx-auto text-center mb-40">
+          <div className="flex flex-col items-center mb-12 md:mb-20">
+            <h2 className="text-5xl md:text-7xl font-black uppercase italic tracking-tighter text-white">
+              Our <span className="text-brandRed">Team</span>
+            </h2>
+            <div className="w-24 h-1 bg-brandRed mt-4 shadow-[0_0_20px_#FF0000]" />
+          </div>
+          
+          {/* Matches Archive: 2 columns on mobile (gap-4), 3 on desktop (gap-12) */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-12 justify-items-center">
+            {teamMembers.length > 0 ? (
+              teamMembers.map((member, idx) => (
+                <div key={idx} className="group w-full max-w-[280px]">
+                  
+                  {/* Portrait Container: Scales corner radius for mobile vs desktop */}
+                  <div className="relative aspect-[3/4] rounded-2xl md:rounded-[40px] overflow-hidden border border-white/5 mb-3 md:mb-6 bg-zinc-950 shadow-2xl transition-all duration-500 group-hover:border-brandRed/50 group-hover:scale-[1.02]">
+                    <Image 
+                      src={member.image} 
+                      alt={member.name} 
+                      fill
+                      sizes="(max-width: 768px) 50vw, 33vw"
+                      className="object-cover transition-all duration-700 brightness-[0.9] group-hover:brightness-110 saturate-[1.1]" 
+                    />
+                    
+                    {/* Red Inner Glow on Hover */}
+                    <div className="absolute inset-0 bg-gradient-to-t from-brandRed/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+                  </div>
+
+                  {/* Identity: Responsive text sizing */}
+                  <h4 className="text-[14px] sm:text-lg md:text-3xl font-black uppercase italic leading-tight text-white group-hover:text-brandRed transition-colors truncate px-1">
+                    {member.name}
+                  </h4>
+                  
+                  <div className="flex items-center justify-center gap-1.5 md:gap-2 mt-1 md:mt-2">
+                    <div className="h-[1px] w-2 md:w-4 bg-brandRed/40" />
+                    <p className="text-brandRed font-black uppercase text-[8px] md:text-[10px] tracking-[0.2em] md:tracking-[0.3em] truncate max-w-[120px] md:max-w-none">
+                      {member.role}
+                    </p>
+                    <div className="h-[1px] w-2 md:w-4 bg-brandRed/40" />
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div className="col-span-full py-12 md:py-20 border border-dashed border-white/5 rounded-2xl md:rounded-[40px] w-full">
+                <p className="text-zinc-600 font-black uppercase tracking-[0.2em] md:tracking-[0.4em] text-[8px] md:text-[10px] italic animate-pulse">
+                  Node personnel synchronization in progress...
+                </p>
               </div>
-              <h4 className="text-3xl font-black uppercase italic">Sucheendran K.C</h4>
-              <p className="text-brandRed font-black uppercase text-xs tracking-[0.4em] mt-3">Founder</p>
-            </div>
-            <div className="group w-full max-w-[320px]">
-              <div className="aspect-[3/4] rounded-[50px] overflow-hidden border border-white/10 mb-8 bg-zinc-950 shadow-2xl transition-all group-hover:border-brandRed group-hover:scale-105 duration-700">
-                <Image src="/founders/shehanas.jpg" alt="Shena" width={400} height={533} className="object-cover w-full h-full grayscale group-hover:grayscale-0 transition-all duration-700" />
-              </div>
-              <h4 className="text-3xl font-black uppercase italic">Shena</h4>
-              <p className="text-brandRed font-black uppercase text-xs tracking-[0.4em] mt-3">Co-Founder</p>
-            </div>
+            )}
           </div>
         </section>
-
         <LaserDivider />
 
         {/* 6. CONCISE GALLERY SECTION */}
@@ -304,27 +417,7 @@ export default function AboutPage() {
         <InstagramGlimpse />
         <LaserDivider />
         
-        {/* 6. NETWORK SECTION (REBALANCED FOR 3 CARDS) */}
-<section className="max-w-7xl mx-auto text-center mb-40">
-  <h2 className="text-6xl font-black uppercase italic tracking-tighter mb-24">Our <span className="text-brandRed">Network</span></h2>
-  <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
-    {[
-      { name: "Pune Malayali Fed.", icon: <Handshake size={40}/> },
-      { name: "Digital Partners", icon: <ShieldCheck size={40}/> },
-      { name: "Community Support", icon: <Heart size={40}/> },
-    ].map((partner, idx) => (
-      <div key={idx} className="p-14 bg-zinc-950/50 border border-white/5 rounded-[40px] flex flex-col items-center justify-center group hover:border-brandRed transition-all duration-500 shadow-xl backdrop-blur-md">
-        <div className="text-zinc-700 group-hover:text-brandRed mb-6 transition-colors">
-          {partner.icon}
-        </div>
-        <span className="text-xs font-black uppercase tracking-[0.2em] text-zinc-500 group-hover:text-white transition-colors">
-          {partner.name}
-        </span>
-      </div>
-    ))}
-  </div>
-</section>
-
+       
         {/* 7. CTA: THE TRIBE */}
         <section className="max-w-5xl mx-auto text-center pb-40">
           <div className="p-24 rounded-[80px] bg-gradient-to-br from-brandRed to-red-950 shadow-2xl relative overflow-hidden group">

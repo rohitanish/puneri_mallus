@@ -5,7 +5,7 @@ import {
   ArrowRight, Settings, LayoutPanelTop, 
   Zap, ShieldCheck, Globe, Handshake, Search, X,
   MessageSquare, // Existing
-  Megaphone // Added for Collaborations
+  Megaphone,UserCircle2 // Added for Collaborations
 } from 'lucide-react';
 import Link from 'next/link';
 import AddAdminCard from '@/components/admin/AddAdminCard';
@@ -32,7 +32,7 @@ export default function AdminPortal() {
       color: "from-brandRed/30"
     },
     {
-      title: "Team Management",
+      title: "Team Management Page",
       desc: "Manage brand partners, collaborators, and member perks.",
       icon: <Handshake className="text-brandRed" size={32} />,
       link: "/admin/partners",
@@ -54,6 +54,14 @@ export default function AdminPortal() {
       link: "/admin/community",
       status: "Live",
       color: "from-cyan-400/20"
+    },
+    {
+      title: "Team Members",
+      desc: "Architect the internal Tribe team, founders, and core personnel.",
+      icon: <UserCircle2 className="text-brandRed" size={32} />,
+      link: "/admin/team",
+      status: "Live",
+      color: "from-brandRed/30"
     },
     {
       title: "Gallery Edit",
