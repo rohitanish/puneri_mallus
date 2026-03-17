@@ -122,8 +122,16 @@ export default function Footer() {
               © 2026 Puneri Mallus Hub
             </span>
             <span className="text-[11px] md:text-[12px] uppercase tracking-[0.3em] text-white">
-              Built by Rohit Anish
-            </span>
+  Built by{" "}
+  <a 
+    href="https://wa.me/918669865623" 
+    target="_blank" 
+    rel="noopener noreferrer"
+    className="hover:text-brandRed transition-colors duration-300 decoration-brandRed/30 underline-offset-4 hover:underline"
+  >
+    Rohit Anish
+  </a>
+</span>
           </div>
 
           <div className="flex flex-col sm:flex-row items-start sm:items-center gap-6 md:gap-8 w-full md:w-auto">

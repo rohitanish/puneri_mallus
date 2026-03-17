@@ -142,28 +142,30 @@ export default function AboutPage() {
       </div>
 
       <div className="relative z-10">
-        {/* 1. HERO: THE ORIGIN STORY */}
-        <section className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-20 items-center mb-40">
-          <div className="relative aspect-square rounded-[40px] overflow-hidden border border-white/10 group shadow-2xl bg-zinc-950">
-            <Image 
-              src="/about/community.jpeg" 
-              alt="Community" 
-              fill 
-              className="object-cover grayscale-[20%] group-hover:grayscale-0 transition-all duration-1000 group-hover:scale-105" 
-            />
-            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80" />
-          </div>
-          <div className="space-y-10">
-            <h1 className="text-7xl md:text-9xl font-black uppercase tracking-tighter italic leading-[0.8] mb-4">
-              About <br /><span className="text-brandRed">Puneri <br />Mallus.</span>
-            </h1>
-            <p className="text-2xl text-zinc-400 font-medium leading-relaxed italic max-w-xl">
-              The heartbeat of the Kerala diaspora in Pune. A cultural bridge, a support system, and a family away from home.
-            </p>
-          </div>
-        </section>
-
-        <LaserDivider />
+       {/* 1. HERO: THE ORIGIN STORY */}
+<section className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-20 items-center mb-40 px-6">
+  <div className="relative aspect-square rounded-[40px] overflow-hidden border border-white/10 group shadow-2xl bg-zinc-950">
+    <Image 
+      src="/about/community.jpeg" 
+      alt="Community" 
+      fill 
+      className="object-cover grayscale-[20%] group-hover:grayscale-0 transition-all duration-1000 group-hover:scale-105" 
+    />
+    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80" />
+  </div>
+  
+  <div className="space-y-8">
+    {/* Slightly increased: 6xl on mobile, 8xl on desktop */}
+    <h1 className="text-6xl md:text-8xl font-black uppercase tracking-tighter italic leading-[0.85] mb-4">
+      About <br />
+      <span className="text-brandRed">Puneri <br />Mallus.</span>
+    </h1>
+    
+    <p className="text-xl md:text-2xl text-zinc-400 font-medium leading-relaxed italic max-w-xl">
+      The heartbeat of the Kerala diaspora in Pune. A cultural bridge, a support system, and a family away from home.
+    </p>
+  </div>
+</section>
 
         {/* 2. CORE DIRECTIVES (MISSION, VISION, VALUES) */}
         <section className="max-w-7xl mx-auto mb-40 px-6">
@@ -285,7 +287,7 @@ export default function AboutPage() {
                   <span className="inline-block w-3 h-12 bg-brandRed ml-3 animate-pulse align-middle" />
                 </h3>
                 <p className="text-xl text-zinc-500 italic leading-relaxed border-l-2 border-brandRed/20 pl-6 max-w-sm">
-                  Raw musical energy recreating the magic of Kerala unplugged.
+                  Mallu Beats recreating the magic of Kerala unplugged.
                 </p>
               </div>
             </div>

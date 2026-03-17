@@ -94,7 +94,15 @@ export default function AdminPortal() {
       link: "/admin/support",
       status: "Live",
       color: "from-orange-500/20"
-    }
+    },
+    {
+  title: "Mallu Mart",
+  desc: "Audit professional listings, verify businesses, or purge nodes from the mart.",
+  icon: <ShieldCheck className="text-brandRed" size={32} />,
+  link: "/admin/mart", // New route
+  status: "Live",
+  color: "from-brandRed/40"
+},
   ];
 
   // Rest of your logic (filteredModules, return statement) remains the same

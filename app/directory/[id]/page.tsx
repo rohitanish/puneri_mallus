@@ -1,0 +1,295 @@
+"use client";
+import { useState, useEffect, useRef } from 'react';
+import { useParams, useRouter } from 'next/navigation';
+import Image from 'next/image';
+import Link from 'next/link';
+import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
+import { createBrowserClient } from '@supabase/ssr';
+import { 
+  MessageCircle, MapPin, Globe, Instagram, 
+  ExternalLink, Maximize2, X, ShieldCheck, Share2, 
+  Phone, Star, ChevronRight, Zap, ListChecks, Info, Image as ImageIcon
+} from 'lucide-react';
+import { Loader2 } from 'lucide-react';
+
+export default function ProfessionalDetailsPage() {
+  const { id } = useParams();
+  const router = useRouter();
+  const [item, setItem] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [zoomImage, setZoomImage] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState('overview');
+  
+  // Rating Mechanism
+  const [userRating, setUserRating] = useState(0);
+  const [avgRating, setAvgRating] = useState(3); // Default 3
+
+  const { scrollY } = useScroll();
+  const y = useTransform(scrollY, [0, 500], [0, 150]);
+
+  // Section Refs
+  const overviewRef = useRef<HTMLDivElement>(null);
+  const photosRef = useRef<HTMLDivElement>(null);
+  const servicesRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    async function fetchDetails() {
+      try {
+        const res = await fetch('/api/mart');
+        const data = await res.json();
+        const found = data.find((i: any) => i._id === id);
+        if (found) {
+          setItem(found);
+          if (found.rating) setAvgRating(found.rating);
+        }
+      } catch (err) { console.error(err); } finally { setLoading(false); }
+    }
+    fetchDetails();
+  }, [id]);
+
+  if (loading) return <div className="min-h-screen bg-black flex items-center justify-center"><Loader2 className="animate-spin text-brandRed" size={40} /></div>;
+  if (!item) return <div className="min-h-screen bg-black flex flex-col items-center justify-center text-white"><h1>Profile Not Found</h1><Link href="/directory" className="px-6 py-3 bg-brandRed rounded-lg font-bold text-sm uppercase">Return</Link></div>;
+
+  const images = item.imagePaths || (item.imagePath ? [item.imagePath] : []);
+  const thumbnail = images[0];
+  const gallery = images.slice(1, 7);
+
+  const tabs = [
+    { id: 'overview', label: 'Overview', icon: Info, ref: overviewRef },
+    { id: 'photos', label: 'Photos', icon: ImageIcon, ref: photosRef },
+    { id: 'services', label: 'Services', icon: ListChecks, ref: servicesRef },
+  ];
+
+  const scrollToSection = (ref: any, id: string) => {
+    setActiveTab(id);
+    const offset = 180; // Offset for the sticky tab bar
+    const elementPosition = ref.current?.getBoundingClientRect().top + window.pageYOffset;
+    window.scrollTo({
+      top: elementPosition - offset,
+      behavior: 'smooth'
+    });
+  };
+
+  return (
+    <div className="min-h-screen bg-[#030303] text-zinc-100 relative overflow-x-hidden selection:bg-brandRed/30">
+      
+      {/* 1. BACKGROUND PARALLAX */}
+      <motion.div style={{ y }} className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-[#030303]">
+        <Image src="/events/mmart.png" alt="BG" fill priority className="object-cover opacity-[0.2] brightness-[0.7] scale-110" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#030303] via-transparent to-[#030303] z-[1]" />
+      </motion.div>
+
+      {/* 2. MAIN CONTENT */}
+      <main className="max-w-7xl mx-auto px-6 pt-44 pb-32 relative z-10">
+        
+        {/* HEADER SECTION */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 mb-8 items-start">
+          
+          <div className="lg:col-span-4 relative aspect-square rounded-[32px] overflow-hidden border border-white/10 bg-zinc-900 shadow-2xl group">
+            <Image 
+              src={`https://bhfrgcphqmbocplfcvbg.supabase.co/storage/v1/object/public/mallu-mart/${thumbnail}`}
+              alt={item.name} fill priority unoptimized className="object-cover"
+            />
+            <button 
+              onClick={() => navigator.share({title: item.name, url: window.location.href})}
+              className="absolute top-4 right-4 p-3 bg-black/60 backdrop-blur-md rounded-full text-white hover:bg-brandRed transition-all z-20"
+            >
+              <Share2 size={18} />
+            </button>
+
+            {item.isVerified && (
+              <div className="absolute top-4 left-4 bg-brandRed text-white px-3 py-1 rounded-full flex items-center gap-1.5 text-[8px] font-black uppercase tracking-widest">
+                <ShieldCheck size={10} /> Verified
+              </div>
+            )}
+          </div>
+
+          <div className="lg:col-span-8 flex flex-col justify-center space-y-6">
+            <div className="space-y-4">
+              <div className="inline-flex items-center gap-2 px-3 py-1 bg-brandRed/10 border border-brandRed/20 rounded-lg">
+                <Zap size={12} className="text-brandRed" />
+                <span className="text-[9px] font-black uppercase tracking-[0.3em] text-brandRed">{item.category}</span>
+              </div>
+              
+              <h1 className="text-5xl md:text-7xl font-black text-white italic uppercase tracking-tighter leading-none">
+                {item.name}
+              </h1>
+              
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1 bg-zinc-900 px-3 py-1.5 rounded-xl border border-white/5">
+                    <span className="text-yellow-500 font-black text-sm">{avgRating.toFixed(1)}</span>
+                    <div className="flex items-center">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <button
+                          key={star}
+                          onMouseEnter={() => setUserRating(star)}
+                          onMouseLeave={() => setUserRating(0)}
+                          onClick={() => setAvgRating((avgRating + star) / 2)}
+                          className="transition-transform hover:scale-110"
+                        >
+                          <Star 
+                            size={16} 
+                            fill={star <= (userRating || avgRating) ? "#EAB308" : "none"} 
+                            className={star <= (userRating || avgRating) ? "text-yellow-500" : "text-zinc-600"}
+                          />
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <span className="text-[9px] font-black uppercase text-zinc-500 tracking-widest italic">Rate this professional</span>
+                </div>
+
+                <div className="flex items-center gap-4 text-zinc-400 font-black uppercase tracking-[0.2em] text-[9px]">
+                  <MapPin size={14} className="text-brandRed" />
+                  {item.area}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row gap-3">
+              <a href={`https://wa.me/${item.contact}`} target="_blank" className="flex-1 flex items-center justify-center gap-3 bg-white text-black h-16 rounded-2xl font-black uppercase text-[11px] tracking-[0.2em] hover:bg-brandRed hover:text-white transition-all shadow-xl">
+                <MessageCircle size={20} /> Chat on WhatsApp
+              </a>
+              <a href={`tel:${item.contact}`} className="flex items-center justify-center gap-3 bg-zinc-900/50 backdrop-blur-md text-white h-16 px-10 rounded-2xl font-black uppercase text-[11px] tracking-[0.2em] border border-white/10 hover:border-brandRed transition-all">
+                <Phone size={20} /> Call Now
+              </a>
+            </div>
+          </div>
+        </div>
+
+        {/* TAB BAR */}
+        <div className="sticky top-[100px] z-[40] mb-12 bg-black/60 backdrop-blur-xl border-y border-white/5 mx-[-1.5rem] px-6">
+          <div className="flex items-center gap-8 overflow-x-auto no-scrollbar py-4">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => scrollToSection(tab.ref, tab.id)}
+                className={`flex items-center gap-2 whitespace-nowrap text-[10px] font-black uppercase tracking-[0.2em] transition-all relative py-2 ${
+                  activeTab === tab.id ? 'text-brandRed' : 'text-zinc-500 hover:text-white'
+                }`}
+              >
+                <tab.icon size={14} />
+                {tab.label}
+                {activeTab === tab.id && (
+                  <motion.div layoutId="activeTabUnderline" className="absolute -bottom-4 left-0 right-0 h-1 bg-brandRed shadow-[0_0_10px_#FF0000]" />
+                )}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+          <div className="lg:col-span-8 space-y-16">
+            
+            {/* Overview Section */}
+<section ref={overviewRef} className="bg-zinc-950/40 backdrop-blur-md border border-white/5 p-10 rounded-[40px] space-y-6 scroll-mt-24">
+  <h2 className="text-xs font-black text-white uppercase tracking-[0.3em] flex items-center gap-3">
+    <div className="w-10 h-px bg-brandRed/50" />
+    Company Profile
+  </h2>
+  {/* ADDED 'break-words' BELOW */}
+  <p className="text-zinc-300 text-lg leading-relaxed italic border-l-2 border-brandRed/30 pl-8 whitespace-pre-wrap break-words">
+    {item.description}
+  </p>
+</section>
+
+            {/* Services Section */}
+            {item.services && item.services.length > 0 && (
+              <section ref={servicesRef} className="space-y-8 scroll-mt-24">
+                <h2 className="text-xs font-black text-white uppercase tracking-[0.3em] flex items-center gap-3">
+                  <div className="w-10 h-px bg-brandRed/50" />
+                  Services Offered
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {item.services.map((service: any, idx: number) => (
+                    <div key={idx} className="bg-zinc-900/50 p-6 rounded-3xl border border-white/5 group hover:border-brandRed/30 transition-all">
+                      <div className="flex items-start gap-4">
+                        <div className="w-8 h-8 rounded-full bg-brandRed/10 flex items-center justify-center text-brandRed font-black text-[10px] shrink-0">
+                          {idx + 1}
+                        </div>
+                        <div className="space-y-1">
+                          <h4 className="text-sm font-black uppercase text-white tracking-tight">{service.name}</h4>
+                          {/* INCREASED FONT SIZE & COLOR TO WHITE */}
+                          <p className="text-[13px] text-zinc-100 leading-relaxed italic">{service.desc}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* Photo Gallery */}
+            {gallery.length > 0 && (
+              <section ref={photosRef} className="space-y-8 scroll-mt-24">
+                <h2 className="text-xs font-black text-white uppercase tracking-[0.3em] flex items-center gap-3">
+                  <div className="w-10 h-px bg-brandRed/50" />
+                  Portfolio Gallery
+                </h2>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {gallery.map((img: string, idx: number) => (
+                    <div 
+                      key={idx} 
+                      onClick={() => setZoomImage(`https://bhfrgcphqmbocplfcvbg.supabase.co/storage/v1/object/public/mallu-mart/${img}`)}
+                      className="relative aspect-square rounded-[30px] border border-white/10 cursor-zoom-in group bg-zinc-900"
+                    >
+                      <Image src={`https://bhfrgcphqmbocplfcvbg.supabase.co/storage/v1/object/public/mallu-mart/${img}`} alt="Work" fill unoptimized className="object-cover opacity-90 rounded-[30px] group-hover:opacity-100 transition-all duration-700" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 rounded-[30px] group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <Maximize2 size={24} className="text-white" />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
+
+          {/* STICKY SIDEBAR */}
+          <aside className="lg:col-span-4 sticky top-44">
+            <div className="bg-zinc-950 border border-white/10 p-10 rounded-[45px] space-y-10 shadow-3xl">
+              <div className="space-y-8">
+                <div className="flex gap-5">
+                  <div className="w-12 h-12 bg-zinc-900 rounded-2xl flex items-center justify-center shrink-0 border border-white/5 text-brandRed">
+                    <MapPin size={24} />
+                  </div>
+                  <div>
+                    <p className="text-[9px] text-zinc-500 font-black uppercase tracking-widest mb-1">Base</p>
+                    <p className="text-sm text-zinc-200 font-bold uppercase">{item.area}</p>
+                    {item.mapUrl && <a href={item.mapUrl} target="_blank" className="text-[10px] text-brandRed font-black mt-3 inline-flex items-center gap-1 hover:underline tracking-widest uppercase">Navigation Link <ExternalLink size={12} /></a>}
+                  </div>
+                </div>
+
+                <div className="flex gap-5">
+                  <div className="w-12 h-12 bg-zinc-900 rounded-2xl flex items-center justify-center shrink-0 border border-white/5 text-brandRed">
+                    <Globe size={24} />
+                  </div>
+                  <div className="flex flex-wrap gap-4 items-center">
+                    {item.instagram && <a href={`https://instagram.com/${item.instagram}`} target="_blank" className="text-zinc-400 hover:text-brandRed transition-colors scale-125"><Instagram size={24} /></a>}
+                    {item.website && <a href={item.website} target="_blank" className="text-zinc-400 hover:text-brandRed transition-colors scale-125"><Globe size={24} /></a>}
+                  </div>
+                </div>
+
+                {item.buttonText && item.buttonUrl && (
+                  <a href={item.buttonUrl} target="_blank" className="flex items-center justify-center bg-brandRed text-white w-full py-5 rounded-2xl font-black uppercase text-[10px] tracking-[0.2em] shadow-lg hover:scale-105 transition-all">
+                    {item.buttonText}
+                  </a>
+                )}
+              </div>
+            </div>
+          </aside>
+        </div>
+      </main>
+
+      {/* LIGHTBOX OVERLAY */}
+      <AnimatePresence>
+        {zoomImage && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={() => setZoomImage(null)} className="fixed inset-0 z-[1000] bg-black/98 flex items-center justify-center p-8 cursor-zoom-out">
+            <div className="relative w-full max-w-6xl h-full flex items-center justify-center"><Image src={zoomImage} alt="Zoomed" fill unoptimized className="object-contain" /></div>
+            <button className="absolute top-10 right-10 text-white p-4 bg-zinc-900 rounded-full hover:bg-brandRed transition-all"><X size={32} /></button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+}
