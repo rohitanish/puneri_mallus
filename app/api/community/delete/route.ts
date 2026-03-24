@@ -3,36 +3,77 @@ import clientPromise from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
 import { createClient } from '@supabase/supabase-js';
 
-const supabase = createClient(
+const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
+
+// Helper to extract filename safely
+const getFileName = (url: string) => {
+  if (!url || !url.includes('community/')) return null;
+  const parts = url.split('/');
+  const fileNameWithParams = parts[parts.length - 1];
+  return fileNameWithParams.split('?')[0];
+};
 
 export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
-    if (!id) return NextResponse.json({ error: "No ID" }, { status: 400 });
+
+    if (!id || !ObjectId.isValid(id)) {
+      return NextResponse.json({ error: "Valid ID required" }, { status: 400 });
+    }
 
     const client = await clientPromise;
     const db = client.db("punerimallus");
 
-    // 1. Fetch the circle to get the image URL before deleting
-    const circle = await db.collection("community_circles").findOne({ _id: new ObjectId(id) });
+    // 1. Fetch node to get ALL asset references before database deletion
+    const node = await db.collection("community_circles").findOne({ 
+      _id: new ObjectId(id) 
+    });
 
-    if (circle?.image) {
-      const fileName = circle.image.split('/').pop();
-      if (fileName) {
-        // 2. Remove the asset from Supabase storage
-        await supabase.storage.from('community').remove([`thumbnails/${fileName}`]);
+    if (!node) {
+      return NextResponse.json({ error: "Node not found" }, { status: 404 });
+    }
+
+    // 2. Comprehensive Asset Purge
+    // Collect unique URLs from both 'image' and 'imagePaths' array
+    const allAssetUrls = new Set([
+      node.image, 
+      ...(node.imagePaths || [])
+    ].filter(Boolean));
+
+    const filesToDelete = Array.from(allAssetUrls)
+      .map(url => getFileName(url))
+      .filter(Boolean) as string[];
+
+    if (filesToDelete.length > 0) {
+      try {
+        const { error: storageError } = await supabaseAdmin.storage
+          .from('community')
+          .remove(filesToDelete);
+
+        if (storageError) {
+          console.error("SUPABASE_STORAGE_PURGE_ERROR:", storageError);
+        }
+      } catch (err) {
+        console.error("ASSET_PURGE_CRITICAL_WARNING:", err);
       }
     }
 
-    // 3. Delete the document from MongoDB
-    await db.collection("community_circles").deleteOne({ _id: new ObjectId(id) });
+    // 3. Delete from Database
+    const result = await db.collection("community_circles").deleteOne({ 
+      _id: new ObjectId(id) 
+    });
 
-    return NextResponse.json({ message: "Deleted successfully" });
-  } catch (e) {
-    return NextResponse.json({ error: "Delete failed" }, { status: 500 });
+    return NextResponse.json({ 
+      message: "Node and all associated gallery assets dissolved",
+      deletedCount: result.deletedCount 
+    });
+
+  } catch (e: any) {
+    console.error("COMMUNITY_DELETE_CRITICAL_ERROR:", e);
+    return NextResponse.json({ error: "Dissolution protocol failed" }, { status: 500 });
   }
 }

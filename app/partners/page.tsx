@@ -1,224 +1,167 @@
 "use client";
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { motion } from 'framer-motion';
 import { 
-  Handshake, Zap, ArrowUpRight, ExternalLink, 
-  Loader2, Star, Instagram, Mail, Globe,
-  MapPin, MessageCircle, Facebook, Search, Filter, X
+  Loader2, Search, Filter, Briefcase, ChevronRight, Zap
 } from 'lucide-react';
 
-const LaserDivider = () => (
-  <div className="relative w-full h-px flex items-center justify-center overflow-visible my-8">
-    <div className="absolute inset-x-0 h-px bg-gradient-to-r from-transparent via-brandRed/40 to-transparent" />
-    <div className="absolute w-[30%] h-[2px] bg-brandRed shadow-[0_0_20px_#FF0000] z-10" />
-  </div>
-);
+const HIERARCHY = [
+  "Advisory Board",
+  "Board of Trustees",
+  "Executive Council",
+  "Trailblazers Panel"
+];
 
 export default function PartnersPage() {
   const [partners, setPartners] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeCategory, setActiveCategory] = useState("ALL");
+  const sectionRefs = useRef<{ [key: string]: HTMLElement | null }>({});
 
   useEffect(() => {
-    fetch('/api/partners')
-      .then(res => res.json())
-      .then(data => {
-        setPartners(data);
-        setLoading(false);
-      });
+    fetch('/api/partners').then(res => res.json()).then(data => {
+      setPartners(data);
+      setLoading(false);
+    });
   }, []);
 
-  const categories = useMemo(() => {
-    const cats = partners.map(p => p.category?.toUpperCase() || "UNCATEGORIZED");
-    return ["ALL", ...Array.from(new Set(cats))];
-  }, [partners]);
-
-  const filteredPartners = useMemo(() => {
-    return partners.filter(partner => {
-      const matchesSearch = 
-        partner.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
-        partner.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        partner.category?.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = activeCategory === "ALL" || partner.category?.toUpperCase() === activeCategory;
-      return matchesSearch && matchesCategory;
-    });
-  }, [searchQuery, activeCategory, partners]);
+  const scrollToSection = (cat: string) => {
+    const element = sectionRefs.current[cat];
+    if (element) {
+      const offset = 150;
+      const bodyRect = document.body.getBoundingClientRect().top;
+      const elementRect = element.getBoundingClientRect().top;
+      window.scrollTo({ top: (elementRect - bodyRect) - offset, behavior: 'smooth' });
+    }
+  };
 
   if (loading) return (
     <div className="min-h-screen bg-black flex items-center justify-center">
-      <Loader2 className="animate-spin text-brandRed" size={30} strokeWidth={1} />
+      <Loader2 className="animate-spin text-brandRed" size={40} />
     </div>
   );
 
   return (
-    <div className="min-h-screen bg-[#030303] text-white relative selection:bg-brandRed/30 overflow-x-hidden">
+    <div className="min-h-screen bg-[#030303] text-white relative overflow-x-hidden selection:bg-brandRed/30">
       
-      {/* 1. FIXED BRANDED BACKGROUND - OPACITY INCREASED */}
-      <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-black">
+      {/* INCREASED OPACITY BACKGROUND */}
+      <div className="fixed inset-0 z-0 bg-black">
         <Image 
           src="/events/main3.jpg" 
-          alt="Branded Atmosphere"
-          fill
-          priority
-          className="object-cover object-center opacity-[0.45] brightness-[1.1] saturate-[1.2] contrast-[1.1]" 
+          alt="BG" 
+          fill 
+          className="object-cover opacity-[0.5] brightness-[0.8]" 
+          priority 
         />
-        <div className="absolute inset-0 bg-gradient-radial from-transparent via-zinc-950/20 to-[#030303] z-[1]" />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#030303] z-[1]" />
-        <div className="absolute inset-0 opacity-[0.04] bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay z-[2]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-transparent to-[#030303] z-[1]" />
       </div>
 
-      <div className="max-w-7xl mx-auto relative z-10 pt-40 pb-20 px-6">
+      <main className="max-w-7xl mx-auto relative z-10 pt-44 pb-32 px-6">
         
         {/* HEADER */}
-        <div className="text-center mb-16 space-y-6">
-          <div className="inline-flex items-center gap-3 px-5 py-2 bg-zinc-950/60 backdrop-blur-xl border border-white/10 rounded-full">
-            <Handshake size={14} className="text-brandRed" />
-            <span className="text-[10px] font-black uppercase tracking-[0.4em] text-zinc-400">
-              Official // <span className="text-white">Allies</span>
-            </span>
+        <div className="text-center mb-20 space-y-4">
+          <div className="inline-flex items-center gap-2 px-3 py-1 bg-brandRed/20 border border-brandRed/30 rounded-full mb-2 backdrop-blur-md">
+             <Zap size={12} className="text-brandRed" fill="currentColor" />
+             <span className="text-[9px] font-black uppercase tracking-[0.3em] text-white">Community Leadership</span>
           </div>
-          <h1 className="text-6xl md:text-9xl font-black italic uppercase tracking-tighter leading-none text-white">
-            Tribe <span className="text-brandRed">Allies .</span>
+          <h1 className="text-6xl md:text-8xl font-black italic uppercase tracking-tighter leading-none drop-shadow-2xl">
+            The <span className="text-brandRed">Architects .</span>
           </h1>
-          <p className="text-zinc-500 font-bold uppercase tracking-[0.5em] text-sm md:text-xl">
-            Strategic Collaborations . Community Soul
+          <p className="text-zinc-300 font-bold uppercase tracking-[0.5em] text-[10px] md:text-xs">
+            The Visionaries behind Puneri Mallus
           </p>
         </div>
 
-        {/* SEARCH & FILTER MODULE */}
-        <div className="mb-20 space-y-8">
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-            <div className="relative w-full md:max-w-md group">
-              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-brandRed transition-colors" size={18} />
+        {/* SEARCH & ENHANCED FILTERS */}
+        <div className="sticky top-24 z-50 flex flex-col lg:flex-row items-center gap-6 mb-32 bg-black/60 backdrop-blur-3xl p-6 rounded-[32px] border border-white/10 shadow-2xl">
+           <div className="relative flex-1 w-full">
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-500" size={20} />
               <input 
-                type="text"
-                placeholder="SEARCH BRANDS OR SECTORS..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full bg-zinc-950/40 border border-white/10 rounded-2xl py-5 pl-14 pr-6 text-[10px] font-black tracking-widest uppercase focus:outline-none focus:border-brandRed/50 transition-all placeholder:text-zinc-700 backdrop-blur-xl"
+                placeholder="SEARCH MEMBERS..." 
+                className="w-full bg-white/[0.05] border border-white/10 rounded-2xl py-5 pl-14 text-xs font-black uppercase tracking-widest outline-none focus:border-brandRed/50 transition-all placeholder:text-zinc-600"
+                value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
               />
-              {searchQuery && (
-                <button onClick={() => setSearchQuery("")} className="absolute right-5 top-1/2 -translate-y-1/2 text-zinc-600 hover:text-white">
-                  <X size={16} />
-                </button>
-              )}
-            </div>
-
-            <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-2 w-full md:w-auto">
-              <Filter size={14} className="text-brandRed shrink-0 mr-2" />
-              {categories.map((cat) => (
-                <button
-                  key={cat}
-                  onClick={() => setActiveCategory(cat)}
-                  className={`px-6 py-3 rounded-xl text-[9px] font-black uppercase tracking-widest whitespace-nowrap transition-all border ${
-                    activeCategory === cat 
-                    ? 'bg-brandRed border-brandRed text-white shadow-[0_0_20px_rgba(255,0,0,0.3)]' 
-                    : 'bg-zinc-950/40 border-white/10 text-zinc-500 hover:text-white backdrop-blur-md'
-                  }`}
+           </div>
+           <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2 lg:pb-0 w-full lg:w-auto px-2">
+              {HIERARCHY.map((cat) => (
+                <button 
+                  key={cat} 
+                  onClick={() => scrollToSection(cat)} 
+                  className="px-8 py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest whitespace-nowrap bg-zinc-800 border border-white/5 hover:border-brandRed hover:text-brandRed transition-all shadow-xl active:scale-95"
                 >
                   {cat}
                 </button>
               ))}
-            </div>
-          </div>
+           </div>
         </div>
 
-        {/* DYNAMIC PARTNERS GRID */}
-        {filteredPartners.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-10 mb-32">
-            {filteredPartners.map((partner) => (
-              <div key={partner._id} className="group relative bg-zinc-950/30 border border-white/5 rounded-[40px] overflow-hidden p-8 flex flex-col sm:flex-row gap-8 items-center transition-all duration-500 hover:border-brandRed/40 shadow-2xl backdrop-blur-2xl">
+        {/* SECTIONAL DIVISIONS */}
+        <div className="space-y-48">
+          {HIERARCHY.map((cat) => {
+            const sectionMembers = partners.filter(p => p.category === cat && 
+              (p.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
+               p.perk?.toLowerCase().includes(searchQuery.toLowerCase()))
+            );
+
+            if (sectionMembers.length === 0) return null;
+
+            return (
+              <section key={cat} ref={(el) => { sectionRefs.current[cat] = el; }} className="scroll-mt-48">
                 
-                {/* SPOTLIGHT GRADIENT */}
-                <div className="absolute -inset-px bg-gradient-radial from-brandRed/15 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none z-0" />
-
-                {/* Logo Section */}
-                <div className="relative z-10 w-32 h-32 md:w-40 md:h-40 rounded-3xl bg-white/[0.03] border border-white/10 overflow-hidden shrink-0 flex items-center justify-center p-6 group-hover:border-brandRed/30 group-hover:bg-brandRed/5 transition-all duration-500">
-                  <div className="relative w-full h-full">
-                    <Image 
-                      src={partner.image || "/placeholder.jpg"} 
-                      alt={partner.name} 
-                      fill 
-                      className="object-contain transition-transform duration-700 group-hover:scale-110" 
-                    />
-                  </div>
+                <div className="flex flex-col gap-3 mb-20">
+                   <div className="flex items-center gap-6">
+                      <h2 className="text-4xl md:text-6xl font-black italic uppercase tracking-tighter text-white whitespace-nowrap leading-none drop-shadow-xl">
+                        {cat}
+                      </h2>
+                      <div className="h-px w-full bg-gradient-to-r from-brandRed to-transparent" />
+                   </div>
+                   <div className="flex items-center gap-3 text-brandRed font-black uppercase text-[10px] tracking-[0.4em]">
+                      <span className="w-8 h-[1px] bg-brandRed" /> Leading Representative
+                   </div>
                 </div>
 
-                {/* Content Section */}
-                <div className="relative z-10 flex-1 text-center sm:text-left space-y-4">
-                  <div className="space-y-1">
-                    <span className="text-brandRed font-black uppercase text-[10px] tracking-[0.3em]">
-                      {partner.category}
-                    </span>
-                    <h3 className="text-3xl font-black uppercase italic tracking-tighter group-hover:text-white transition-colors">
-                      {partner.name}
-                    </h3>
-                  </div>
-                  <p className="text-zinc-500 text-sm font-medium italic leading-relaxed line-clamp-3 group-hover:text-zinc-300 transition-colors">
-                    {partner.description}
-                  </p>
-                  
-                  {partner.perk && (
-                    <div className="inline-flex items-center gap-2 px-4 py-2 bg-brandRed/10 border border-brandRed/20 rounded-xl">
-                      <Star size={12} className="text-brandRed fill-brandRed" />
-                      <span className="text-[10px] font-black text-white uppercase tracking-widest">
-                        {partner.perk}
-                      </span>
-                    </div>
-                  )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 md:gap-10">
+                  {sectionMembers.map((member) => (
+                    <Link key={member._id} href={`/partners/${member._id}`}>
+                      <motion.div 
+                        whileHover={{ y: -15 }}
+                        className="group relative bg-black/40 border border-white/10 rounded-[60px] p-10 backdrop-blur-xl hover:border-brandRed/40 transition-all flex flex-col items-center text-center shadow-[0_30px_60px_rgba(0,0,0,0.8)]"
+                      >
+                        <div className="relative w-44 h-44 md:w-48 md:h-48 rounded-full mb-8 p-1.5 border-2 border-white/10 group-hover:border-brandRed transition-all duration-500 shadow-2xl">
+                          <div className="w-full h-full rounded-full overflow-hidden relative shadow-inner">
+                            <Image 
+                                src={member.image} 
+                                alt={member.name} 
+                                fill 
+                                className="object-cover transition-transform duration-700 group-hover:scale-110 saturate-[1.1]" 
+                                unoptimized
+                            />
+                          </div>
+                        </div>
 
-                  {/* Links */}
-                  <div className="flex flex-wrap items-center justify-center sm:justify-start gap-5 pt-4 border-t border-white/5">
-                    {partner.link && (
-                      <Link href={partner.link} target="_blank" className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-white transition-all">
-                        <Globe size={14} className="text-brandRed" /> WEB
-                      </Link>
-                    )}
-                    {partner.instagram && (
-                      <Link href={`https://instagram.com/${partner.instagram.replace('@', '')}`} target="_blank" className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-white transition-all">
-                        <Instagram size={14} className="text-brandRed" /> INSTA
-                      </Link>
-                    )}
-                    {partner.whatsapp && (
-                      <Link href={`https://wa.me/${partner.whatsapp.replace(/\D/g, '')}`} target="_blank" className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-zinc-500 hover:text-[#25D366] transition-all">
-                        <MessageCircle size={14} className="text-[#25D366]" /> CHAT
-                      </Link>
-                    )}
-                  </div>
+                        <div className="space-y-3 flex-1">
+                           <h3 className="text-2xl font-black uppercase italic tracking-tighter group-hover:text-brandRed transition-colors leading-tight">
+                             {member.name}
+                           </h3>
+                           <div className="inline-flex items-center gap-2 text-[10px] font-bold text-zinc-400 uppercase tracking-widest border-t border-white/10 pt-4 w-full justify-center">
+                              <Briefcase size={12} className="text-brandRed" /> {member.perk}
+                           </div>
+                        </div>
+
+                        <div className="mt-8 flex items-center gap-2 text-[8px] font-black uppercase tracking-[0.3em] text-zinc-500 group-hover:text-white transition-all">
+                           View Profile <ChevronRight size={10} className="group-hover:translate-x-1 transition-transform" />
+                        </div>
+                      </motion.div>
+                    </Link>
+                  ))}
                 </div>
-
-                {/* HOVER ACCENT */}
-                <div className="absolute top-6 right-6 opacity-0 group-hover:opacity-100 transition-all duration-500 translate-y-2 group-hover:translate-y-0 pointer-events-none">
-                  <ArrowUpRight className="text-brandRed" size={20} />
-                </div>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <div className="h-96 flex flex-col items-center justify-center border border-white/5 rounded-[40px] bg-zinc-950/20 mb-32 backdrop-blur-md">
-            <Search size={40} className="text-zinc-800 mb-4" />
-            <p className="text-zinc-500 font-black uppercase tracking-[0.3em] text-[10px]">No Allies found</p>
-            <button onClick={() => { setSearchQuery(""); setActiveCategory("ALL"); }} className="mt-4 text-brandRed font-black uppercase text-[9px] hover:underline tracking-widest">Reset Discovery</button>
-          </div>
-        )}
-
-        {/* BOTTOM STATS */}
-        <div className="text-center">
-          <LaserDivider />
-          <div className="flex flex-col md:flex-row items-center justify-center gap-12 mt-12 opacity-40">
-            <div className="flex items-center gap-3">
-              <Handshake size={16} className="text-brandRed" />
-              <span className="text-[10px] font-black uppercase tracking-[0.5em]">{filteredPartners.length}  Collaborators</span>
-            </div>
-            <div className="flex items-center gap-3">
-              <Zap size={16} className="text-brandRed" />
-              <span className="text-[10px] font-black uppercase tracking-[0.5em]">Tribe Collaborations</span>
-            </div>
-          </div>
+              </section>
+            );
+          })}
         </div>
-      </div>
+      </main>
     </div>
   );
 }

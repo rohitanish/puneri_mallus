@@ -58,7 +58,7 @@ export default function Navbar() {
     { name: 'Home', href: '/' },
     { name: 'About Us', href: '/about' },
     { name: 'Events', href: '/events' },
-    { name: 'Partners', href: '/partners' },
+    { name: 'Our Team', href: '/partners' },
     { name: 'Community', href: '/community' },
     { name: 'Mallu Mart', href: '/directory' },
     { name: 'Contact', href: '/contact' },

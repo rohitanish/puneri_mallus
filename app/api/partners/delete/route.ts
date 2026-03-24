@@ -3,52 +3,66 @@ import clientPromise from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
 import { createClient } from '@supabase/supabase-js';
 
-// Initialize Supabase
-const supabase = createClient(
+// Use Service Role Key for backend admin operations (bypasses RLS)
+const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
-/**
- * DELETE ROUTE: TRIBE ALLIES
- */
 export async function DELETE(req: Request) {
   try {
     const { searchParams } = new URL(req.url);
     const id = searchParams.get('id');
 
-    if (!id) {
-      return NextResponse.json({ error: "Missing Partner ID" }, { status: 400 });
+    if (!id || !ObjectId.isValid(id)) {
+      return NextResponse.json({ error: "A valid Partner ID is required" }, { status: 400 });
     }
 
     const client = await clientPromise;
-    const db = client.db("punerimallus"); // Updated DB Name
+    const db = client.db("punerimallus");
 
-    // 1. Find the partner to get the logo/image URL before deleting
-    const partner = await db.collection("partners").findOne({ _id: new ObjectId(id) });
+    // 1. Fetch the partner to identify assets before database removal
+    const partner = await db.collection("partners").findOne({ 
+      _id: new ObjectId(id) 
+    });
 
-    if (partner?.logoUrl || partner?.image) {
-      const imageUrl = partner.logoUrl || partner.image;
-      const fileName = imageUrl.split('/').pop();
-      
-      if (fileName) {
-        // 2. Remove the file from the 'partners' bucket in Supabase
-        await supabase.storage.from('partners').remove([`${fileName}`]);
+    if (!partner) {
+      return NextResponse.json({ error: "Ally not found in grid" }, { status: 404 });
+    }
+
+    // 2. Purge the image asset from Supabase 'partners' bucket
+    const imageUrl = partner.image || partner.logoUrl;
+    if (imageUrl) {
+      try {
+        // Extract filename accurately by removing potential query params (?t=...)
+        const urlParts = imageUrl.split('/');
+        const fileNameWithParams = urlParts[urlParts.length - 1];
+        const fileName = fileNameWithParams.split('?')[0];
+
+        if (fileName) {
+          await supabaseAdmin.storage
+            .from('partners')
+            .remove([fileName]);
+        }
+      } catch (storageErr) {
+        console.error("PARTNER_ASSET_PURGE_WARNING:", storageErr);
+        // Continue to delete the DB record even if asset removal fails
       }
     }
 
-    // 3. Perform the deletion in MongoDB
+    // 3. Terminate the record in MongoDB
     const result = await db.collection("partners").deleteOne({ 
       _id: new ObjectId(id) 
     });
 
     if (result.deletedCount === 0) {
-      return NextResponse.json({ error: "Partner not found" }, { status: 404 });
+      return NextResponse.json({ error: "Dissolution failed" }, { status: 500 });
     }
 
-    return NextResponse.json({ message: "Ally Removed Successfully" });
+    return NextResponse.json({ message: "Ally connection dissolved and assets purged." });
+
   } catch (e: any) {
-    console.error("API DELETE ERROR:", e);
-    return NextResponse.json({ error: e.message || "Internal Server Error" }, { status: 500 });
+    console.error("PARTNER_DELETE_CRITICAL_ERROR:", e);
+    return NextResponse.json({ error: "System failure during dissolution" }, { status: 500 });
   }
 }

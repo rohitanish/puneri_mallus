@@ -3,10 +3,10 @@ import clientPromise from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
 import { createClient } from '@supabase/supabase-js';
 
-// Initialize Supabase
-const supabase = createClient(
+// Use Service Role Key for backend storage operations (Deletions)
+const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  process.env.SUPABASE_SERVICE_ROLE_KEY!
 );
 
 export async function POST(req: Request) {
@@ -17,57 +17,67 @@ export async function POST(req: Request) {
 
     const { _id, ...body } = data;
 
+    // Strict Data Sanitation
     const sanitizedPartner = {
-      name: body.name,
-      category: body.category,
+      name: body.name?.toUpperCase().trim(),
+      category: body.category, // e.g. "Executive Council"
       description: body.description,
-      perk: body.perk,
-      link: body.link,
+      perk: body.perk?.toUpperCase().trim(),
+      link: body.link?.trim(), // Website
       image: body.image,
-      email: body.email?.toLowerCase().trim(),
       instagram: body.instagram?.replace('@', '').trim(),
-      whatsapp: body.whatsapp?.replace(/\D/g, ''), 
+      whatsapp: body.whatsapp?.replace(/\D/g, ''), // Clean phone number
       updated_at: new Date()
     };
 
     if (_id) {
-      // 1. Fetch the existing partner to check for image replacement
-      const oldPartner = await db.collection("partners").findOne({ _id: new ObjectId(_id) });
+      if (!ObjectId.isValid(_id)) {
+        return NextResponse.json({ error: "Invalid Ally ID" }, { status: 400 });
+      }
 
-      // 2. If the image has changed, delete the old one from Supabase
-      if (oldPartner?.image && oldPartner.image !== sanitizedPartner.image) {
-        const fileName = oldPartner.image.split('/').pop();
-        if (fileName) {
-          // Using 'partners' bucket - ensure this matches your Supabase setup
-          await supabase.storage.from('partners').remove([fileName]);
+      // 1. Fetch the existing partner to check for image replacement
+      const oldPartner = await db.collection("partners").findOne({ 
+        _id: new ObjectId(_id) 
+      });
+
+      // 2. If image changed, purge the old asset from Supabase
+      if (oldPartner?.image && body.image && oldPartner.image !== body.image) {
+        try {
+          const urlParts = oldPartner.image.split('/');
+          const fileNameWithParams = urlParts[urlParts.length - 1];
+          const fileName = fileNameWithParams.split('?')[0]; // Remove tokens/params
+
+          if (fileName) {
+            await supabaseAdmin.storage
+              .from('partners')
+              .remove([fileName]);
+          }
+        } catch (storageErr) {
+          console.error("PARTNER_ASSET_CLEANUP_WARNING:", storageErr);
         }
       }
 
-      // 3. UPDATE EXISTING ALLY
-      const result = await db.collection("partners").updateOne(
+      // 3. Update Existing Record
+      await db.collection("partners").updateOne(
         { _id: new ObjectId(_id) },
         { $set: sanitizedPartner }
       );
 
-      if (result.matchedCount === 0) {
-        return NextResponse.json({ error: "Partner not found" }, { status: 404 });
-      }
-
-      return NextResponse.json({ message: "Ally intelligence updated." });
+      return NextResponse.json({ message: "Ally intelligence synchronized." });
     } else {
-      // CREATE NEW ALLY
+      // 4. Onboard New Ally
       const result = await db.collection("partners").insertOne({
         ...sanitizedPartner,
-        created_at: new Date(),
+        created_at: new Date()
       });
 
       return NextResponse.json({ 
-        message: "New Ally onboarded to the Tribe.", 
+        message: "New Ally integrated into the Grid.", 
         id: result.insertedId 
       });
     }
   } catch (e: any) {
-    console.error("PARTNER_MANAGE_ERROR:", e);
-    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+    console.error("PARTNER_MANAGE_CRITICAL_ERROR:", e);
+    return NextResponse.json({ error: "Grid synchronization failed" }, { status: 500 });
   }
 }
