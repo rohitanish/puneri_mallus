@@ -11,9 +11,10 @@ import {
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import TribeCalendar from '@/components/ui/TribeCalendar';
-
+import { auth } from '@/lib/firebase';
+import { RecaptchaVerifier, signInWithPhoneNumber, ConfirmationResult } from "firebase/auth";
 // --- DUAL TESTING TOGGLES ---
-const DEV_MODE_PHONE = true; // Set to true to bypass WhatsApp OTP UI
+const DEV_MODE_PHONE = false; // Set to true to bypass WhatsApp OTP UI
 const DEV_MODE_EMAIL = false; // Set to true to bypass Email Activation message
 // ----------------------------
 
@@ -38,7 +39,13 @@ export default function SignupPage() {
   const dateInputRef = useRef<HTMLInputElement>(null);
   const [showCalendar, setShowCalendar] = useState(false);
   const dateContainerRef = useRef<HTMLDivElement>(null);
-
+  const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
+  const setupRecaptcha = (phoneNumber: string) => {
+  const verifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+    size: 'invisible',
+  });
+  return verifier;
+};
   const PUNE_AREAS = [
     "Pune", "Shivajinagar", "Kothrud", "Karve Nagar", "Erandwane", "Deccan", 
     "Sadashiv Peth", "Swargate", "Bibwewadi", "Dhankawadi", "Sahakar Nagar", 
@@ -100,38 +107,77 @@ export default function SignupPage() {
   }, []);
 
   const sendPhoneOtp = async () => {
-    if (!isPhoneValid || timer > 0 || DEV_MODE_PHONE) return;
-    setLoading(true);
+  if (!isPhoneValid || timer > 0) return;
+  
+  // IF DEV MODE: Just skip the SMS and show the field
+  if (DEV_MODE_PHONE) {
+    setGeneratedOtp("123456");
+    setShowOtpField(true);
+    setTimer(60);
+    setMessage("DEV MODE: USE CODE 123456");
+    return;
+  }
 
-    const testOtp = "123456"; 
-    setGeneratedOtp(testOtp); 
-
-    const res = await fetch('/api/auth/send-test-whatsapp', {
-      method: 'POST',
-      body: JSON.stringify({ phoneNumber: phone }),
+  setLoading(true);
+  try {
+    // 1. Initialize Invisible Recaptcha
+    const recaptchaVerifier = new RecaptchaVerifier(auth, 'recaptcha-container', {
+      size: 'invisible',
     });
 
-    if (res.ok) {
-      setShowOtpField(true);
-      setTimer(60);
-      setMessage("TEST PING SENT! CHECK WHATSAPP. (FOR DEMO, USE: 123456)");
-    } else {
-      setMessage("META API ERROR: CHECK CONSOLE");
+    // 2. Send SMS via Firebase
+    const phoneNumber = `+91${phone}`;
+    const confirmation = await signInWithPhoneNumber(auth, phoneNumber, recaptchaVerifier);
+    
+    setConfirmationResult(confirmation);
+    setShowOtpField(true);
+    setTimer(60);
+    setMessage("SMS SENT! CHECK YOUR PHONE.");
+  } catch (error: any) {
+    console.error("Firebase Auth Error:", error);
+    setMessage("ERROR: " + (error.code === 'auth/too-many-requests' ? "TOO MANY ATTEMPTS. TRY LATER." : "FAILED TO SEND SMS."));
+    // Reset recaptcha if it fails
+    if ((window as any).recaptchaVerifier) {
+      (window as any).recaptchaVerifier.clear();
     }
-    setLoading(false);
-  };
+  }
+  setLoading(false);
+};
 
   const verifyPhoneOtp = async () => {
-    setLoading(true);
-    if (otp === "123456" || otp === generatedOtp) {
+  setLoading(true);
+  
+  // IF DEV MODE: Check against hardcoded string
+  if (DEV_MODE_PHONE) {
+    if (otp === "123456") {
       setIsPhoneVerified(true);
       setShowOtpField(false);
-      setMessage("PHONE VERIFIED SUCCESSFULLY");
+      setMessage("PHONE VERIFIED (DEV MODE)");
     } else {
-      setMessage("INVALID CODE. PLEASE USE 123456.");
+      setMessage("INVALID DEV CODE.");
     }
     setLoading(false);
-  };
+    return;
+  }
+
+  // REAL MODE: Verify with Firebase
+  try {
+    if (!confirmationResult) {
+      setMessage("SESSION EXPIRED. RESEND OTP.");
+      setLoading(false);
+      return;
+    }
+
+    await confirmationResult.confirm(otp);
+    setIsPhoneVerified(true);
+    setShowOtpField(false);
+    setMessage("PHONE VERIFIED SUCCESSFULLY");
+  } catch (error) {
+    console.error("Verification Error:", error);
+    setMessage("INVALID OTP. PLEASE CHECK AGAIN.");
+  }
+  setLoading(false);
+};
 
   const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -400,7 +446,7 @@ export default function SignupPage() {
                 {loading ? 'Processing...' : 'Tap to Register'} <ArrowRight size={14} />
               </button>
             </form>
-
+                <div id="recaptcha-container"></div>
             <div className="mt-8 text-center flex flex-col gap-3">
               <Link href="/auth/login" className="text-[9px] font-black uppercase tracking-widest text-white/30 hover:text-brandRed transition-colors">
                 Already a member? <span className="text-white">Sign In</span>
