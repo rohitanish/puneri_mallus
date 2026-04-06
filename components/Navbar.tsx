@@ -21,14 +21,30 @@ export default function Navbar() {
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20);
     window.addEventListener('scroll', handleScroll);
+    
     const fetchUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
+      const { data: { session } } = await supabase.auth.getSession();
+      // Only set user if there is an active session and the email is confirmed
+      // or if they have successfully logged in (prevents signup "ghost" profiles)
+      if (session?.user && (session.user.confirmed_at || session.user.last_sign_in_at)) {
+        setUser(session.user);
+      } else {
+        setUser(null);
+      }
     };
+    
     fetchUser();
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // Only show profile if the event is a explicit SIGN_IN
+      // This prevents the 'Join Tribe' button from turning into a profile during Signup
+      if (event === 'SIGNED_IN' && session?.user) {
+        setUser(session.user);
+      } else if (event === 'SIGNED_OUT') {
+        setUser(null);
+      }
     });
+
     return () => {
       window.removeEventListener('scroll', handleScroll);
       subscription.unsubscribe();
@@ -71,30 +87,25 @@ export default function Navbar() {
           ? 'bg-black/90 backdrop-blur-xl shadow-lg shadow-black/40'
           : 'bg-gradient-to-b from-black/60 to-transparent'
       }`}>
-        {/* Removed py-3 and tightened horizontal padding for better laptop fit */}
         <div className="w-full px-4 md:px-6 lg:px-8 xl:px-12 flex items-center justify-between gap-2 lg:gap-4 py-1">
 
-          {/* Removed py-2 to shift the nav up and save space */}
           <Link href="/" className="block group flex-shrink-0">
             <Image
-  src="/logo.png"
-  alt="Puneri Mallus"
-  width={400}
-  height={120}
-  // This tells the browser: "The logo will never be wider than 400px"
-  // It prevents the browser from loading a massive version on high-DPI phones.
-  sizes="(max-width: 768px) 150px, 400px"
-  className={`object-contain object-left transition-all duration-300 group-hover:scale-105
-    drop-shadow-[0_0_20px_rgba(255,0,0,0.4)] w-auto ${
-    scrolled
-      ? 'h-20 sm:h-24 md:h-28'
-      : 'h-24 sm:h-28 md:h-32 lg:h-36'
-  }`}
-  priority
-/>
+              src="/logo.png"
+              alt="Puneri Mallus"
+              width={400}
+              height={120}
+              sizes="(max-width: 768px) 150px, 400px"
+              className={`object-contain object-left transition-all duration-300 group-hover:scale-105
+                drop-shadow-[0_0_20px_rgba(255,0,0,0.4)] w-auto ${
+                scrolled
+                  ? 'h-20 sm:h-24 md:h-28'
+                  : 'h-24 sm:h-28 md:h-32 lg:h-36'
+              }`}
+              priority
+            />
           </Link>
 
-          {/* Adjusted gap values (lg:gap-5) to prevent squishing on smaller 13/14-inch laptops */}
           <div className="hidden lg:flex items-center gap-4 lg:gap-5 xl:gap-8 2xl:gap-10 flex-1 justify-center">
             {navLinks.map((link) => {
               const isActive = pathname === link.href;

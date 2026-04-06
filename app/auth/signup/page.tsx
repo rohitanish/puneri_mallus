@@ -11,9 +11,10 @@ import {
 import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import TribeCalendar from '@/components/ui/TribeCalendar';
+
 // --- DUAL TESTING TOGGLES ---
-const DEV_MODE_PHONE = true; // Set to false for real SMS OTP
-const DEV_MODE_EMAIL = true; // Set to false to force Email Activation link
+const DEV_MODE_PHONE = true; // Set to true to bypass WhatsApp OTP UI
+const DEV_MODE_EMAIL = false; // Set to true to bypass Email Activation message
 // ----------------------------
 
 export default function SignupPage() {
@@ -32,10 +33,12 @@ export default function SignupPage() {
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
   const [timer, setTimer] = useState(0);
+  const [generatedOtp, setGeneratedOtp] = useState(''); 
   const router = useRouter();
   const dateInputRef = useRef<HTMLInputElement>(null);
   const [showCalendar, setShowCalendar] = useState(false);
   const dateContainerRef = useRef<HTMLDivElement>(null);
+
   const PUNE_AREAS = [
     "Pune", "Shivajinagar", "Kothrud", "Karve Nagar", "Erandwane", "Deccan", 
     "Sadashiv Peth", "Swargate", "Bibwewadi", "Dhankawadi", "Sahakar Nagar", 
@@ -89,59 +92,51 @@ export default function SignupPage() {
     return () => clearInterval(interval);
   }, [timer]);
 
-  const sendPhoneOtp = async () => {
-    if (!isPhoneValid || timer > 0) return;
-    
+  // Auto-verify phone state if DEV_MODE_PHONE is active
+  useEffect(() => {
     if (DEV_MODE_PHONE) {
-      setShowOtpField(true);
-      setMessage("DEV MODE: ENTER ANY 6 DIGITS TO VERIFY");
-      setTimer(30);
-      return;
+      setIsPhoneVerified(true);
     }
+  }, []);
 
+  const sendPhoneOtp = async () => {
+    if (!isPhoneValid || timer > 0 || DEV_MODE_PHONE) return;
     setLoading(true);
-    setMessage('');
-    const { error } = await supabase.auth.signInWithOtp({ phone: `+91${phone}` });
-    
-    if (error) {
-      setMessage(error.message.toUpperCase());
-    } else {
+
+    const testOtp = "123456"; 
+    setGeneratedOtp(testOtp); 
+
+    const res = await fetch('/api/auth/send-test-whatsapp', {
+      method: 'POST',
+      body: JSON.stringify({ phoneNumber: phone }),
+    });
+
+    if (res.ok) {
       setShowOtpField(true);
       setTimer(60);
-      setMessage("OTP SENT TO YOUR MOBILE");
+      setMessage("TEST PING SENT! CHECK WHATSAPP. (FOR DEMO, USE: 123456)");
+    } else {
+      setMessage("META API ERROR: CHECK CONSOLE");
     }
     setLoading(false);
   };
 
   const verifyPhoneOtp = async () => {
-    if (DEV_MODE_PHONE) {
-      setIsPhoneVerified(true);
-      setShowOtpField(false);
-      setMessage("PHONE VERIFIED (BYPASSED)");
-      return;
-    }
-
     setLoading(true);
-    const { error } = await supabase.auth.verifyOtp({ 
-      phone: `+91${phone}`, 
-      token: otp, 
-      type: 'sms' 
-    });
-
-    if (error) {
-      setMessage("INVALID OTP. PLEASE CHECK AND TRY AGAIN.");
-    } else {
+    if (otp === "123456" || otp === generatedOtp) {
       setIsPhoneVerified(true);
       setShowOtpField(false);
       setMessage("PHONE VERIFIED SUCCESSFULLY");
+    } else {
+      setMessage("INVALID CODE. PLEASE USE 123456.");
     }
     setLoading(false);
   };
 
- const handleSignup = async (e: React.FormEvent) => {
+  const handleSignup = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!isPhoneVerified) {
+    if (!isPhoneVerified && !DEV_MODE_PHONE) {
       setMessage("PLEASE VERIFY YOUR PHONE NUMBER FIRST.");
       return;
     }
@@ -154,7 +149,18 @@ export default function SignupPage() {
     setLoading(true);
     setMessage('');
 
-    // Destructure 'data' along with 'error' to check identities
+    const { data: existingPhone } = await supabase
+      .from('profiles') 
+      .select('phone')
+      .eq('phone', `+91${phone}`)
+      .single();
+
+    if (existingPhone) {
+      setMessage("PHONE NUMBER ALREADY REGISTERED. PLEASE SIGN IN.");
+      setLoading(false);
+      return;
+    }
+
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -179,9 +185,6 @@ export default function SignupPage() {
       }
       setLoading(false);
     } else {
-      // --- DUPLICATE ACCOUNT CHECK ---
-      // If Supabase returns a user but the identities array is empty, 
-      // it means the email or phone is already registered.
       if (data.user && data.user.identities && data.user.identities.length === 0) {
         setMessage("ACCOUNT ALREADY EXISTS. PLEASE SIGN IN INSTEAD.");
         setLoading(false);
@@ -192,6 +195,7 @@ export default function SignupPage() {
         setMessage('REGISTRATION SUCCESSFUL! ENTERING...');
         setTimeout(() => router.push('/auth/login'), 2500);
       } else {
+        // Supabase handles the SMTP email automatically via Dashboard settings
         setMessage('CHECK YOUR EMAIL TO ACTIVATE YOUR TRIBE ACCOUNT!');
       }
       setLoading(false);
@@ -200,7 +204,6 @@ export default function SignupPage() {
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-6 pt-32 pb-12 relative overflow-hidden">
-      
       <div className="absolute inset-0 z-0 flex items-center justify-center">
         <Image 
           src="/events/signup.jpg" 
@@ -218,16 +221,15 @@ export default function SignupPage() {
           
           <div className="flex justify-center mb-8 relative z-10">
             <Link href="/">
-             <Image 
-  src="/logo.png" 
-  alt="Logo" 
-  width={500} 
-  height={150} 
-  // Optimized for mobile width while maintaining desktop sharpness
-  sizes="(max-width: 768px) 250px, 500px"
-  className="h-24 md:h-32 w-auto object-contain drop-shadow-[0_0_25px_rgba(255,0,0,0.5)]" 
-  priority 
-/>
+              <Image 
+                src="/logo.png" 
+                alt="Logo" 
+                width={500} 
+                height={150} 
+                sizes="(max-width: 768px) 250px, 500px"
+                className="h-24 md:h-32 w-auto object-contain drop-shadow-[0_0_25px_rgba(255,0,0,0.5)]" 
+                priority 
+              />
             </Link>
           </div>
 
@@ -236,11 +238,6 @@ export default function SignupPage() {
               <h2 className="text-2xl font-black uppercase italic tracking-tighter text-white">
                 Join the <span className="text-brandRed">Tribe.</span>
               </h2>
-              {(DEV_MODE_PHONE || DEV_MODE_EMAIL) && (
-                <span className="text-[7px] font-black tracking-[0.5em] text-brandRed block mt-2 animate-pulse uppercase">
-                  {/* [ Dev Testing Active ] */}
-                </span>
-              )}
             </div>
 
             <form onSubmit={handleSignup} className="space-y-3.5">
@@ -259,46 +256,43 @@ export default function SignupPage() {
 
               <div className="grid grid-cols-2 gap-3">
                 <div className="relative group">
-  <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={14} />
-  <input 
-    type="text" 
-    placeholder="PROFESSION" 
-    required
-    
-    className="w-full bg-black/40 border border-white/10 p-4 pl-11 rounded-xl font-bold text-[10px] tracking-widest focus:border-brandRed transition-all outline-none text-white uppercase"
-    value={profession} 
-    
-    onChange={(e) => setProfession(e.target.value.toUpperCase())}
-  />
-</div>
+                  <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={14} />
+                  <input 
+                    type="text" 
+                    placeholder="PROFESSION" 
+                    required
+                    className="w-full bg-black/40 border border-white/10 p-4 pl-11 rounded-xl font-bold text-[10px] tracking-widest focus:border-brandRed transition-all outline-none text-white uppercase"
+                    value={profession} 
+                    onChange={(e) => setProfession(e.target.value.toUpperCase())}
+                  />
+                </div>
                 
                 <div className="relative" ref={dateContainerRef}>
-  <div 
-    className="relative group cursor-pointer bg-black/40 border border-white/10 p-4 rounded-xl flex items-center gap-3 focus-within:border-brandRed transition-all"
-    onClick={() => setShowCalendar(!showCalendar)}
-  >
-    <CalendarIcon size={14} className={dob ? "text-brandRed" : "text-white/20"} />
-    <span className={`font-bold text-[9px] tracking-widest uppercase truncate ${dob ? "text-white" : "text-zinc-500"}`}>
-      {dob ? new Date(dob).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "BIRTH DATE"}
-    </span>
-  </div>
+                  <div 
+                    className="relative group cursor-pointer bg-black/40 border border-white/10 p-4 rounded-xl flex items-center gap-3 focus-within:border-brandRed transition-all"
+                    onClick={() => setShowCalendar(!showCalendar)}
+                  >
+                    <CalendarIcon size={14} className={dob ? "text-brandRed" : "text-white/20"} />
+                    <span className={`font-bold text-[9px] tracking-widest uppercase truncate ${dob ? "text-white" : "text-zinc-500"}`}>
+                      {dob ? new Date(dob).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "BIRTH DATE"}
+                    </span>
+                  </div>
 
-  <AnimatePresence>
-    {showCalendar && (
-      <>
-        <div className="fixed inset-0 z-[9998]" onClick={() => setShowCalendar(false)} />
-        <TribeCalendar 
-          value={dob} 
-          onChange={(date) => setDob(date)} 
-          onClose={() => setShowCalendar(false)} 
-          maxDate={maxDobDate}
-          // Pass the position of the input field
-          anchorRef={dateContainerRef}
-        />
-      </>
-    )}
-  </AnimatePresence>
-</div>
+                  <AnimatePresence>
+                    {showCalendar && (
+                      <>
+                        <div className="fixed inset-0 z-[9998]" onClick={() => setShowCalendar(false)} />
+                        <TribeCalendar 
+                          value={dob} 
+                          onChange={(date) => setDob(date)} 
+                          onClose={() => setShowCalendar(false)} 
+                          maxDate={maxDobDate}
+                          anchorRef={dateContainerRef}
+                        />
+                      </>
+                    )}
+                  </AnimatePresence>
+                </div>
               </div>
 
               <div className="relative group">
@@ -319,11 +313,12 @@ export default function SignupPage() {
                 <div className="relative flex items-center group">
                   <Phone className="absolute left-4 text-white/20" size={14} />
                   <input 
-                    type="tel" placeholder="PHONE NUMBER" required maxLength={10} disabled={isPhoneVerified && !DEV_MODE_PHONE}
-                    className={`w-full bg-black/40 border p-4 pl-11 pr-24 rounded-xl font-bold text-[11px] tracking-widest focus:border-brandRed transition-all outline-none text-white ${showPhoneError ? 'border-brandRed/50' : 'border-white/10'}`}
+                    type="tel" placeholder="PHONE NUMBER" required maxLength={10} 
+                    disabled={isPhoneVerified && !DEV_MODE_PHONE}
+                    className={`w-full bg-black/40 border p-4 pl-11 rounded-xl font-bold text-[11px] tracking-widest focus:border-brandRed transition-all outline-none text-white ${showPhoneError ? 'border-brandRed/50' : 'border-white/10'} ${isPhoneVerified && !DEV_MODE_PHONE ? 'opacity-50 cursor-not-allowed' : ''} ${!DEV_MODE_PHONE ? 'pr-24' : 'pr-11'}`}
                     value={phone} onChange={(e) => setPhone(e.target.value.replace(/\D/g, ''))}
                   />
-                  {!isPhoneVerified && isPhoneValid && (
+                  {!DEV_MODE_PHONE && !isPhoneVerified && isPhoneValid && (
                     <button 
                       type="button" 
                       onClick={sendPhoneOtp}
@@ -333,7 +328,9 @@ export default function SignupPage() {
                       {timer > 0 ? `WAIT ${timer}s` : "VERIFY"}
                     </button>
                   )}
-                  {isPhoneVerified && <CheckCircle2 className="absolute right-4 text-green-500" size={18} />}
+                  {(isPhoneVerified || DEV_MODE_PHONE) && phone.length === 10 && (
+                    <CheckCircle2 className="absolute right-4 text-green-500" size={18} />
+                  )}
                 </div>
                 {showPhoneError && (
                   <p className="text-[8px] font-black uppercase text-brandRed tracking-widest ml-4 animate-pulse">
@@ -342,7 +339,7 @@ export default function SignupPage() {
                 )}
 
                 <AnimatePresence>
-                  {showOtpField && !isPhoneVerified && (
+                  {!DEV_MODE_PHONE && showOtpField && !isPhoneVerified && (
                     <motion.div 
                       initial={{ height: 0, opacity: 0 }} 
                       animate={{ height: 'auto', opacity: 1 }} 
@@ -369,9 +366,8 @@ export default function SignupPage() {
 
               <div className="relative group">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={14} />
-                <input 
+                <input suppressHydrationWarning
                   type="email" placeholder="EMAIL" required
-                  suppressHydrationWarning
                   className="w-full bg-black/40 border border-white/10 p-4 pl-11 rounded-xl font-bold text-[11px] tracking-widest focus:border-brandRed transition-all outline-none text-white"
                   value={email} onChange={(e) => setEmail(e.target.value)}
                 />
@@ -395,19 +391,10 @@ export default function SignupPage() {
                 </p>
               )}
 
-              {!isAdult && dob && (
-                <div className="flex flex-col items-center gap-1 animate-pulse">
-                  <p className="text-[8px] font-black uppercase text-center text-brandRed tracking-widest">
-                    Restricted: Age must be 16+
-                  </p>
-                  <div className="h-[1px] w-12 bg-brandRed/30" />
-                </div>
-              )}
-
               <button 
-                disabled={Boolean(loading || (dob && !isAdult) || !isPhoneVerified)} 
+                disabled={Boolean(loading || (dob && !isAdult) || (!isPhoneVerified && !DEV_MODE_PHONE))} 
                 className={`w-full py-4 text-white font-black uppercase tracking-[0.3em] rounded-xl transition-all shadow-xl active:scale-95 text-[12px] flex items-center justify-center gap-2 mt-4 ${
-                  (loading || (dob && !isAdult) || !isPhoneVerified) ? "bg-zinc-800 cursor-not-allowed opacity-50" : "bg-brandRed hover:bg-white hover:text-black"
+                  (loading || (dob && !isAdult) || (!isPhoneVerified && !DEV_MODE_PHONE)) ? "bg-zinc-800 cursor-not-allowed opacity-50" : "bg-brandRed hover:bg-white hover:text-black"
                 }`}
               >
                 {loading ? 'Processing...' : 'Tap to Register'} <ArrowRight size={14} />

@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { Mail, Lock, ArrowRight, Eye, EyeOff, RefreshCw } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -33,7 +34,7 @@ export default function LoginPage() {
     if (error) {
       if (error.message.toLowerCase().includes("email not confirmed")) {
         setError("ACCOUNT NOT ACTIVE: PLEASE CHECK YOUR EMAIL TO VERIFY.");
-        setShowResend(true); // Show the resend button
+        setShowResend(true); 
       } else if (error.message.toLowerCase().includes("invalid login credentials")) {
         setError("INVALID EMAIL OR PASSWORD.");
       } else {
@@ -41,7 +42,7 @@ export default function LoginPage() {
       }
       setLoading(false);
     } else {
-      router.push('/');
+      router.replace('/');
       router.refresh();
     }
   };
@@ -87,15 +88,14 @@ export default function LoginPage() {
           <div className="flex justify-center mb-8 relative z-10">
             <Link href="/">
               <Image 
-  src="/logo.png" 
-  alt="Logo" 
-  width={500} 
-  height={150} 
-  // Tells the browser to load a 250px version on mobile and a 500px on desktop
-  sizes="(max-width: 768px) 250px, 500px" 
-  className="h-24 md:h-32 w-auto object-contain drop-shadow-[0_0_25px_rgba(255,0,0,0.5)]" 
-  priority 
-/>
+                src="/logo.png" 
+                alt="Logo" 
+                width={500} 
+                height={150} 
+                sizes="(max-width: 768px) 250px, 500px" 
+                className="h-24 md:h-32 w-auto object-contain drop-shadow-[0_0_25px_rgba(255,0,0,0.5)]" 
+                priority 
+              />
             </Link>
           </div>
 
@@ -147,25 +147,33 @@ export default function LoginPage() {
                 </Link>
               </div>
 
-              {error && (
-                <div className="space-y-3">
-                  <p className="text-brandRed text-[9px] font-black uppercase tracking-widest text-center py-2 px-4 bg-brandRed/10 border border-brandRed/20 rounded-lg animate-pulse">
-                    {error}
-                  </p>
-                  
-                  {showResend && (
-                    <button
-                      type="button"
-                      onClick={handleResendEmail}
-                      disabled={resending}
-                      className="w-full flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-widest text-white/50 hover:text-white transition-colors"
-                    >
-                      <RefreshCw size={12} className={resending ? "animate-spin" : ""} />
-                      {resending ? "RESENDING..." : "Resend Activation Email"}
-                    </button>
-                  )}
-                </div>
-              )}
+              <AnimatePresence>
+                {error && (
+                  <motion.div 
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    transition={{ duration: 0.2, ease: "easeOut" }}
+                    className="space-y-3"
+                  >
+                    <p className="text-brandRed text-[9px] font-black uppercase tracking-widest text-center py-2 px-4 bg-brandRed/10 border border-brandRed/20 rounded-lg animate-pulse">
+                      {error}
+                    </p>
+                    
+                    {showResend && (
+                      <button
+                        type="button"
+                        onClick={handleResendEmail}
+                        disabled={resending}
+                        className="w-full flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-widest text-white/50 hover:text-white transition-colors"
+                      >
+                        <RefreshCw size={12} className={resending ? "animate-spin" : ""} />
+                        {resending ? "RESENDING..." : "Resend Activation Email"}
+                      </button>
+                    )}
+                  </motion.div>
+                )}
+              </AnimatePresence>
 
               <button 
                 disabled={loading} 
