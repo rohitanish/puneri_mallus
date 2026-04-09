@@ -8,28 +8,36 @@ export async function GET(request: NextRequest) {
   const token_hash = searchParams.get('token_hash')
   const type = searchParams.get('type') as EmailOtpType | null
   
-  // 1. DYNAMIC REDIRECT: Look for 'redirect_to' or 'next' from the email link
-  // If neither exists, fallback to '/auth/verified'
+  // 1. Grab the destination from the URL or default to our success page
   const next = searchParams.get('redirect_to') || searchParams.get('next') || '/auth/verified'
 
   const redirectTo = request.nextUrl.clone()
   redirectTo.pathname = next
   
-  // Clean up params so they don't show in the browser bar
+  // Clean up params for a clean URL
   redirectTo.searchParams.delete('token_hash')
   redirectTo.searchParams.delete('type')
+  redirectTo.searchParams.delete('next')
   redirectTo.searchParams.delete('redirect_to')
 
   if (token_hash && type) {
-    const cookieStore = cookies()
+    // 🔥 FIX: Await the cookieStore
+    const cookieStore = await cookies()
+    
     const supabase = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
         cookies: {
-          get(name: string) { return cookieStore.get(name)?.value },
-          set(name: string, value: string, options: any) { cookieStore.set({ name, value, ...options }) },
-          remove(name: string, options: any) { cookieStore.set({ name, value: '', ...options }) },
+          get(name: string) {
+            return cookieStore.get(name)?.value
+          },
+          set(name: string, value: string, options: any) {
+            cookieStore.set({ name, value, ...options })
+          },
+          remove(name: string, options: any) {
+            cookieStore.set({ name, value: '', ...options })
+          },
         },
       }
     )
@@ -40,12 +48,12 @@ export async function GET(request: NextRequest) {
     })
 
     if (!error) {
-      // 2. SUCCESS: Go to /auth/verified
+      // SUCCESS: User is verified, send them to /auth/verified
       return NextResponse.redirect(redirectTo)
     }
   }
 
-  // 3. ERROR: Go back to login
+  // ERROR: Fallback to login
   redirectTo.pathname = '/auth/login'
   return NextResponse.redirect(redirectTo)
 }
