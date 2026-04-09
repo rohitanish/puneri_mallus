@@ -48,30 +48,35 @@ export default function SignupPage() {
 
   // --- 1. AUTOMATIC REDIRECT ENGINE ---
   useEffect(() => {
-  const handleVisibilityChange = async () => {
-    if (document.visibilityState === 'visible') {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        setMessage("EMAIL VERIFIED. WELCOME TO THE TRIBE!");
-        setTimeout(() => router.push('/dashboard'), 1500);
-      }
+  let poller: any;
+
+  // 1. The check function that runs every 2 seconds
+  const checkRemoteVerification = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    
+    // If a session exists, it means the user clicked 'Confirm' on their phone
+    if (session) {
+      setMessage("IDENTITY SYNCED. REDIRECTING...");
+      clearInterval(poller); // Stop the heartbeat
+      
+      // Delay slightly so the user can read the success message
+      setTimeout(() => {
+        router.push('/auth/login'); 
+      }, 2000);
     }
   };
 
-  const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-    if ((event === 'SIGNED_IN' || event === 'USER_UPDATED') && session) {
-      setMessage("IDENTITY VERIFIED. ACCESS GRANTED.");
-      setTimeout(() => router.push('/dashboard'), 1500); 
-    }
-  });
+  // 2. Start polling ONLY after the email is sent
+  if (message.includes("CHECK YOUR EMAIL") || message.includes("VERIFICATION EMAIL DISPATCHED")) {
+    // This heartbeat checks Supabase every 2 seconds
+    poller = setInterval(checkRemoteVerification, 2000);
+  }
 
-  window.addEventListener('visibilitychange', handleVisibilityChange);
-  
+  // 3. Cleanup to prevent memory leaks
   return () => {
-    subscription.unsubscribe();
-    window.removeEventListener('visibilitychange', handleVisibilityChange);
+    if (poller) clearInterval(poller);
   };
-}, [supabase, router]);
+}, [message, supabase, router]);
 
   const PUNE_AREAS = ["Akurdi", "Aundh", "Balewadi", "Baner", "Bavdhan", "Bhosari", "Bibwewadi", "Camp", "Chikhali", "Chinchwad", "Dapodi", "Deccan", "Dhanori", "Erandwane", "Fatima Nagar", "Ghorpadi", "Hadapsar", "Hinjewadi", "Kalyani Nagar", "Karve Nagar", "Kasarwadi", "Katraj", "Khadki", "Kondhwa", "Koregaon Park", "Kothrud", "Lohegaon", "Magarpatta", "Model Colony", "Moshi", "Mundhwa", "NIBM", "Nigdi", "Pashan", "Phugewadi", "Pimpri", "Pimple Gurav", "Pimple Nilakh", "Pimple Saudagar", "Pune", "Punawale", "Rahatani", "Ravet", "Sadashiv Peth", "Sahakar Nagar", "Sangvi", "Shivajinagar", "Sinhagad Road", "Sus", "Swargate", "Talawade", "Tathawade", "Thergaon", "Undri", "Viman Nagar", "Vishrantwadi", "Wakad", "Wanowrie", "Warje", "Yerwada"].sort();
 
