@@ -64,8 +64,8 @@ export default function LoginPage() {
   };
 
   return (
-    /* 🔥 UPDATED: items-start and pt-44 to push container down from navbar */
-    <div className="min-h-screen bg-black flex items-start justify-center p-6 pt-32 md:pt-44 relative overflow-hidden">
+    /* 🔥 UPDATED: Changed items-start to items-center and removed pt-32/pt-44 for perfect vertical centering */
+    <div className="min-h-screen bg-black flex items-center justify-center p-6 relative overflow-hidden">
       
       {/* BACKGROUND IMAGE */}
       <div className="absolute inset-0 z-0">
@@ -85,19 +85,7 @@ export default function LoginPage() {
         <div className="relative bg-white/[0.03] backdrop-blur-2xl border border-white/10 px-8 py-8 md:px-10 md:py-10 rounded-[32px] shadow-2xl overflow-hidden text-left">
           <div className="absolute top-0 left-0 w-full h-full bg-gradient-to-br from-white/[0.03] to-transparent pointer-events-none" />
 
-          {/* IMPACTFUL LOGO */}
-          <div className="flex justify-center mb-6 relative z-10">
-            <Link href="/">
-              <Image 
-                src="/logo.png" 
-                alt="Logo" 
-                width={400} 
-                height={120} 
-                className="h-16 md:h-20 w-auto object-contain drop-shadow-[0_0_20px_rgba(255,0,0,0.5)]" 
-                priority 
-              />
-            </Link>
-          </div>
+          {/* 🔥 LOGO REMOVED AS REQUESTED */}
 
           <div className="relative z-10">
             <h2 className="text-xl font-black uppercase italic tracking-tighter mb-6 text-center text-white">
@@ -113,7 +101,6 @@ export default function LoginPage() {
                   required
                   autoComplete="off"
                   suppressHydrationWarning
-                  /* 🔥 UPDATED: Increased text size to 13px and tracking for better visibility */
                   className="relative w-full bg-black/40 border border-white/10 p-4 pl-12 rounded-xl font-bold text-[13px] tracking-wide focus:border-brandRed transition-all outline-none text-white placeholder:text-zinc-500 placeholder:text-[10px] placeholder:tracking-widest z-10"
                   value={email} 
                   onChange={(e) => setEmail(e.target.value)}
@@ -126,7 +113,6 @@ export default function LoginPage() {
                   type={showPassword ? "text" : "password"} 
                   placeholder="PASSWORD" 
                   required
-                  /* 🔥 UPDATED: Increased text size to 13px and tracking for better visibility */
                   className="relative w-full bg-black/40 border border-white/10 p-4 pl-12 pr-12 rounded-xl font-bold text-[13px] tracking-wide focus:border-brandRed transition-all outline-none text-white placeholder:text-zinc-500 placeholder:text-[10px] placeholder:tracking-widest z-10"
                   value={password} 
                   onChange={(e) => setPassword(e.target.value)}

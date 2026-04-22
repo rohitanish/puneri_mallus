@@ -12,6 +12,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import TribeAlert from '@/components/TribeAlert'; 
 import TribeConfirm from '@/components/TribeConfirm';
 import TribeDisclaimer from '@/components/TribeDisclaimer';
+import { useRouter, usePathname } from 'next/navigation';
 
 const EXTERNAL_CATEGORIES = ["SAMAJAM", "TEMPLE", "CHURCH", "ORGANIZATION"];
 const TABS = [
@@ -32,7 +33,8 @@ export default function CommunityPage() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
-  
+  const router = useRouter();       // <-- ADD THIS
+  const pathname = usePathname();
   const [circles, setCircles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
@@ -185,15 +187,21 @@ const handleDelete = async () => {
               <h3 className="text-xs md:text-sm font-black italic uppercase tracking-widest text-white">List your <span className="text-brandRed">Organization</span></h3>
               <p className="text-zinc-500 text-[8px] font-bold uppercase tracking-widest mt-0.5">Add Samajams or Temples</p>
             </div>
-            <Link href="/community/add">
-              <motion.button 
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                className="flex items-center justify-center gap-2 bg-white text-black px-4 py-2 md:px-6 md:py-3 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-brandRed hover:text-white transition-all shadow-xl whitespace-nowrap"
-              >
-                <Plus size={14} strokeWidth={3} /> Add Now
-              </motion.button>
-            </Link>
+            {/* 🔥 The Link tag is removed, and the logic is inside onClick */}
+<motion.button 
+  onClick={() => {
+    if (!currentUser) {
+      router.push(`/auth/login?next=${pathname}`);
+    } else {
+      router.push('/community/add');
+    }
+  }}
+  whileHover={{ scale: 1.05 }}
+  whileTap={{ scale: 0.95 }}
+  className="flex items-center justify-center gap-2 bg-white text-black px-4 py-2 md:px-6 md:py-3 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-brandRed hover:text-white transition-all shadow-xl whitespace-nowrap"
+>
+  <Plus size={14} strokeWidth={3} /> Add Now
+</motion.button>
           </div>
 
         </div>

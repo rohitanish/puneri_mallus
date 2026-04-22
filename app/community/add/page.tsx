@@ -349,13 +349,13 @@ function AddCommunityForm() {
 
         {/* SEPARATED DESCRIPTION BOX */}
         <div className="border border-white/10 p-5 rounded-[24px] bg-zinc-950/40 focus-within:border-brandRed transition-all">
-          <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 mb-1 block tracking-widest">
+          <label className="text-[11px] font-black uppercase text-zinc-500 ml-1 mb-1 block tracking-widest">
             Offer Details
           </label>
           <textarea 
             placeholder="DESCRIBE THE SCOPE OF THIS SERVICE..." 
             rows={2} 
-            className="w-full bg-transparent outline-none text-xs font-medium text-zinc-400 italic px-1 resize-none" 
+            className="w-full bg-transparent outline-none text-xl font-medium text-zinc-400 italic px-1 resize-none" 
             value={service.desc} 
             onChange={(e) => updateService(index, 'desc', e.target.value)} 
           />

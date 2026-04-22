@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect, useRef } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, usePathname } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
@@ -27,9 +27,10 @@ export default function ProfessionalDetailsPage() {
   const router = useRouter();
   const [item, setItem] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [paymentLoading, setPaymentLoading] = useState(false); // 🔥 NEW: Separate payment loading state
   const [zoomImage, setZoomImage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
-  
+  const pathname = usePathname();
   const [isUnlocked, setIsUnlocked] = useState(false);
   const [isPaymentEnabled, setIsPaymentEnabled] = useState(false);
   const [isVerifyOpen, setIsVerifyOpen] = useState(false);
@@ -55,7 +56,6 @@ export default function ProfessionalDetailsPage() {
   const overviewRef = useRef<HTMLDivElement>(null);
   const photosRef = useRef<HTMLDivElement>(null);
   const servicesRef = useRef<HTMLDivElement>(null);
-  // 🔥 NEW REF: To scroll down to the paywall options
   const paywallRef = useRef<HTMLDivElement>(null);
 
   // --- INITIAL DATA FETCH ---
@@ -121,7 +121,7 @@ export default function ProfessionalDetailsPage() {
     fetchAllData();
   }, [id, supabase]);
 
-  // --- 🔥 UPDATED ACTION HANDLER (Scrolls instead of instantly opening modal) ---
+  // --- ACTION HANDLER ---
   const handleLockedAction = (target: string, type: 'URL' | 'UNLOCK' = 'URL') => {
     if (isUnlocked) {
       if (type === 'URL' && target) window.open(target, '_blank');
@@ -129,11 +129,15 @@ export default function ProfessionalDetailsPage() {
     }
 
     if (isPaymentEnabled) {
-      // Set the pending action so we can resume it after they pay
       setPendingAction(target);
-      // SCROLL down to the paywall options smoothly
-      paywallRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-      // Show a quick alert guiding them
+      
+      // 🔥 FIX 1: Precise mathematical offset scroll instead of erratic scrollIntoView
+      if (paywallRef.current) {
+        const offset = 150; // Keeps it nicely below the top edge
+        const elementPosition = paywallRef.current.getBoundingClientRect().top + window.pageYOffset;
+        window.scrollTo({ top: elementPosition - offset, behavior: 'smooth' });
+      }
+      
       setAlertConfig({ isVisible: true, message: "Select an access plan to continue.", type: 'info' });
     } else {
       setIsUnlocked(true);
@@ -144,7 +148,7 @@ export default function ProfessionalDetailsPage() {
   // --- PAYMENT EXECUTION ---
   const handleConfirmPayment = async () => {
     setConfirmOpen(false);
-    setLoading(true);
+    setPaymentLoading(true); // 🔥 FIX 2: Use payment-specific loader so page doesn't unmount
 
     try {
       const orderRes = await fetch('/api/razorpay/order', {
@@ -167,16 +171,15 @@ export default function ProfessionalDetailsPage() {
         description: `Unlock Mallu Mart Access (${selectedPlan.toUpperCase()})`,
         order_id: orderData.id,
         method: {
-    netbanking: true,
-    card: true,
-    upi: true,
-    wallet: true,
-    emi: false,      // Explicitly disabled
-    paylater: false  // Explicitly disabled
-  },
+          netbanking: true,
+          card: true,
+          upi: true,
+          wallet: true,
+          emi: false,      
+          paylater: false  
+        },
         config: {
           display: {
-           
             sequence: ['block.banks', 'block.cards'],
             preferences: { show_default_blocks: true },
           },
@@ -190,7 +193,7 @@ export default function ProfessionalDetailsPage() {
               razorpay_payment_id: response.razorpay_payment_id,
               razorpay_signature: response.razorpay_signature,
               userId: currentUser.id,
-              userEmail: currentUser?.email, // 🔥 ADD THIS LINE!
+              userEmail: currentUser?.email,
               paymentType: 'MART',
               plan: selectedPlan.toUpperCase()
             })
@@ -201,7 +204,6 @@ export default function ProfessionalDetailsPage() {
             setIsUnlocked(true);
             setAlertConfig({ isVisible: true, message: `Mallu Mart Unlocked (${selectedPlan.toUpperCase()})!`, type: 'success' });
             
-            // If they were trying to click a link, open it after success!
             if (pendingAction && pendingAction !== '') {
                window.open(pendingAction, '_blank');
             }
@@ -211,7 +213,7 @@ export default function ProfessionalDetailsPage() {
         },
         prefill: { email: currentUser?.email || "" },
         theme: { color: "#FF0000" },
-        modal: { ondismiss: () => setLoading(false) }
+        modal: { ondismiss: () => setPaymentLoading(false) } // 🔥 FIX 2: Revert payment loader on modal close
       };
 
       const rzp = new (window as any).Razorpay(options);
@@ -220,7 +222,7 @@ export default function ProfessionalDetailsPage() {
     } catch (err) {
       setAlertConfig({ isVisible: true, message: "Gateway Error", type: 'error' });
     } finally {
-      setLoading(false);
+      setPaymentLoading(false); // 🔥 FIX 2: Revert payment loader
     }
   };
 
@@ -360,7 +362,8 @@ export default function ProfessionalDetailsPage() {
 
         <div className="relative" ref={paywallRef}>
           {!isUnlocked && (
-<div className="absolute inset-x-0 -top-10 bottom-0 z-[60] flex flex-col items-center justify-start pt-16 sm:pt-32 p-6 md:p-10">              <div className="absolute inset-0 bg-[#030303]/70 backdrop-blur-2xl rounded-[50px] border border-white/5 shadow-3xl" />
+            <div className="absolute inset-x-0 -top-10 bottom-0 z-[60] flex flex-col items-center justify-start pt-16 sm:pt-32 p-6 md:p-10">
+              <div className="absolute inset-0 bg-[#030303]/70 backdrop-blur-2xl rounded-[50px] border border-white/5 shadow-3xl" />
               <div className="relative z-10 text-center space-y-8 w-full max-w-sm mx-auto">
                 <div className="w-20 h-20 bg-brandRed/10 rounded-full flex items-center justify-center mx-auto border border-brandRed/20 shadow-[0_0_50px_rgba(255,0,0,0.2)]">
                   <Lock size={32} className="text-brandRed animate-pulse" />
@@ -372,7 +375,6 @@ export default function ProfessionalDetailsPage() {
 
                 {isPaymentEnabled && martPlans && (
                   <div className="space-y-3 text-left w-full pt-4">
-                    {/* 🔥 UPDATED: Added onClick to DIVs instead of labels so state actually updates! */}
                     {martPlans.monthly.active && (
                       <div onClick={() => setSelectedPlan('monthly')} className={`flex items-center justify-between p-4 rounded-2xl border cursor-pointer transition-all ${selectedPlan === 'monthly' ? 'border-brandRed bg-brandRed/10 shadow-[0_0_15px_rgba(255,0,0,0.2)]' : 'border-white/10 bg-black/50 hover:border-white/30'}`}>
                         <div className="flex items-center gap-4">
@@ -409,9 +411,14 @@ export default function ProfessionalDetailsPage() {
                   </div>
                 )}
 
-                {/* 🔥 UPDATED: This button now triggers the confirm modal based on the selected plan */}
                 <button 
                   onClick={() => {
+                    // 1. THE BOUNCER: Check if they are logged in!
+    if (!currentUser) {
+      // 2. THE RETURN TICKET: Send them to login, then drop them back here
+      router.push(`/auth/login?next=${pathname}`);
+      return; // Stop the code right here!
+    }
                     if (isPaymentEnabled) {
                       if (!selectedPlan) {
                         setAlertConfig({ isVisible: true, message: "Please select an access plan.", type: 'error' });
@@ -422,9 +429,16 @@ export default function ProfessionalDetailsPage() {
                       setIsUnlocked(true);
                     }
                   }} 
-                  className="w-full px-12 py-5 bg-brandRed text-white font-black uppercase text-xs tracking-[0.2em] rounded-2xl hover:bg-white hover:text-black transition-all shadow-[0_20px_40px_rgba(255,0,0,0.3)] active:scale-95"
+                  disabled={paymentLoading} // 🔥 FIX 2: Disable button while loading
+                  className={`w-full px-12 py-5 bg-brandRed text-white font-black uppercase text-xs tracking-[0.2em] rounded-2xl transition-all shadow-[0_20px_40px_rgba(255,0,0,0.3)] ${paymentLoading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-white hover:text-black active:scale-95'}`}
                 >
-                  {isPaymentEnabled ? 'Authorize Payment' : 'View More & Contact'}
+                  {paymentLoading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <Loader2 size={16} className="animate-spin" /> PROCESSING...
+                    </span>
+                  ) : (
+                    isPaymentEnabled ? 'Authorize Payment' : 'View More & Contact'
+                  )}
                 </button>
               </div>
             </div>
