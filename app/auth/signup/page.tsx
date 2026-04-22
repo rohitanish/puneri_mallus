@@ -41,7 +41,7 @@ export default function SignupPage() {
   
   // 🔥 NEW: Store verifier in ref to prevent re-initialization lag
   const recaptchaVerifierRef = useRef<RecaptchaVerifier | null>(null);
-
+  const [waitingUserId, setWaitingUserId] = useState<string | null>(null);
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
@@ -64,28 +64,42 @@ export default function SignupPage() {
   }, []);
 
   // --- AUTOMATIC REDIRECT ENGINE ---
-  useEffect(() => {
-    let poller: any;
-    const checkGlobalRegistration = async () => {
-      if (!phone || !isWaitingForEmail) return;
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('id')
-        .eq('phone_number', `+91${phone}`)
-        .maybeSingle();
+ // --- NEW AUTOMATIC REDIRECT ENGINE ---
+useEffect(() => {
+  let poller: any;
+  
+  const checkEmailStatus = async () => {
+    // Stop polling if we don't have an ID or aren't waiting
+    if (!waitingUserId || !isWaitingForEmail) return;
 
-      if (data && !error) {
-        setMessage("IDENTITY VERIFIED! SYNCING ACCESS...");
+    try {
+      const res = await fetch('/api/auth/check-status', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId: waitingUserId })
+      });
+
+      const { confirmed } = await res.json();
+
+      // THE MAGIC MOMENT
+      if (confirmed) {
+        setMessage("EMAIL VERIFIED! REDIRECTING...");
         clearInterval(poller);
+        
+        // Give them 2 seconds to read the success message, then route to login
         setTimeout(() => { router.push('/auth/login'); }, 2000);
       }
-    };
-
-    if (isWaitingForEmail) {
-      poller = setInterval(checkGlobalRegistration, 3000);
+    } catch (err) {
+      console.error("Polling error", err);
     }
-    return () => { if (poller) clearInterval(poller); };
-  }, [isWaitingForEmail, phone, supabase, router]);
+  };
+
+  if (isWaitingForEmail && waitingUserId) {
+    poller = setInterval(checkEmailStatus, 3000); // Check every 3 seconds
+  }
+  
+  return () => { if (poller) clearInterval(poller); };
+}, [isWaitingForEmail, waitingUserId, router]);
 
   const PUNE_AREAS = ["Akurdi", "Aundh", "Balewadi", "Baner", "Bavdhan", "Bhosari", "Bibwewadi", "Camp", "Chikhali", "Chinchwad", "Dapodi", "Deccan", "Dhanori", "Erandwane", "Fatima Nagar", "Ghorpadi", "Hadapsar", "Hinjewadi", "Kalyani Nagar", "Karve Nagar", "Kasarwadi", "Katraj", "Khadki", "Kondhwa", "Koregaon Park", "Kothrud", "Lohegaon", "Magarpatta", "Model Colony", "Moshi", "Mundhwa", "NIBM", "Nigdi", "Pashan", "Phugewadi", "Pimpri", "Pimple Gurav", "Pimple Nilakh", "Pimple Saudagar", "Pune City", "Punawale", "Rahatani", "Ravet", "Sadashiv Peth", "Sahakar Nagar", "Sangvi", "Shivajinagar", "Sinhagad Road", "Sus", "Swargate", "Talawade", "Tathawade", "Thergaon", "Undri", "Viman Nagar", "Vishrantwadi", "Wakad", "Wanowrie", "Warje", "Yerwada"].sort();
 
@@ -207,6 +221,7 @@ export default function SignupPage() {
           setMessage('WELCOME TO THE TRIBE! ENTERING...');
           setTimeout(() => router.push('/auth/login'), 2000);
         } else {
+          setWaitingUserId(data.user.id); // <--- ADD THIS LINE
           setMessage('VERIFICATION EMAIL SENT. CHECK YOUR MAIL...');
           setIsWaitingForEmail(true); 
         }
@@ -325,7 +340,7 @@ export default function SignupPage() {
             </div>
 
             {message && (
-              <p className={`text-[8px] font-black uppercase text-center py-2 px-4 rounded-lg bg-black/50 border ${message.includes('VERIFIED') || message.includes('SENT') ? 'text-green-400 border-green-400/20' : 'text-brandRed border-brandRed/20'}`}>
+              <p className={`text-[12px] font-black uppercase text-center py-2 px-4 rounded-lg bg-black/50 border ${message.includes('VERIFIED') || message.includes('SENT') ? 'text-green-400 border-green-400/20' : 'text-brandRed border-brandRed/20'}`}>
                 {message}
               </p>
             )}
