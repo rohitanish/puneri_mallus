@@ -1,11 +1,10 @@
 "use client";
-import { useState, useEffect, useMemo, useRef } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 import { 
-  Loader2, Search, Zap, History, Calendar, 
-  Clock, MapPin, X, Ticket
+  Loader2, Search, Zap, History, Clock, MapPin, X, Ticket
 } from 'lucide-react';
 
 const FILTERS = [
@@ -13,6 +12,7 @@ const FILTERS = [
     { id: 'UPCOMING', label: 'Upcoming Event' },
     { id: 'PAST', label: 'Past Events' }
 ];
+
 const shimmer = (w: number, h: number) => `
 <svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">
   <rect width="100%" height="100%" fill="#111"/>
@@ -22,7 +22,9 @@ const toBase64 = (str: string) =>
   typeof window === 'undefined'
     ? Buffer.from(str).toString('base64')
     : window.btoa(str);
+
 export const blurPlaceholder = `data:image/svg+xml;base64,${toBase64(shimmer(700, 475))}`;
+
 export default function EventsPage() {
   const [activeFilter, setActiveFilter] = useState('ALL');
   const [isAutoPlaying, setIsAutoPlaying] = useState(false);
@@ -33,13 +35,16 @@ export default function EventsPage() {
 
   const { scrollY } = useScroll();
   const [isMobile, setIsMobile] = useState(false);
-useEffect(() => {
-  const check = () => setIsMobile(window.innerWidth < 768);
-  check();
-  window.addEventListener('resize', check);
-  return () => window.removeEventListener('resize', check);
-}, []);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth < 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
+
   const y = useTransform(scrollY, [0, 500], isMobile ? [0, 0] : [0, 150]);
+
   useEffect(() => {
     // Only allow auto-play if screen is larger than 1024px (Desktop)
     if (window.innerWidth > 1024) {
@@ -52,13 +57,19 @@ useEffect(() => {
       try {
         const res = await fetch('/api/events');
         const data = await res.json();
-        const sortedData = data.sort((a: any, b: any) => {
-          if (a.isUpcoming !== b.isUpcoming) return a.isUpcoming ? -1 : 1;
-          return new Date(b.date).getTime() - new Date(a.date).getTime();
-        });
-        setEvents(sortedData);
+        
+        // Ensure data is actually an array before sorting
+        if (Array.isArray(data)) {
+            const sortedData = data.sort((a: any, b: any) => {
+              if (a.isUpcoming !== b.isUpcoming) return a.isUpcoming ? -1 : 1;
+              return new Date(b.date).getTime() - new Date(a.date).getTime();
+            });
+            setEvents(sortedData);
+        } else {
+            setEvents([]);
+        }
       } catch (error) {
-        console.error("Pulse Sync Failed:", error);
+        // 🔥 Silent failure for QA
       } finally {
         setLoading(false);
       }
@@ -83,18 +94,24 @@ useEffect(() => {
   };
 
   const filteredEvents = useMemo(() => {
+    const safeSearch = search.toLowerCase().trim();
     return events.filter(e => {
-      const matchesSearch = e.title.toLowerCase().includes(search.toLowerCase());
+      // 🔥 QA BUG FIX: Bulletproof null check on title to prevent rendering crashes
+      const safeTitle = e.title ? String(e.title).toLowerCase() : "";
+      const matchesSearch = safeTitle.includes(safeSearch);
+      
       const matchesFilter = activeFilter === 'ALL' || 
         (activeFilter === 'UPCOMING' && e.isUpcoming) || 
         (activeFilter === 'PAST' && !e.isUpcoming);
+        
       return matchesSearch && matchesFilter;
     });
   }, [events, activeFilter, search]);
 
   if (loading) return (
-    <div className="min-h-screen bg-black flex items-center justify-center">
+    <div className="min-h-screen bg-black flex flex-col items-center justify-center gap-4">
       <Loader2 className="text-brandRed animate-spin" size={30} strokeWidth={1} />
+      <p className="text-zinc-500 text-[11px] font-bold uppercase tracking-widest">Loading Events...</p>
     </div>
   );
 
@@ -104,21 +121,22 @@ useEffect(() => {
       onClickCapture={stopSlider}
       onKeyDownCapture={stopSlider}
     >
+      {/* 🔥 SAFE GLASS FIX: Hardware Accelerated Background */}
       <div
-  className="fixed inset-0 z-0 pointer-events-none overflow-hidden"
-  style={{
-    backgroundImage: 'url(/events/eventsback.jpg)',
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-    opacity: 0.45,
-    transform: 'translateZ(0)',
-    willChange: 'transform',
-  }}
-/>
-<div className="fixed inset-0 z-0 pointer-events-none">
-  <div className="absolute inset-0 brightness-[0.8] saturate-[1.2]" />
-  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#030303] z-[1]" />
-</div>
+        className="fixed inset-0 z-0 pointer-events-none overflow-hidden"
+        style={{
+          backgroundImage: 'url(/events/eventsback.jpg)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          opacity: 0.45,
+          transform: 'translateZ(0)',
+          willChange: 'transform',
+        }}
+      />
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <div className="absolute inset-0 brightness-[0.8] saturate-[1.2]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#030303] z-[1]" />
+      </div>
 
       <div className="max-w-7xl mx-auto relative z-10 pt-32 pb-32 px-6">
         <div className="text-center mb-12 space-y-4">
@@ -129,10 +147,12 @@ useEffect(() => {
 
         <div className="flex flex-col md:flex-row gap-4 items-center justify-between mb-16">
             <div className="relative group w-full md:max-w-xs">
+                <label htmlFor="searchEvents" className="sr-only">Search Events</label>
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600 group-focus-within:text-brandRed" size={14} />
                 <input 
-                    placeholder="SEARCH RECORDS..." 
-                    className="w-full bg-zinc-950/40 border border-white/10 rounded-xl py-3.5 pl-11 text-[9px] font-black tracking-widest outline-none focus:border-brandRed transition-all text-white md:backdrop-blur-xl" 
+                    id="searchEvents"
+                    placeholder="Search events..." 
+                    className="w-full bg-zinc-950/40 border border-white/10 rounded-xl py-3.5 pl-11 text-[13px] font-medium outline-none focus:border-brandRed transition-all text-white md:backdrop-blur-xl placeholder:text-zinc-500" 
                     onChange={e => {setSearch(e.target.value); stopSlider();}} value={search}
                 />
             </div>
@@ -140,21 +160,20 @@ useEffect(() => {
             <div className="relative flex items-center bg-zinc-950/50 p-1 rounded-xl border border-white/10 w-full md:w-[450px] md:backdrop-blur-md">
                 {FILTERS.map((f) => (
                     <button key={f.id} onClick={() => {setActiveFilter(f.id); stopSlider();}}
-                        className={`relative flex-1 py-2.5 text-[9px] font-black uppercase tracking-widest transition-colors z-10 ${activeFilter === f.id ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
+                        className={`relative flex-1 py-2.5 text-[10px] font-bold uppercase tracking-widest transition-colors z-10 ${activeFilter === f.id ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
                     >
                         {f.label}
                         <AnimatePresence>
-  {activeFilter === f.id && (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ duration: 0.2 }}
-      className="absolute inset-0 bg-brandRed rounded-lg -z-10 shadow-[0_0_15px_rgba(255,0,0,0.3)]"
-    />
-  )}
-</AnimatePresence>
-
+                          {activeFilter === f.id && (
+                            <motion.div
+                              initial={{ opacity: 0, scale: 0.95 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              exit={{ opacity: 0, scale: 0.95 }}
+                              transition={{ duration: 0.2 }}
+                              className="absolute inset-0 bg-brandRed rounded-lg -z-10 shadow-[0_0_15px_rgba(255,0,0,0.3)]"
+                            />
+                          )}
+                        </AnimatePresence>
                     </button>
                 ))}
             </div>
@@ -170,21 +189,19 @@ useEffect(() => {
 
               return (
                 <motion.div layout key={item._id}
-                  
-  initial={{ opacity: 0 }} 
-  animate={{ opacity: 1 }} 
-  exit={{ opacity: 0 }}
-                  className="group relative bg-zinc-950/30 border border-white/5 rounded-[40px] overflow-hidden transition-all duration-500 hover:border-brandRed/30 shadow-xl md:backdrop-blur-2xl h-fit"
+                  initial={{ opacity: 0 }} 
+                  animate={{ opacity: 1 }} 
+                  exit={{ opacity: 0 }}
+                  className="group relative border border-white/5 rounded-[40px] overflow-hidden transition-all duration-500 hover:border-brandRed/30 shadow-xl md:backdrop-blur-2xl h-fit bg-white/[0.03]"
+                  style={{ transform: 'translateZ(0)' }}
                 >
                   <div className="relative w-full h-56 overflow-hidden">
                     <Image 
                       src={item.image || "/about/placeholder.jpeg"} 
-                      alt={item.title} fill  
+                      alt={item.title || "Event Image"} fill  
                       blurDataURL={blurPlaceholder} placeholder="blur"
-                      // ADD THIS:
-    // Mobile: 100% width, Tablet: 50% width, Desktop: 33% width
-    sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                      className={`object-cover group-hover:scale-105 transition-all duration-700 ${!item.isUpcoming ? 'grayscale opacity-60' : 'grayscale-0'}`} 
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      className={`object-cover group-hover:scale-105 transition-all duration-700 will-change-transform ${!item.isUpcoming ? 'grayscale opacity-60' : 'grayscale-0'}`} 
                     />
                     <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-transparent" />
                     
@@ -193,87 +210,79 @@ useEffect(() => {
                         <div className="px-3 py-1 text-2xl font-black text-black leading-none pb-2">{day}</div>
                     </div>
 
-                    {/* 🔥 LOGO BADGE: Increased Size & Full Coverage */}
-<div className="absolute top-6 right-6 z-20">
-  {/* Increased container to w-14 h-14 (56px) */}
-  <div className="relative w-14 h-14 flex items-center justify-center">
-    {/* Dynamic Background Glow */}
-    <motion.div 
-      animate={item.isUpcoming ? { opacity: [0.4, 0.7, 0.4], scale: [1, 1.1, 1] } : { opacity: 0.2 }}
-      transition={{ repeat: Infinity, duration: 3 }}
-      className={`absolute inset-0 rounded-full blur-lg ${item.isUpcoming ? 'bg-brandRed' : 'bg-zinc-600'}`} 
-    />
-    
-    {/* Circular Logo Container - Removed extra padding (p-0) to allow image to cover */}
-    <div className={`relative w-full h-full rounded-full border-2 overflow-hidden flex items-center justify-center backdrop-blur-md transition-all duration-500 ${
-      item.isUpcoming 
-      ? 'bg-zinc-950/90 border-white/20 shadow-2xl' 
-      : 'bg-zinc-900/90 border-white/5 grayscale opacity-60'
-    }`}>
-      {item.categoryLogo ? (
-        <img 
-          src={item.categoryLogo} 
-          alt="Category" 
-          /* 🔥 object-cover ensures the circle is entirely covered by the image */
-          className="w-full h-full object-cover" 
-        />
-      ) : (
-        /* Fallback icon remains if no logo is found */
-        item.isUpcoming ? (
-          <Zap size={20} className="text-brandRed fill-brandRed/20" />
-        ) : (
-          <History size={20} className="text-zinc-500" />
-        )
-      )}
-    </div>
-  </div>
-</div>
+                    <div className="absolute top-6 right-6 z-20">
+                      <div className="relative w-14 h-14 flex items-center justify-center">
+                        <motion.div 
+                          animate={item.isUpcoming ? { opacity: [0.4, 0.7, 0.4], scale: [1, 1.1, 1] } : { opacity: 0.2 }}
+                          transition={{ repeat: Infinity, duration: 3 }}
+                          className={`absolute inset-0 rounded-full blur-lg ${item.isUpcoming ? 'bg-brandRed' : 'bg-zinc-600'}`} 
+                        />
+                        
+                        <div className={`relative w-full h-full rounded-full border-2 overflow-hidden flex items-center justify-center backdrop-blur-md transition-all duration-500 ${
+                          item.isUpcoming 
+                          ? 'bg-zinc-950/90 border-white/20 shadow-2xl' 
+                          : 'bg-zinc-900/90 border-white/5 grayscale opacity-60'
+                        }`}>
+                          {item.categoryLogo ? (
+                            <img 
+                              src={item.categoryLogo} 
+                              alt="Category" 
+                              className="w-full h-full object-cover" 
+                            />
+                          ) : (
+                            item.isUpcoming ? (
+                              <Zap size={20} className="text-brandRed fill-brandRed/20" />
+                            ) : (
+                              <History size={20} className="text-zinc-500" />
+                            )
+                          )}
+                        </div>
+                      </div>
+                    </div>
                   </div>
 
                   <div className="p-8 space-y-6">
-                    <h2 className={`text-2xl md:text-3xl font-black italic uppercase tracking-tighter leading-[0.9] ${!item.isUpcoming ? 'text-zinc-500' : 'text-white'}`}>
-                      {item.title}
+                    <h2 className={`text-2xl md:text-3xl font-black italic uppercase tracking-tighter leading-[0.9] truncate ${!item.isUpcoming ? 'text-zinc-500' : 'text-white'}`}>
+                      {item.title || "Untitled Event"}
                     </h2>
 
                     <AnimatePresence>
-  {isExpanded && (
-    <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden space-y-6" >
-       <div className="h-px bg-white/10 w-full" />
-       
-       <div className="grid grid-cols-1 gap-4">
-         <div className="flex items-center gap-3 text-zinc-300 text-sm md:text-base font-black uppercase tracking-widest">
-           <Clock size={18} className={item.isUpcoming ? 'text-brandRed' : 'text-zinc-600'} /> {item.time || 'TBA'}
-         </div>
-         <div className="flex items-center gap-3 text-zinc-300 text-sm md:text-base font-black uppercase tracking-widest">
-           <MapPin size={18} className={item.isUpcoming ? 'text-brandRed' : 'text-zinc-600'} /> {item.location || 'Pune Hub'}
-         </div>
-       </div>
+                      {isExpanded && (
+                        <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} className="overflow-hidden space-y-6" >
+                          <div className="h-px bg-white/10 w-full" />
+                          
+                          <div className="grid grid-cols-1 gap-4">
+                            <div className="flex items-center gap-3 text-zinc-300 text-sm md:text-base font-bold tracking-widest">
+                              <Clock size={18} className={item.isUpcoming ? 'text-brandRed' : 'text-zinc-600'} /> {item.time || 'TBA'}
+                            </div>
+                            <div className="flex items-center gap-3 text-zinc-300 text-sm md:text-base font-bold tracking-widest">
+                              <MapPin size={18} className={item.isUpcoming ? 'text-brandRed' : 'text-zinc-600'} /> {item.location || 'Pune Hub'}
+                            </div>
+                          </div>
 
-       {/* UPDATED DESCRIPTION LOGIC: Convert hyphens to pointers */}
-       <div className="space-y-3 pl-1">
-         {item.description?.split('-').map((segment: string, idx: number) => {
-           const trimmed = segment.trim();
-           if (!trimmed) return null;
+                          <div className="space-y-3 pl-1">
+                            {item.description?.split('-').map((segment: string, idx: number) => {
+                              const trimmed = segment.trim();
+                              if (!trimmed) return null;
 
-           return (
-             <div key={idx} className="flex items-start gap-3 group/item">
-               <div className="mt-2 shrink-0">
-                 <div className="w-1.5 h-1.5 rounded-full bg-brandRed shadow-[0_0_8px_#FF0000]" />
-               </div>
-               <p className="text-zinc-300 text-sm md:text-base leading-relaxed italic font-medium group-hover/item:text-white transition-colors">
-                 {trimmed}
-               </p>
-             </div>
-           );
-         })}
-       </div>
-    </motion.div>
-  )}
-</AnimatePresence>
+                              return (
+                                <div key={idx} className="flex items-start gap-3 group/item">
+                                  <div className="mt-2 shrink-0">
+                                    <div className="w-1.5 h-1.5 rounded-full bg-brandRed shadow-[0_0_8px_#FF0000]" />
+                                  </div>
+                                  <p className="text-zinc-300 text-sm md:text-base leading-relaxed italic font-medium group-hover/item:text-white transition-colors">
+                                    {trimmed}
+                                  </p>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
 
                     <div className="flex flex-col gap-3">
                         <div className="flex gap-2">
-                           {/* BOOKING BUTTON - Visible if upcoming */}
                            {item.isUpcoming && (
                              <Link 
                                href={item.link || '#'} 
@@ -284,7 +293,6 @@ useEffect(() => {
                              </Link>
                            )}
                            
-                           {/* DETAILS TOGGLE */}
                            <button onClick={() => {setExpandedId(isExpanded ? null : item._id); stopSlider();}}
                               className={`flex-1 py-4 rounded-2xl font-black uppercase text-[11px] tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95 ${item.isUpcoming ? 'bg-white text-black hover:bg-zinc-200' : 'bg-zinc-800 text-zinc-400 hover:text-white'}`}
                            >
@@ -301,9 +309,9 @@ useEffect(() => {
 
         {filteredEvents.length === 0 && (
           <div className="py-32 text-center">
-            <Search size={40} className="text-zinc-800 mx-auto mb-4" />
-            <p className="text-zinc-500 font-black uppercase tracking-[0.3em] text-[10px]">No transmission found</p>
-            <button onClick={() => { setSearch(''); setActiveFilter('ALL'); }} className="mt-4 text-brandRed font-black uppercase text-[10px] hover:underline tracking-widest">Reset Radar</button>
+            <Search size={40} className="text-zinc-600 mx-auto mb-4" />
+            <p className="text-zinc-400 font-bold uppercase tracking-widest text-[11px]">No events found</p>
+            <button onClick={() => { setSearch(''); setActiveFilter('ALL'); }} className="mt-4 text-brandRed font-bold uppercase text-[11px] hover:underline tracking-widest">Clear Search</button>
           </div>
         )}
       </div>

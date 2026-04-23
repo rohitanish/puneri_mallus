@@ -5,30 +5,20 @@ import Link from 'next/link';
 import InstagramGlimpse from '@/components/about/InstagramGlimpse';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  ShieldCheck, 
-  Handshake, 
-  Globe, 
-  Zap, 
+  Target,
+  Eye,
+  Diamond,
   ArrowRight, 
   Music, 
-  Heart,
-  MapPin,
   ArrowUpRight,
-  Instagram,
-  Facebook,
-  MessageCircle,
-  Target, // NEW
-  Eye,    // NEW
-  Diamond, // NEW
   X
 } from 'lucide-react';
+
 interface TeamMember {
   name: string;
   role: string;
   image: string;
 }
-// For local images, generate blurDataURL at build time using next/image
-// Quickest approach: use a tiny base64 placeholder
 
 const shimmer = (w: number, h: number) => `
 <svg width="${w}" height="${h}" xmlns="http://www.w3.org/2000/svg">
@@ -41,56 +31,44 @@ const toBase64 = (str: string) =>
     : window.btoa(str);
 
 export const blurPlaceholder = `data:image/svg+xml;base64,${toBase64(shimmer(700, 475))}`;
+
 const LaserDivider = () => (
   <div className="relative w-full h-px flex items-center justify-center overflow-visible my-32">
     <div className="absolute inset-x-0 h-px bg-gradient-to-r from-transparent via-brandRed/40 to-transparent" />
     <div className="absolute w-[45%] h-[2px] bg-brandRed shadow-[0_0_20px_#FF0000] z-10" />
-    
   </div>
 );
 
 export default function AboutPage() {
   const [cycle, setCycle] = useState(false);
-  const fullText = "THE JAMMING SESSIONS"; 
-  const [displayText, setDisplayText] = useState("");
-  const [textIndex, setTextIndex] = useState(0);
-  const [startTypewriter, setStartTypewriter] = useState(false);
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
+
   useEffect(() => {
     async function initializeTribeData() {
-      const timestamp = Date.now();
-      
       try {
-        // Parallel Fetching for maximum performance
         const [galleryRes, teamRes] = await Promise.all([
           fetch('/api/settings/gallery'),
           fetch('/api/team')
         ]);
 
-        // 1. Process Gallery Data
         const galleryData = await galleryRes.json();
         if (galleryData && Array.isArray(galleryData.images) && galleryData.images.length > 0) {
           setGalleryImages(galleryData.images);
         } else {
-          // Fallback if MongoDB is empty
           setGalleryImages([
             '/gallery/img1.jpg', '/gallery/img2.jpg', '/gallery/img3.jpg', 
             '/gallery/img4.jpg', '/gallery/img5.jpg', '/gallery/img6.jpg'
           ]);
         }
 
-        // 2. Process Team Data
         const teamData = await teamRes.json();
         if (Array.isArray(teamData) && teamData.length > 0) {
           setTeamMembers(teamData);
         }
 
       } catch (err) {
-        console.error("Archive Synchronization Failure:", err);
-        
-        // Final fallback for gallery on network error
         setGalleryImages([
           '/gallery/img1.jpg', '/gallery/img2.jpg', '/gallery/img3.jpg', 
           '/gallery/img4.jpg', '/gallery/img5.jpg', '/gallery/img6.jpg'
@@ -102,95 +80,69 @@ export default function AboutPage() {
   }, []);
 
   useEffect(() => {
-  if (!zoomImage) return
-  const handler = (e: KeyboardEvent) => {
-    if (e.key === 'Escape') setZoomImage(null)
-  }
-  window.addEventListener('keydown', handler)
-  return () => window.removeEventListener('keydown', handler)
-}, [zoomImage])
-
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.isIntersecting) {
-          setStartTypewriter(true);
-        }
-      },
-      { threshold: 0.3 }
-    );
-    const element = document.getElementById('jamming-section');
-    if (element) observer.observe(element);
-    return () => {
-      if (element) observer.unobserve(element);
+    if (!zoomImage) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setZoomImage(null);
     };
-  }, []);
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [zoomImage]);
 
   useEffect(() => {
-  const interval = setInterval(() => setCycle(p => !p), 4000)
-  return () => clearInterval(interval)
-}, []) // runs once, never interrupted
-
-useEffect(() => {
-  if (!startTypewriter || textIndex >= fullText.length) return
-  const timeout = setTimeout(() => {
-    setDisplayText(p => p + fullText[textIndex])
-    setTextIndex(p => p + 1)
-  }, 60)
-  return () => clearTimeout(timeout)
-}, [textIndex, startTypewriter])
+    const interval = setInterval(() => setCycle(p => !p), 4000);
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <main className="min-h-screen bg-[#030303] text-white pt-40 pb-20 px-6 relative selection:bg-brandRed/30">
       
-      {/* 1. FIXED BRANDED BACKGROUND (UPDATED OPACITY FOR VISIBILITY) */}
+      {/* 1. FIXED BRANDED BACKGROUND */}
       <div
-  className="fixed inset-0 z-0 pointer-events-none overflow-hidden"
-  style={{
-    backgroundImage: 'url(/events/about5.png)',
-    backgroundSize: 'cover',
-    backgroundPosition: 'center',
-    opacity: 0.4,
-    transform: 'translateZ(0)',
-    willChange: 'transform',
-  }}
-/>
-<div className="fixed inset-0 z-0 pointer-events-none">
-  <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#030303]" />
-  <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-brandRed/10 blur-[150px] rounded-full opacity-30" />
-  <div className="absolute inset-0 opacity-[0.03] bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay" />
-</div>
+        className="fixed inset-0 z-0 pointer-events-none overflow-hidden"
+        style={{
+          backgroundImage: 'url(/events/about5.png)',
+          backgroundSize: 'cover',
+          backgroundPosition: 'center',
+          opacity: 0.4,
+          transform: 'translateZ(0)',
+          willChange: 'transform',
+        }}
+      />
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#030303]" />
+        <div className="absolute top-[-10%] left-[-10%] w-[60%] h-[60%] bg-brandRed/10 blur-[150px] rounded-full opacity-30" />
+        <div className="absolute inset-0 opacity-[0.03] bg-[url('https://grainy-gradients.vercel.app/noise.svg')] mix-blend-overlay" />
+      </div>
 
       <div className="relative z-10">
-       {/* 1. HERO: THE ORIGIN STORY */}
-<section className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-20 items-center mb-40 px-6">
-  <div className="relative aspect-square rounded-[40px] overflow-hidden border border-white/10 group shadow-2xl bg-zinc-950">
-    <Image 
-  src="/about/community.jpeg" 
-  alt="Community" 
-  fill 
-  blurDataURL={blurPlaceholder} placeholder="blur"
-  // Tells the browser: "Use full screen width on mobile, half on desktop."
-  sizes="(max-width: 768px) 100vw, 50vw" 
-  className="object-cover grayscale-[20%] group-hover:grayscale-0 transition-all duration-1000 group-hover:scale-105" 
-/>
-    <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80" />
-  </div>
-  
-  <div className="space-y-8">
-    {/* Slightly increased: 6xl on mobile, 8xl on desktop */}
-    <h1 className="text-6xl md:text-8xl font-black uppercase tracking-tighter italic leading-[0.85] mb-4">
-      About <br />
-      <span className="text-brandRed">Puneri <br />Mallus.</span>
-    </h1>
-    
-    <p className="text-xl md:text-2xl text-zinc-400 font-medium leading-relaxed italic max-w-xl">
-      The heartbeat of the Kerala diaspora in Pune. A cultural bridge, a support system, and a family away from home.
-    </p>
-  </div>
-</section>
+        
+        {/* HERO: THE ORIGIN STORY */}
+        <section className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-20 items-center mb-40 px-6">
+          <div className="relative aspect-square rounded-[40px] overflow-hidden border border-white/10 group shadow-2xl bg-zinc-950">
+            <Image 
+              src="/about/community.jpeg" 
+              alt="Community" 
+              fill 
+              blurDataURL={blurPlaceholder} placeholder="blur"
+              sizes="(max-width: 768px) 100vw, 50vw" 
+              className="object-cover grayscale-[20%] group-hover:grayscale-0 transition-all duration-1000 group-hover:scale-105" 
+            />
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-transparent to-transparent opacity-80" />
+          </div>
+          
+          <div className="space-y-8">
+            <h1 className="text-6xl md:text-8xl font-black uppercase tracking-tighter italic leading-[0.85] mb-4">
+              About <br />
+              <span className="text-brandRed">Puneri <br />Mallus.</span>
+            </h1>
+            
+            <p className="text-xl md:text-2xl text-zinc-400 font-medium leading-relaxed italic max-w-xl">
+              The heartbeat of the Kerala diaspora in Pune. A cultural bridge, a support system, and a family away from home.
+            </p>
+          </div>
+        </section>
 
-        {/* 2. CORE DIRECTIVES (MISSION, VISION, VALUES) */}
+        {/* CORE DIRECTIVES */}
         <section className="max-w-7xl mx-auto mb-40 px-6">
           <div className="flex flex-col items-center mb-20 text-center">
             <h2 className="text-5xl md:text-7xl font-black uppercase italic tracking-tighter">
@@ -200,7 +152,6 @@ useEffect(() => {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 md:gap-10">
-            {/* Mission */}
             <div className="bg-zinc-950 border border-white/5 p-10 md:p-12 rounded-[40px] hover:border-brandRed/40 transition-all duration-500 shadow-2xl relative group overflow-hidden flex flex-col items-start text-left">
               <div className="absolute top-0 right-0 w-40 h-40 bg-brandRed/5 blur-[50px] opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
               <div className="p-5 bg-black border border-white/5 rounded-2xl mb-8 group-hover:scale-110 group-hover:border-brandRed/30 transition-all duration-500 shadow-xl">
@@ -212,7 +163,6 @@ useEffect(() => {
               </p>
             </div>
 
-            {/* Vision */}
             <div className="bg-zinc-950 border border-white/5 p-10 md:p-12 rounded-[40px] hover:border-brandRed/40 transition-all duration-500 shadow-2xl relative group overflow-hidden flex flex-col items-start text-left">
               <div className="absolute top-0 right-0 w-40 h-40 bg-brandRed/5 blur-[50px] opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
               <div className="p-5 bg-black border border-white/5 rounded-2xl mb-8 group-hover:scale-110 group-hover:border-brandRed/30 transition-all duration-500 shadow-xl">
@@ -224,7 +174,6 @@ useEffect(() => {
               </p>
             </div>
 
-            {/* Values */}
             <div className="bg-zinc-950 border border-white/5 p-10 md:p-12 rounded-[40px] hover:border-brandRed/40 transition-all duration-500 shadow-2xl relative group overflow-hidden flex flex-col items-start text-left">
               <div className="absolute top-0 right-0 w-40 h-40 bg-brandRed/5 blur-[50px] opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
               <div className="p-5 bg-black border border-white/5 rounded-2xl mb-8 group-hover:scale-110 group-hover:border-brandRed/30 transition-all duration-500 shadow-xl">
@@ -240,13 +189,17 @@ useEffect(() => {
 
         <LaserDivider />
 
-        {/* 2. AGAM: FLAGSHIP PROGRAM */}
+        {/* AGAM: FLAGSHIP PROGRAM */}
         <section className="max-w-7xl mx-auto mb-40">
-<div className="relative p-12 lg:p-24 rounded-[80px] bg-zinc-950/80 md:bg-zinc-950/40 border border-brandRed/20 md:backdrop-blur-3xl overflow-hidden group">            <div className="flex flex-col lg:flex-row gap-20 items-center">
+          <div 
+            className="relative p-12 lg:p-24 rounded-[80px] bg-zinc-950/80 md:bg-white/[0.03] border border-brandRed/20 md:backdrop-blur-3xl overflow-hidden group"
+            style={{ transform: 'translateZ(0)' }}
+          > 
+            <div className="flex flex-col lg:flex-row gap-20 items-center">
               <div className="w-full lg:w-2/5 space-y-8 order-2 lg:order-1">
                 <div className="flex items-center gap-3">
-                   <Zap size={18} className="text-brandRed fill-brandRed" />
-                   <span className="text-brandRed font-black uppercase text-[10px] tracking-[0.5em]">Intellectual Property</span>
+                   <Target size={18} className="text-brandRed fill-brandRed" />
+                   <span className="text-brandRed font-black uppercase text-[11px] tracking-widest">Flagship Event</span>
                 </div>
                 <h2 className="text-6xl md:text-8xl font-black uppercase italic tracking-tighter leading-[0.85]">
                   Agam: The <br /><span className="text-white">Pioneer <br />Program</span>
@@ -255,15 +208,15 @@ useEffect(() => {
               </div>
               <div className="w-full lg:w-3/5 order-1 lg:order-2">
                 <div className="relative h-[500px] lg:h-[700px] w-full rounded-[50px] overflow-hidden border border-white/5 shadow-2xl">
-<Image 
-  src="/about/agams.jpg" 
-  alt="Agam" 
-  fill 
-  blurDataURL={blurPlaceholder} placeholder="blur"
-  // Optimized for a responsive grid: Full width on mobile, 1/2 on tablet, 1/3 on desktop
-  sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-  className="object-cover group-hover:scale-110 transition-transform duration-1000" 
-/>                </div>
+                  <Image 
+                    src="/about/agams.jpg" 
+                    alt="Agam" 
+                    fill 
+                    blurDataURL={blurPlaceholder} placeholder="blur"
+                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                    className="object-cover group-hover:scale-110 transition-transform duration-1000" 
+                  /> 
+                </div>
               </div>
             </div>
           </div>
@@ -271,20 +224,19 @@ useEffect(() => {
 
         <LaserDivider />
 
-        {/* 3. JAMMING SESSIONS */}
+        {/* JAMMING SESSIONS */}
         <section id="jamming-section" className="max-w-7xl mx-auto mb-40 relative">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
             <div className="lg:col-span-7 relative h-[600px] rounded-[60px] overflow-hidden border border-white/10 shadow-2xl bg-zinc-950">
               <Image 
-  src="/about/image_1.jpeg" 
-  alt="Jamming" 
-  fill 
-  blurDataURL={blurPlaceholder} placeholder="blur"
-  // Tells the browser to load a 100% width version for mobile and 50% for desktop
-  sizes="(max-width: 768px) 100vw, 50vw" 
-  className={`object-cover transition-opacity duration-500 ease-in-out ${cycle ? 'opacity-0' : 'opacity-80'}`} 
-  priority
-/>
+                src="/about/image_1.jpeg" 
+                alt="Jamming" 
+                fill 
+                blurDataURL={blurPlaceholder} placeholder="blur"
+                sizes="(max-width: 768px) 100vw, 50vw" 
+                className={`object-cover transition-opacity duration-500 ease-in-out ${cycle ? 'opacity-0' : 'opacity-80'}`} 
+                priority
+              />
               <video 
                 autoPlay loop muted playsInline preload="none"
                 className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ease-in-out ${cycle ? 'opacity-80' : 'opacity-0'}`}
@@ -302,21 +254,14 @@ useEffect(() => {
                 <div className="flex items-center gap-4 text-brandRed">
                   <Music size={24} className="animate-pulse" />
                   <span className="font-mono uppercase tracking-[0.4em] text-[10px] font-black opacity-60">
-                    Transmitting...
+                    Live Music
                   </span>
                 </div>
-                <h3 className="text-6xl md:text-8xl font-black uppercase italic tracking-tighter leading-[0.85] min-h-[160px]">
-                  <span className="text-white">
-                    {displayText.includes("THE") ? "THE " : ""}
-                  </span>
-                  <span className="text-brandRed drop-shadow-[0_0_15px_rgba(255,0,0,0.5)]">
-                    {displayText.replace("THE ", "").split(" ")[0]}
-                  </span> 
-                  <br />
-                  <span className="text-white">
-                    {displayText.split(" ").slice(2).join(" ")}
-                  </span>
-                  <span className="inline-block w-3 h-12 bg-brandRed ml-3 animate-pulse align-middle" />
+                {/* 🔥 FIX 1: QA Empty H3 Bug. Hardcoded stable text. */}
+                <h3 className="text-6xl md:text-8xl font-black uppercase italic tracking-tighter leading-[0.85]">
+                  <span className="text-white">THE </span>
+                  <span className="text-brandRed drop-shadow-[0_0_15px_rgba(255,0,0,0.5)]">JAMMING</span><br />
+                  <span className="text-white">SESSIONS</span>
                 </h3>
                 <p className="text-xl text-zinc-500 italic leading-relaxed border-l-2 border-brandRed/20 pl-6 max-w-sm">
                   Mallu Beats recreating the magic of Kerala unplugged.
@@ -328,13 +273,13 @@ useEffect(() => {
 
         <LaserDivider />
 
-        {/* 4. BEAUTY PAGEANT */}
+        {/* BEAUTY PAGEANT */}
         <section className="max-w-7xl mx-auto mb-40">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-24 items-center">
             <div className="space-y-8">
                 <div className="flex items-center gap-3">
                     <span className="w-12 h-px bg-brandRed" />
-                    <span className="text-brandRed font-black uppercase text-[10px] tracking-[0.5em]">Annual Glamour</span>
+                    <span className="text-brandRed font-black uppercase text-[11px] tracking-widest">Annual Event</span>
                  </div>
               <h2 className="text-6xl md:text-8xl font-black uppercase italic tracking-tighter leading-none">
                 The <span className="text-brandRed">Beauty</span> <br />Pageant Pune.
@@ -343,15 +288,13 @@ useEffect(() => {
             </div>
             <div className="relative h-[650px] w-full rounded-[60px] overflow-hidden border border-white/10 shadow-2xl">
               <Image 
-  src="/about/beauty.jpeg" 
-  alt="Pageant" 
-  fill 
-  blurDataURL={blurPlaceholder} placeholder="blur"
-  // Tells the browser: "On mobile, use full screen width. On desktop, use half."
-  // This drastically reduces the file size for phone users.
-  sizes="(max-width: 768px) 100vw, 50vw" 
-  className={`object-cover transition-opacity duration-1000 ${cycle ? 'opacity-0' : 'opacity-80'}`} 
-/>
+                src="/about/beauty.jpeg" 
+                alt="Pageant" 
+                fill 
+                blurDataURL={blurPlaceholder} placeholder="blur"
+                sizes="(max-width: 768px) 100vw, 50vw" 
+                className={`object-cover transition-opacity duration-1000 ${cycle ? 'opacity-0' : 'opacity-80'}`} 
+              />
               <video 
                 autoPlay loop muted playsInline 
                 className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${cycle ? 'opacity-80' : 'opacity-0'}`}
@@ -364,7 +307,7 @@ useEffect(() => {
 
         <LaserDivider />
 
-       {/* 5. DYNAMIC TEAM SECTION (2-COLUMN MOBILE GRID) */}
+       {/* DYNAMIC TEAM SECTION */}
         <section className="max-w-[90%] md:max-w-7xl mx-auto text-center mb-40">
           <div className="flex flex-col items-center mb-12 md:mb-20">
             <h2 className="text-5xl md:text-7xl font-black uppercase italic tracking-tighter text-white">
@@ -373,34 +316,29 @@ useEffect(() => {
             <div className="w-24 h-1 bg-brandRed mt-4 shadow-[0_0_20px_#FF0000]" />
           </div>
           
-          {/* Matches Archive: 2 columns on mobile (gap-4), 3 on desktop (gap-12) */}
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-12 justify-items-center">
             {teamMembers.length > 0 ? (
               teamMembers.map((member, idx) => (
                 <div key={idx} className="group w-full max-w-[280px]">
-                  
-                  {/* Portrait Container: Scales corner radius for mobile vs desktop */}
-                    <div className="relative aspect-[3/4] rounded-2xl md:rounded-[40px] overflow-hidden border border-white/5 mb-3 md:mb-6 bg-zinc-950 shadow-2xl transition-all duration-500 group-hover:border-brandRed/50 md:group-hover:scale-[1.02]">                    <Image 
-                      src={member.image} 
-                      alt={member.name} 
-                      fill
-                      blurDataURL={blurPlaceholder} placeholder="blur"
-                      sizes="(max-width: 768px) 50vw, 33vw"
-                      className="object-cover transition-all duration-700 brightness-[0.9] group-hover:brightness-110 saturate-[1.1]" 
-                    />
-                    
-                    {/* Red Inner Glow on Hover */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-brandRed/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-                  </div>
+                    <div className="relative aspect-[3/4] rounded-2xl md:rounded-[40px] overflow-hidden border border-white/5 mb-3 md:mb-6 bg-zinc-950 shadow-2xl transition-all duration-500 group-hover:border-brandRed/50 md:group-hover:scale-[1.02]">
+                      <Image 
+                        src={member.image} 
+                        alt={member.name} 
+                        fill
+                        blurDataURL={blurPlaceholder} placeholder="blur"
+                        sizes="(max-width: 768px) 50vw, 33vw"
+                        className="object-cover transition-all duration-700 brightness-[0.9] group-hover:brightness-110 saturate-[1.1]" 
+                      />
+                      <div className="absolute inset-0 bg-gradient-to-t from-brandRed/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+                    </div>
 
-                  {/* Identity: Responsive text sizing */}
                   <h4 className="text-[14px] sm:text-lg md:text-3xl font-black uppercase italic leading-tight text-white group-hover:text-brandRed transition-colors truncate px-1">
                     {member.name}
                   </h4>
                   
                   <div className="flex items-center justify-center gap-1.5 md:gap-2 mt-1 md:mt-2">
                     <div className="h-[1px] w-2 md:w-4 bg-brandRed/40" />
-                    <p className="text-brandRed font-black uppercase text-[8px] md:text-[10px] tracking-[0.2em] md:tracking-[0.3em] truncate max-w-[120px] md:max-w-none">
+                    <p className="text-brandRed font-black uppercase text-[10px] md:text-[11px] tracking-widest truncate max-w-[120px] md:max-w-none">
                       {member.role}
                     </p>
                     <div className="h-[1px] w-2 md:w-4 bg-brandRed/40" />
@@ -408,9 +346,10 @@ useEffect(() => {
                 </div>
               ))
             ) : (
+              // 🔥 FIX 2: QA Placeholder Bug. Changed to simple English.
               <div className="col-span-full py-12 md:py-20 border border-dashed border-white/5 rounded-2xl md:rounded-[40px] w-full">
-                <p className="text-zinc-600 font-black uppercase tracking-[0.2em] md:tracking-[0.4em] text-[8px] md:text-[10px] italic animate-pulse">
-                  Team personnel synchronization in progress...
+                <p className="text-zinc-500 font-bold uppercase tracking-widest text-[11px]">
+                  Loading team members...
                 </p>
               </div>
             )}
@@ -418,84 +357,84 @@ useEffect(() => {
         </section>
         <LaserDivider />
 
-        {/* 6. CONCISE GALLERY SECTION */}
-<section className="max-w-[90%] mx-auto mb-40 relative">
-  <div className="flex flex-col md:flex-row items-baseline gap-6 mb-12">
-    <h2 className="text-5xl md:text-7xl font-black uppercase italic tracking-tighter text-white">
-      The <span className="text-brandRed">Archive</span>
-    </h2>
-    <p className="text-zinc-500 font-bold uppercase tracking-[0.3em] text-[10px]">
-      Visual Legacy // 2026
-    </p>
-  </div>
+        {/* CONCISE GALLERY SECTION */}
+        <section className="max-w-[90%] mx-auto mb-40 relative">
+          <div className="flex flex-col md:flex-row items-baseline gap-6 mb-12">
+            <h2 className="text-5xl md:text-7xl font-black uppercase italic tracking-tighter text-white">
+              The <span className="text-brandRed">Archive</span>
+            </h2>
+            <p className="text-zinc-500 font-bold uppercase tracking-widest text-[11px]">
+              Visual Legacy // 2026
+            </p>
+          </div>
 
-  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-    {(galleryImages.length > 0 ? galleryImages : [1, 2, 3, 4, 5, 6]).map((item, idx) => {
-      const src = typeof item === 'string' ? item : `/gallery/img${item}.jpg`;
-      return (
-        <div 
-          key={idx} 
-          onClick={() => setZoomImage(src)} // Trigger Lightbox
-          className="relative aspect-video md:aspect-[4/3] rounded-2xl overflow-hidden border border-white/5 group bg-zinc-900 shadow-2xl cursor-pointer"
-        >
-          <Image 
-            src={src} 
-            alt={`Archive Legacy ${idx + 1}`} 
-            fill 
-            blurDataURL={blurPlaceholder} placeholder="blur"
-            sizes="(max-width: 768px) 50vw, 33vw"
-            className="object-cover transition-all duration-700 grayscale md:group-hover:grayscale-0 md:group-hover:scale-110" 
-            loading="lazy"  
-          />
-          <div className="absolute inset-0 bg-brandRed/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-          {/* Decorative Corner Pointers */}
-          <div className="absolute top-4 right-4 w-6 h-[1px] bg-white/20 group-hover:bg-brandRed transition-colors" />
-          <div className="absolute top-4 right-4 h-6 w-[1px] bg-white/20 group-hover:bg-brandRed transition-colors" />
-        </div>
-      );
-    })}
-  </div>
-</section>
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+            {(galleryImages.length > 0 ? galleryImages : [1, 2, 3, 4, 5, 6]).map((item, idx) => {
+              const src = typeof item === 'string' ? item : `/gallery/img${item}.jpg`;
+              return (
+                <div 
+                  key={idx} 
+                  onClick={() => setZoomImage(src)}
+                  className="relative aspect-video md:aspect-[4/3] rounded-2xl overflow-hidden border border-white/5 group bg-zinc-900 shadow-2xl cursor-pointer"
+                >
+                  <Image 
+                    src={src} 
+                    alt={`Archive Legacy ${idx + 1}`} 
+                    fill 
+                    blurDataURL={blurPlaceholder} placeholder="blur"
+                    sizes="(max-width: 768px) 50vw, 33vw"
+                    className="object-cover transition-all duration-700 grayscale md:group-hover:grayscale-0 md:group-hover:scale-110" 
+                    loading="lazy"  
+                  />
+                  <div className="absolute inset-0 bg-brandRed/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+                  <div className="absolute top-4 right-4 w-6 h-[1px] bg-white/20 group-hover:bg-brandRed transition-colors" />
+                  <div className="absolute top-4 right-4 h-6 w-[1px] bg-white/20 group-hover:bg-brandRed transition-colors" />
+                </div>
+              );
+            })}
+          </div>
+        </section>
 
-<LaserDivider />
+        <LaserDivider />
 
-{/* LIGHTBOX OVERLAY */}
-<AnimatePresence>
-  {zoomImage && (
-    <motion.div 
-      initial={{ opacity: 0 }} 
-      animate={{ opacity: 1 }} 
-      exit={{ opacity: 0 }} 
-      onClick={() => setZoomImage(null)} 
-      className="fixed inset-0 z-[1000] bg-black/98 flex items-center justify-center p-4 sm:p-12 cursor-zoom-out backdrop-blur-xl"
-    >
-      <motion.div 
-        initial={{ scale: 0.9, opacity: 0 }}
-        animate={{ scale: 1, opacity: 1 }}
-        exit={{ scale: 0.9, opacity: 0 }}
-        className="relative w-full max-w-6xl h-full flex items-center justify-center"
-      >
-        <Image 
-          src={zoomImage} 
-          alt="Zoomed Legacy Asset" 
-          fill 
-          unoptimized 
-          className="object-contain" 
-          blurDataURL={blurPlaceholder} placeholder="blur"
-        />
-      </motion.div>
-      {/* Close Button */}
-      <button className="absolute top-10 right-10 text-white p-4 bg-zinc-900 rounded-full hover:bg-brandRed transition-all shadow-2xl border border-white/10">
-        <X size={32} />
-      </button>
-    </motion.div>
-  )}
-</AnimatePresence>
+        {/* LIGHTBOX OVERLAY */}
+        <AnimatePresence>
+          {zoomImage && (
+            <motion.div 
+              initial={{ opacity: 0 }} 
+              animate={{ opacity: 1 }} 
+              exit={{ opacity: 0 }} 
+              onClick={() => setZoomImage(null)} 
+              className="fixed inset-0 z-[1000] bg-black/98 flex items-center justify-center p-4 sm:p-12 cursor-zoom-out backdrop-blur-xl"
+              style={{ transform: 'translateZ(0)' }}
+            >
+              <motion.div 
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="relative w-full max-w-6xl h-full flex items-center justify-center"
+              >
+                <Image 
+                  src={zoomImage} 
+                  alt="Zoomed Legacy Asset" 
+                  fill 
+                  unoptimized 
+                  className="object-contain" 
+                  blurDataURL={blurPlaceholder} placeholder="blur"
+                />
+              </motion.div>
+              <button className="absolute top-10 right-10 text-white p-4 bg-zinc-900 rounded-full hover:bg-brandRed transition-all shadow-2xl border border-white/10">
+                <X size={32} />
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
+        
         <InstagramGlimpse />
+        
         <LaserDivider />
         
-       
-        {/* 7. CTA: THE TRIBE */}
+        {/* CTA: THE TRIBE */}
         <section className="max-w-5xl mx-auto text-center pb-40">
           <div className="p-24 rounded-[80px] bg-gradient-to-br from-brandRed to-red-950 shadow-2xl relative overflow-hidden group">
             <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20" />
@@ -505,6 +444,7 @@ useEffect(() => {
             </Link>
           </div>
         </section>
+        
         <LaserDivider />
       </div>
     </main>

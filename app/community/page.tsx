@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
 import { 
   ArrowUpRight, Users, Zap, Flame, Loader2, Search, 
-  MapPin, ShieldCheck, ChevronDown, Filter, Plus, Edit3, Clock,Trash2
+  MapPin, ShieldCheck, ChevronDown, Filter, Plus, Edit3, Clock, Trash2
 } from 'lucide-react';
 import { WhatsAppTribe } from '@/components/ui/WhatsappTribe';
 import { createBrowserClient } from '@supabase/ssr';
@@ -33,7 +33,7 @@ export default function CommunityPage() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
-  const router = useRouter();       // <-- ADD THIS
+  const router = useRouter();       
   const pathname = usePathname();
   const [circles, setCircles] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -46,42 +46,42 @@ export default function CommunityPage() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [alertConfig, setAlertConfig] = useState({
-  isVisible: false,
-  message: '',
-  type: 'info' as 'success' | 'error' | 'info'
-});
+    isVisible: false,
+    message: '',
+    type: 'info' as 'success' | 'error' | 'info'
+  });
 
-const triggerToast = (message: string, type: 'success' | 'error' | 'info') => {
-  setAlertConfig({ isVisible: true, message, type });
-};
+  const triggerToast = (message: string, type: 'success' | 'error' | 'info') => {
+    setAlertConfig({ isVisible: true, message, type });
+  };
 
-const handleDelete = async () => {
-  if (!deleteId || !currentUser?.email) return;
-  setConfirmOpen(false);
+  const handleDelete = async () => {
+    if (!deleteId || !currentUser?.email) return;
+    setConfirmOpen(false);
 
-  try {
-    const res = await fetch('/api/community/delete', {
-      method: 'DELETE',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        id: deleteId, 
-        userEmail: currentUser.email.toLowerCase() 
-      })
-    });
+    try {
+      const res = await fetch('/api/community/delete', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          id: deleteId, 
+          userEmail: currentUser.email.toLowerCase() 
+        })
+      });
 
-    if (res.ok) {
-      triggerToast("Community successfully deleted from the Tribe", "success");
-      setCircles(prev => prev.filter(c => c._id !== deleteId));
-    } else {
-      const errorData = await res.json();
-      triggerToast(errorData.error || "Deletion failed: Unauthorized", "error");
+      if (res.ok) {
+        triggerToast("Community successfully deleted from the Tribe", "success");
+        setCircles(prev => prev.filter(c => c._id !== deleteId));
+      } else {
+        const errorData = await res.json();
+        triggerToast(errorData.error || "Deletion failed: Unauthorized", "error");
+      }
+    } catch (err) {
+      triggerToast("System error during deletion", "error");
+    } finally {
+      setDeleteId(null);
     }
-  } catch (err) {
-    triggerToast("System error during deletion", "error");
-  } finally {
-    setDeleteId(null);
-  }
-};
+  };
 
   const { scrollY } = useScroll();
   const y = useTransform(scrollY, [0, 500], isMobile ? [0, 0] : [0, 150]);
@@ -163,21 +163,22 @@ const handleDelete = async () => {
       <WhatsAppTribe />
 
       {/* Background Atmosphere */}
-      <motion.div style={{ y }} className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-[#030303]">
+      <motion.div style={{ y, willChange: 'transform' }} className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-[#030303]">
         <Image 
           src="/events/comm_2.png" 
-          alt="Atmosphere" fill priority
+          alt="Atmosphere" 
+          fill 
+          priority // 🔥 Critical for LCP (Largest Contentful Paint)
+          sizes="100vw"
           className="object-cover opacity-[0.50] brightness-[0.8] scale-110 saturate-150"
-          onError={(e) => { (e.target as HTMLImageElement).src = "/about/placeholder.jpeg"; }} 
         />
         <div className="absolute inset-0 bg-gradient-to-b from-[#030303]/60 via-transparent to-[#030303] z-[1]" />
       </motion.div>
 
       <div className="max-w-7xl mx-auto relative z-10 pt-40 pb-10 px-6">
         
-        {/* 🔥 FIX: Header left, Add Button right, same row horizontally centered */}
+        {/* Header Section */}
         <div className="flex flex-row justify-between items-center mb-16 gap-4">
-          
           <h1 className="text-4xl md:text-7xl font-black italic uppercase tracking-tighter leading-none shrink-0">
             Our <span className="text-brandRed">Circles .</span>
           </h1>
@@ -187,23 +188,22 @@ const handleDelete = async () => {
               <h3 className="text-xs md:text-sm font-black italic uppercase tracking-widest text-white">List your <span className="text-brandRed">Organization</span></h3>
               <p className="text-zinc-500 text-[8px] font-bold uppercase tracking-widest mt-0.5">Add Samajams or Temples</p>
             </div>
-            {/* 🔥 The Link tag is removed, and the logic is inside onClick */}
-<motion.button 
-  onClick={() => {
-    if (!currentUser) {
-      router.push(`/auth/login?next=${pathname}`);
-    } else {
-      router.push('/community/add');
-    }
-  }}
-  whileHover={{ scale: 1.05 }}
-  whileTap={{ scale: 0.95 }}
-  className="flex items-center justify-center gap-2 bg-white text-black px-4 py-2 md:px-6 md:py-3 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-brandRed hover:text-white transition-all shadow-xl whitespace-nowrap"
->
-  <Plus size={14} strokeWidth={3} /> Add Now
-</motion.button>
+            <motion.button 
+              onClick={() => {
+                if (!currentUser) {
+                  router.push(`/auth/login?next=${pathname}`);
+                } else {
+                  router.push('/community/add');
+                }
+              }}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              style={{ willChange: 'transform' }}
+              className="flex items-center justify-center gap-2 bg-white text-black px-4 py-2 md:px-6 md:py-3 rounded-xl font-black uppercase text-[10px] tracking-widest hover:bg-brandRed hover:text-white transition-all shadow-xl whitespace-nowrap"
+            >
+              <Plus size={14} strokeWidth={3} /> Add Now
+            </motion.button>
           </div>
-
         </div>
 
         {/* Filter Toolbar */}
@@ -223,6 +223,7 @@ const handleDelete = async () => {
                             initial={{ opacity: 0 }}
                             animate={{ opacity: 1 }}
                             exit={{ opacity: 0 }}
+                            style={{ willChange: 'transform, opacity' }}
                             className="absolute inset-0 bg-brandRed rounded-lg -z-10 shadow-[0_0_15px_rgba(255,0,0,0.4)]"
                           />
                         )}
@@ -262,59 +263,69 @@ const handleDelete = async () => {
             {filteredCircles.length > 0 ? (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-16">
                 {filteredCircles.map((circle) => (
-  <motion.div 
-    layout 
-    initial={{ opacity: 0, y: 20 }} 
-    animate={{ opacity: 1, y: 0 }} 
-    exit={{ opacity: 0, scale: 0.95 }}
-    key={circle._id} 
-    className="group relative bg-zinc-950/30 border border-white/5 rounded-[35px] overflow-hidden transition-all duration-500 hover:border-brandRed/30 shadow-xl backdrop-blur-2xl"
-  >
-    {/* OWNER TOOLS: Edit & Delete */}
-{currentUser?.email?.toLowerCase() === circle.submittedBy?.toLowerCase() && (
-  <div className="absolute top-6 right-6 z-[50] flex gap-2">
-    <Link href={`/community/add?edit=${circle._id}`}>
-      <motion.button 
-        whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-        className="p-3 bg-zinc-900/90 backdrop-blur-md text-white rounded-2xl border border-white/10 hover:bg-brandRed transition-all shadow-xl"
-      >
-        <Edit3 size={14} />
-      </motion.button>
-    </Link>
-    <motion.button 
-      whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
-      onClick={() => {
-        setDeleteId(circle._id);
-        setConfirmOpen(true);
-      }}
-      className="p-3 bg-zinc-900/90 backdrop-blur-md text-zinc-400 rounded-2xl border border-white/10 hover:bg-red-600 hover:text-white transition-all shadow-xl"
-    >
-      <Trash2 size={14} />
-    </motion.button>
-  </div>
-)}
+                <motion.div 
+                  layout 
+                  initial={{ opacity: 0, y: 20 }} 
+                  animate={{ opacity: 1, y: 0 }} 
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  style={{ willChange: 'transform, opacity' }} // 🔥 GPU Acceleration for smooth animations
+                  key={circle._id} 
+                  className="group relative bg-zinc-950/30 border border-white/5 rounded-[35px] overflow-hidden transition-all duration-500 hover:border-brandRed/30 shadow-xl backdrop-blur-2xl"
+                >
+                  {/* OWNER TOOLS: Edit & Delete */}
+                  {currentUser?.email?.toLowerCase() === circle.submittedBy?.toLowerCase() && (
+                    <div className="absolute top-6 right-6 z-[50] flex gap-2">
+                      <Link href={`/community/add?edit=${circle._id}`}>
+                        <motion.button 
+                          whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                          className="p-3 bg-zinc-900/90 backdrop-blur-md text-white rounded-2xl border border-white/10 hover:bg-brandRed transition-all shadow-xl"
+                        >
+                          <Edit3 size={14} />
+                        </motion.button>
+                      </Link>
+                      <motion.button 
+                        whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.9 }}
+                        onClick={() => {
+                          setDeleteId(circle._id);
+                          setConfirmOpen(true);
+                        }}
+                        className="p-3 bg-zinc-900/90 backdrop-blur-md text-zinc-400 rounded-2xl border border-white/10 hover:bg-red-600 hover:text-white transition-all shadow-xl"
+                      >
+                        <Trash2 size={14} />
+                      </motion.button>
+                    </div>
+                  )}
 
-    {/* Status Badges */}
-    <div className="absolute top-6 left-6 z-[40] flex flex-col gap-2">
-      {currentUser?.email?.toLowerCase() === circle.submittedBy?.toLowerCase() && circle.isDraft && (
-        <div className="bg-zinc-800/90 backdrop-blur-md text-cyan-400 px-4 py-1.5 rounded-full flex items-center gap-2 text-[8px] font-black uppercase tracking-widest border border-white/10 shadow-xl">
-          <Edit3 size={12} /> Work in Progress
-        </div>
-      )}
+                  {/* Status Badges */}
+                  <div className="absolute top-6 left-6 z-[40] flex flex-col gap-2">
+                    {currentUser?.email?.toLowerCase() === circle.submittedBy?.toLowerCase() && circle.isDraft && (
+                      <div className="bg-zinc-800/90 backdrop-blur-md text-cyan-400 px-4 py-1.5 rounded-full flex items-center gap-2 text-[8px] font-black uppercase tracking-widest border border-white/10 shadow-xl">
+                        <Edit3 size={12} /> Work in Progress
+                      </div>
+                    )}
 
-      {currentUser?.email?.toLowerCase() === circle.submittedBy?.toLowerCase() && !circle.isApproved && !circle.isDraft && (
-        <div className="bg-zinc-950/80 backdrop-blur-md text-amber-500 px-4 py-1.5 rounded-full flex items-center gap-2 text-[8px] font-black uppercase tracking-widest animate-pulse border border-amber-500/20 shadow-xl">
-          <Clock size={12} className="fill-amber-500" /> Pending Review
-        </div>
-      )}
-    </div>
+                    {currentUser?.email?.toLowerCase() === circle.submittedBy?.toLowerCase() && !circle.isApproved && !circle.isDraft && (
+                      <div className="bg-zinc-950/80 backdrop-blur-md text-amber-500 px-4 py-1.5 rounded-full flex items-center gap-2 text-[8px] font-black uppercase tracking-widest animate-pulse border border-amber-500/20 shadow-xl">
+                        <Clock size={12} className="fill-amber-500" /> Pending Review
+                      </div>
+                    )}
+                  </div>
 
                     <Link href={`/community/${circle._id}`} className="block relative w-full h-44 overflow-hidden">
                         <Image 
                             src={circle.image || "/about/placeholder.jpeg"} 
-                            alt={circle.title} fill  
-                            className="object-cover group-hover:scale-110 transition-all duration-1000"
-                            onError={(e) => { (e.target as HTMLImageElement).src = "/about/placeholder.jpeg"; }}
+                            alt={circle.title} 
+                            fill  
+                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" // 🔥 Perfect dimensions for the Grid
+                            className="object-cover group-hover:scale-110 transition-transform duration-1000 will-change-transform"
+                            onError={(e) => {
+                                // Fallback handler to prevent crashing
+                                const target = e.target as HTMLImageElement;
+                                if (target.src !== "/about/placeholder.jpeg") {
+                                    target.src = "/about/placeholder.jpeg";
+                                    target.srcset = "";
+                                }
+                            }}
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-transparent" />
                         <div className="absolute bottom-4 right-4 bg-zinc-950/90 px-3 py-1.5 rounded-full border border-white/10 flex items-center gap-2">
@@ -347,18 +358,16 @@ const handleDelete = async () => {
             ) : (
                 <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} className="h-72 flex flex-col items-center justify-center border border-white/5 rounded-[30px] bg-zinc-950/20 mb-16 backdrop-blur-md">
                     <Search size={30} className="text-zinc-800 mb-3" />
-                    <p className="text-zinc-500 font-black uppercase tracking-[0.3em] text-[9px]">No nodes detected</p>
+                    <p className="text-zinc-500 font-black uppercase tracking-[0.3em] text-[9px]">No communities found</p>
                     <button onClick={() => { setSearchQuery(""); setFilterTab("ALL"); setActiveCategory("ALL"); }} className="mt-3 text-brandRed font-black uppercase text-[8px] hover:underline tracking-widest">Clear Filters</button>
                 </motion.div>
             )}
         </AnimatePresence>
 
-        {/* Disclaimer moved to the very bottom */}
         <div className="mb-10">
           <TribeDisclaimer type="COMMUNITY" />
         </div>
 
-        {/* Footer Metrics */}
         <div className="text-center mt-10 relative">
           <LaserDivider />
           <div className="flex items-center justify-center gap-8 mt-10">
@@ -377,10 +386,9 @@ const handleDelete = async () => {
         </div>
       </div>
 
-      {/* --- CUSTOM OVERLAYS --- */}
       <TribeConfirm 
         isOpen={confirmOpen}
-        title="Purge Node?"
+        title="Delete Community?"
         message="This action will permanently delete this circle from the community grid. This cannot be undone."
         onConfirm={handleDelete}
         onCancel={() => {
