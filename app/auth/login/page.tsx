@@ -4,7 +4,7 @@ import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
-import { Mail, Lock, ArrowRight, Eye, EyeOff, RefreshCw } from 'lucide-react';
+import { Mail, Lock, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 export default function LoginPage() {
@@ -12,9 +12,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [resending, setResending] = useState(false);
   const [error, setError] = useState('');
-  const [showResend, setShowResend] = useState(false);
   
   const router = useRouter();
 
@@ -27,47 +25,47 @@ export default function LoginPage() {
     e.preventDefault();
     setLoading(true);
     setError('');
-    setShowResend(false);
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    // 1. Authenticate with Supabase Auth
+    const { data: authData, error: authError } = await supabase.auth.signInWithPassword({ email, password });
     
-    if (error) {
-      if (error.message.toLowerCase().includes("email not confirmed")) {
-        setError("Please verify your email address to log in.");
-        setShowResend(true); 
-      } else if (error.message.toLowerCase().includes("invalid login credentials")) {
+    if (authError) {
+      if (authError.message.toLowerCase().includes("invalid login credentials")) {
         setError("Incorrect email or password.");
       } else {
-        // Fallback for random Supabase errors, formatted nicely
-        setError(error.message.charAt(0).toUpperCase() + error.message.slice(1));
+        setError(authError.message.charAt(0).toUpperCase() + authError.message.slice(1));
       }
       setLoading(false);
-    } else {
-      router.replace('/');
-      router.refresh();
+      return;
     }
-  };
 
-  const handleResendEmail = async () => {
-    setResending(true);
-    const { error } = await supabase.auth.resend({
-      type: 'signup',
-      email: email,
-    });
+    // 2. Verify they are an authorized admin
+    const { data: adminData, error: adminError } = await supabase
+      .from('authorized_admins')
+      .select('requires_password_change')
+      .eq('id', authData.user.id)
+      .single();
 
-    if (error) {
-      setError("We couldn't resend the email. Please try again later.");
-    } else {
-      setError("Verification email sent! Please check your inbox.");
-      setShowResend(false);
+    if (adminError || !adminData) {
+      // Imposter! Kick them out immediately.
+      await supabase.auth.signOut();
+      setError("Unauthorized access. You are not an admin.");
+      setLoading(false);
+      return;
     }
-    setResending(false);
+
+    // 3. Route based on temp password status
+    if (adminData.requires_password_change) {
+      router.push('/auth/update-password');
+    } else {
+      router.push('/admin');
+    }
   };
 
   return (
     <div className="min-h-screen bg-black flex items-center justify-center p-6 relative overflow-hidden">
       
-      {/* BACKGROUND IMAGE - Optimized for Next.js */}
+      {/* BACKGROUND IMAGE */}
       <div className="absolute inset-0 z-0">
         <Image 
           src="/events/login.jpg" 
@@ -82,8 +80,7 @@ export default function LoginPage() {
         <div className="absolute top-0 right-0 w-1/2 h-full bg-brandRed/5 blur-[120px] pointer-events-none" />
       </div>
 
-      <div className="w-full max-w-[380px] relative z-10">
-        {/* 🔥 THE SAFE GLASS FIX: Premium styling + GPU acceleration */}
+      <div className="w-full max-w-[380px] relative z-20">
         <div 
           className="relative bg-white/[0.03] backdrop-blur-2xl border border-white/10 px-8 py-8 md:px-10 md:py-10 rounded-[32px] shadow-2xl text-left"
           style={{ transform: 'translateZ(0)' }}
@@ -92,19 +89,18 @@ export default function LoginPage() {
 
           <div className="relative z-10">
             <h2 className="text-xl font-black uppercase italic tracking-tighter mb-6 text-center text-white">
-              Welcome <span className="text-brandRed">Back.</span>
+              Admin <span className="text-brandRed">Portal.</span>
             </h2>
 
             <form onSubmit={handleLogin} className="space-y-4">
               
-              {/* ACCESSIBILITY FIX: Explicit <label> tags for Screen Readers & QA tools */}
               <div className="relative group">
                 <label htmlFor="email" className="sr-only">Email Address</label>
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-brandRed transition-colors z-20" size={16} />
                 <input 
                   id="email"
                   type="email" 
-                  placeholder="Email address" 
+                  placeholder="Admin Email" 
                   required
                   autoComplete="email"
                   suppressHydrationWarning
@@ -153,23 +149,10 @@ export default function LoginPage() {
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     transition={{ duration: 0.2, ease: "easeOut" }}
-                    className="space-y-3"
                   >
                     <p className="text-brandRed text-xs font-semibold text-center py-3 px-4 bg-brandRed/10 border border-brandRed/20 rounded-lg">
                       {error}
                     </p>
-                    
-                    {showResend && (
-                      <button
-                        type="button"
-                        onClick={handleResendEmail}
-                        disabled={resending}
-                        className="w-full flex items-center justify-center gap-2 text-[11px] font-bold text-zinc-400 hover:text-white transition-colors"
-                      >
-                        <RefreshCw size={14} className={resending ? "animate-spin" : ""} />
-                        {resending ? "Resending..." : "Resend verification email"}
-                      </button>
-                    )}
                   </motion.div>
                 )}
               </AnimatePresence>
@@ -178,17 +161,11 @@ export default function LoginPage() {
                 disabled={loading} 
                 className="w-full py-4 bg-brandRed text-white font-black uppercase tracking-widest rounded-xl hover:bg-white hover:text-black transition-all shadow-xl active:scale-95 text-xs flex items-center justify-center gap-2"
               >
-                {loading ? 'Logging in...' : 'Log In'} <ArrowRight size={16} />
+                {loading ? 'Authenticating...' : 'Secure Login'} <ArrowRight size={16} />
               </button>
             </form>
 
             <div className="mt-6 text-center flex flex-col gap-3">
-              <Link 
-                href="/auth/signup" 
-                className="text-[11px] font-medium text-zinc-400 hover:text-white transition-colors"
-              >
-                Don't have an account? <span className="text-white font-bold underline decoration-brandRed underline-offset-4">Sign up</span>
-              </Link>
               <Link 
                 href="/" 
                 className="text-[10px] font-bold text-zinc-500 hover:text-white transition-colors flex items-center justify-center gap-1 mt-2"

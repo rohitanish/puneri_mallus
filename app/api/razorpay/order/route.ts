@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import Razorpay from 'razorpay';
-import clientPromise from "@/lib/mongodb";
+import { createClient } from '@supabase/supabase-js';
 
 const razorpay = new Razorpay({
   key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
@@ -9,47 +9,60 @@ const razorpay = new Razorpay({
 
 export async function POST(req: Request) {
   try {
-    // 🔥 UPDATED: Now accepting 'plan' from the frontend
-    const { businessId, paymentType, plan } = await req.json();
+    const { paymentType, plan } = await req.json();
 
-    const client = await clientPromise;
-    const db = client.db("punerimallus");
-    const settings = await db.collection("settings").findOne({});
+    // 1. Initialize Supabase Admin to fetch dynamic pricing settings securely
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY! 
+    );
 
-    // 🔥 LOGIC: Determine the dynamic price based on the selected plan
-    let targetPrice = 99; // Default fallback
-    
-    if (paymentType === "LIFETIME") {
-      // Global Inner Circle Premium Membership
-      targetPrice = settings?.membershipPrice || 499;
-    } else if (paymentType === "MART") {
-      // Mallu Mart Specific Access
-      if (plan === "MONTHLY") targetPrice = settings?.martMonthlyPrice || 99;
-      else if (plan === "YEARLY") targetPrice = settings?.martYearlyPrice || 899;
-      else if (plan === "LIFETIME") targetPrice = settings?.martLifetimePrice || 2499;
+    // 🔥 FIX 1: Fetch the settings row safely without hardcoding id=1
+    const { data: settings, error } = await supabaseAdmin
+      .from('app_settings')
+      .select('*')
+      .limit(1)
+      .single();
+
+    if (error) {
+      console.error("Failed to fetch settings from DB. Falling back to default pricing.", error.message);
     }
 
-    // Convert to Paise (Integer only)
+    // 🔥 FIX 2: Check for both camelCase and snake_case column names
+    let targetPrice = 99; // Absolute fallback
+    
+    if (paymentType === "LIFETIME") {
+      targetPrice = settings?.membershipPrice || settings?.membership_price || 999;
+    } 
+    else if (paymentType === "MART") {
+      if (plan === "MONTHLY") targetPrice = settings?.martMonthlyPrice || settings?.mart_monthly_price || 99;
+      else if (plan === "YEARLY") targetPrice = settings?.martYearlyPrice || settings?.mart_yearly_price || 899;
+      else if (plan === "LIFETIME") targetPrice = settings?.martLifetimePrice || settings?.mart_lifetime_price || 2499;
+    }
+
+    // 3. Convert to Paise (Required by Razorpay, Integer only)
     const amountInPaise = Math.round(Number(targetPrice) * 100);
 
     if (amountInPaise < 100) {
       return NextResponse.json({ error: "Amount too low (Min ₹1)" }, { status: 400 });
     }
 
+    // 4. Build the Razorpay Order Options
     const options = {
       amount: amountInPaise,
       currency: "INR",
       receipt: `rcpt_${paymentType}_${Date.now()}`,
       notes: {
         paymentType: paymentType, 
-        targetId: businessId || "GLOBAL",
-        plan: plan || "NONE" // Passing the plan to Razorpay so it comes back in verification
+        plan: plan || "NONE" 
       }
     };
 
+    // 5. Generate Order Token
     const order = await razorpay.orders.create(options);
     
     return NextResponse.json(order);
+    
   } catch (error: any) {
     console.error("RAZORPAY_ORDER_ERROR:", error);
     return NextResponse.json(

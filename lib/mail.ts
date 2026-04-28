@@ -440,3 +440,79 @@ export async function sendPremiumMembershipEmail(to: string, orderId: string, pa
     console.error("MAIL_PREMIUM_SUBSCRIPTION_ERROR:", error);
   }
 }
+
+/**
+ * 📧 NOTIFY NEW ADMIN: Secure Access Credentials
+ */
+export async function sendAdminAccessEmail(to: string, tempPassword: string) {
+  const loginUrl = `${process.env.NEXT_PUBLIC_BASE_URL || 'https://punerimallusvercel.vercel.app'}/login`;
+  
+  const mailOptions = {
+    from: `"Tribe Protocol" <${process.env.EMAIL_USER}>`,
+    to: to,
+    subject: `🔐 SYSTEM ACCESS: Admin Protocol Authorized`,
+    html: `
+      <div style="font-family: 'Segoe UI', sans-serif; max-width: 500px; margin: auto; background: #030303; color: #ffffff; padding: 40px; border-radius: 30px; border: 1px solid #ff0000;">
+        <div style="text-align: center; margin-bottom: 15px;">
+           <h1 style="color: #ff0000; font-size: 40px; margin: 0; text-shadow: 0 0 20px rgba(255,0,0,0.5);">🛡️</h1>
+        </div>
+        <h2 style="color: #ff0000; text-transform: uppercase; font-style: italic; font-weight: 900; letter-spacing: -1px; text-align: center; margin-top: 0;">Protocol Authorized</h2>
+        <p style="text-align: center; color: #aaa; font-size: 14px; margin-bottom: 30px;">You have been granted administrative access to the Puneri Mallus network. Use the secure credentials below to authenticate.</p>
+        
+        <div style="background: #111; padding: 25px; border-radius: 15px; border: 1px solid #333; margin-bottom: 30px;">
+          <p style="margin: 0 0 15px 0; font-size: 11px; color: #666; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">Access Terminal</p>
+          <a href="${loginUrl}" style="color: #ff0000; word-break: break-all; font-size: 13px; text-decoration: none;">${loginUrl}</a>
+          
+          <p style="margin: 25px 0 15px 0; font-size: 11px; color: #666; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">Admin ID</p>
+          <p style="margin: 0; font-family: monospace; color: #fff; font-size: 14px;">${to}</p>
+
+          <p style="margin: 25px 0 15px 0; font-size: 11px; color: #666; text-transform: uppercase; font-weight: bold; letter-spacing: 1px;">Temporary Key</p>
+          <p style="margin: 0; font-family: monospace; color: #ff0000; font-size: 18px; font-weight: bold; letter-spacing: 2px;">${tempPassword}</p>
+        </div>
+
+        <div style="background: rgba(255,0,0,0.1); padding: 15px; border-radius: 10px; border-left: 4px solid #ff0000; margin-bottom: 30px;">
+          <p style="margin: 0; font-size: 12px; color: #ff0000; font-weight: bold; line-height: 1.5;">SECURITY REQUIREMENT: <span style="color: #fff; font-weight: normal;">You will be forced to configure a permanent, high-entropy password immediately upon initial connection.</span></p>
+        </div>
+
+        <div style="text-align: center;">
+          <a href="${loginUrl}" style="display: inline-block; background: #ff0000; color: #fff; padding: 15px 30px; border-radius: 50px; text-decoration: none; font-weight: 900; text-transform: uppercase; font-size: 12px; letter-spacing: 1px;">Initiate Login</a>
+        </div>
+        
+        <p style="margin-top: 40px; font-size: 10px; color: #555; text-align: center; text-transform: uppercase; letter-spacing: 1px;">
+          Strictly Confidential. Do not forward this transmission.
+        </p>
+      </div>
+    `,
+  };
+
+  try {
+    await transporter.sendMail(mailOptions);
+  } catch (error) {
+    console.error("MAIL_ADMIN_ACCESS_ERROR:", error);
+    throw new Error("Failed to dispatch admin credentials.");
+  }
+}
+
+export const sendBusinessVerificationEmail = async (to: string, verifyLink: string, businessName: string) => {
+  const mailOptions = {
+    from: `"Puneri Mallus Tribe" <${process.env.EMAIL_USER}>`,
+    to: to,
+    subject: "🏢 Verify your Business Identity",
+    html: `
+      <div style="font-family: sans-serif; max-width: 400px; margin: auto; background: #000; color: #fff; padding: 30px; border-radius: 20px; border: 1px solid #333; text-align: center;">
+        <h2 style="color: #ff0000; text-transform: uppercase;">Identity Check</h2>
+        <p style="font-size: 14px; color: #ccc; line-height: 1.6; margin-bottom: 30px;">
+          Hi, we received a request to list <br/><strong style="color: #fff; font-size: 18px;">${businessName}</strong><br/> in the directory. Please verify this email address to proceed.
+        </p>
+        <a href="${verifyLink}" style="display: inline-block; background: #ff0000; color: #fff; padding: 16px 32px; text-decoration: none; border-radius: 12px; font-weight: 900; text-transform: uppercase; letter-spacing: 2px; transition: opacity 0.2s;">
+          Verify Email
+        </a>
+        <p style="font-size: 10px; color: #666; margin-top: 40px; line-height: 1.5;">
+          This is a secure magic link. If you didn't request this, you can safely ignore this email.
+        </p>
+      </div>
+    `,
+  };
+
+  return await transporter.sendMail(mailOptions);
+};

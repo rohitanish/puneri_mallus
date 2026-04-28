@@ -1,18 +1,23 @@
+// app/api/admin/payments/route.ts
 import { NextResponse } from 'next/server';
-import clientPromise from "@/lib/mongodb";
+import { createClient } from '@supabase/supabase-js';
 
-export const dynamic = 'force-dynamic'; // Ensures fresh data every time
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
-    const client = await clientPromise;
-    const db = client.db("punerimallus");
-    
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY! 
+    );
+
     // Fetch all payments, sorted by newest first
-    const payments = await db.collection("payments")
-      .find({})
-      .sort({ createdAt: -1 })
-      .toArray();
+    const { data: payments, error } = await supabaseAdmin
+      .from('payments')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
 
     return NextResponse.json(payments);
   } catch (error) {

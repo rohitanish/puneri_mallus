@@ -1,3 +1,4 @@
+// app/admin/payments/page.tsx
 "use client";
 import { useState, useEffect } from 'react';
 import { 
@@ -31,7 +32,7 @@ export default function AdminPaymentSettings() {
   // Ledger State
   const [payments, setPayments] = useState<any[]>([]);
   
-  // 🔥 NEW: Search and Filter States
+  // Search and Filter States
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState<"ALL" | "MART" | "LIFETIME">("ALL");
 
@@ -46,7 +47,10 @@ export default function AdminPaymentSettings() {
         const settingsData = await settingsRes.json();
         const paymentsData = await paymentsRes.json();
 
-        if (settingsData._id) setSettings({ ...settings, ...settingsData });
+        // Safe merge with existing settings
+        if (settingsData && !settingsData.error) {
+          setSettings(prev => ({ ...prev, ...settingsData }));
+        }
         if (Array.isArray(paymentsData)) setPayments(paymentsData);
 
       } catch (err) {
@@ -62,11 +66,12 @@ export default function AdminPaymentSettings() {
     setSaving(true);
     try {
       const res = await fetch('/api/admin/settings', {
-        method: 'PATCH',
+        method: 'PATCH', // Or PUT/POST depending on your API
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(settings)
       });
       if (res.ok) showAlert("Protocols Deployed Successfully", "success");
+      else showAlert("Failed to deploy settings", "error");
     } catch (err) {
       showAlert("Transmission Error", "error");
     } finally {
@@ -75,6 +80,7 @@ export default function AdminPaymentSettings() {
   };
 
   const formatDate = (dateString: string) => {
+    if (!dateString) return "N/A";
     const options: Intl.DateTimeFormatOptions = { 
       year: 'numeric', month: 'short', day: 'numeric', 
       hour: '2-digit', minute: '2-digit' 
@@ -82,15 +88,14 @@ export default function AdminPaymentSettings() {
     return new Date(dateString).toLocaleDateString('en-IN', options);
   };
 
-  // 🔥 NEW: Filtering Logic
+  // Filtering Logic
   const filteredPayments = payments.filter((payment) => {
-    // 1. Check Search Term (Matches Email or Order ID)
     const matchesSearch = 
-      (payment.user_email?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
+      (payment.email?.toLowerCase() || "").includes(searchTerm.toLowerCase()) || // Updated to 'email' based on typical Supabase schema
       (payment.razorpay_order_id?.toLowerCase() || "").includes(searchTerm.toLowerCase());
     
-    // 2. Check Tab Filter
-    const matchesFilter = filterType === "ALL" || payment.type === filterType;
+    // Note: Adjusted payment.payment_type based on your API insertion logic
+    const matchesFilter = filterType === "ALL" || payment.payment_type === filterType;
 
     return matchesSearch && matchesFilter;
   });
@@ -130,30 +135,63 @@ export default function AdminPaymentSettings() {
             <div className="pt-6 border-t border-white/5 space-y-6 relative z-10">
               <label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500">Available Billing Cycles</label>
               
+              {/* MONTHLY */}
               <div className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${settings.martMonthlyActive ? 'bg-brandRed/10 border-brandRed' : 'bg-white/5 border-white/10'}`}>
                 <input type="checkbox" checked={settings.martMonthlyActive} onChange={(e) => setSettings({...settings, martMonthlyActive: e.target.checked})} className="w-5 h-5 accent-brandRed" />
                 <div className="flex-1 flex items-center gap-2"><Calendar size={16} className="text-zinc-400" /> <span className="text-sm font-bold uppercase">Monthly</span></div>
                 <div className="flex items-center gap-1">
                   <span className="text-zinc-500 font-bold">₹</span>
-                  <input type="number" disabled={!settings.martMonthlyActive} value={settings.martMonthlyPrice} onChange={(e) => setSettings({...settings, martMonthlyPrice: parseInt(e.target.value)})} className="w-20 bg-transparent border-b border-white/20 text-right text-lg font-black outline-none focus:border-brandRed disabled:opacity-50" />
+                  {/* 🔥 FIX: Fallback empty string to prevent NaN on clear */}
+                  <input 
+                    type="number" 
+                    disabled={!settings.martMonthlyActive} 
+                    value={settings.martMonthlyPrice === 0 || isNaN(settings.martMonthlyPrice) ? '' : settings.martMonthlyPrice} 
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setSettings({...settings, martMonthlyPrice: val === '' ? 0 : parseInt(val)});
+                    }} 
+                    className="w-20 bg-transparent border-b border-white/20 text-right text-lg font-black outline-none focus:border-brandRed disabled:opacity-50" 
+                  />
                 </div>
               </div>
 
+              {/* YEARLY */}
               <div className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${settings.martYearlyActive ? 'bg-brandRed/10 border-brandRed' : 'bg-white/5 border-white/10'}`}>
                 <input type="checkbox" checked={settings.martYearlyActive} onChange={(e) => setSettings({...settings, martYearlyActive: e.target.checked})} className="w-5 h-5 accent-brandRed" />
                 <div className="flex-1 flex items-center gap-2"><CalendarDays size={16} className="text-zinc-400" /> <span className="text-sm font-bold uppercase">Yearly</span></div>
                 <div className="flex items-center gap-1">
                   <span className="text-zinc-500 font-bold">₹</span>
-                  <input type="number" disabled={!settings.martYearlyActive} value={settings.martYearlyPrice} onChange={(e) => setSettings({...settings, martYearlyPrice: parseInt(e.target.value)})} className="w-20 bg-transparent border-b border-white/20 text-right text-lg font-black outline-none focus:border-brandRed disabled:opacity-50" />
+                  {/* 🔥 FIX */}
+                  <input 
+                    type="number" 
+                    disabled={!settings.martYearlyActive} 
+                    value={settings.martYearlyPrice === 0 || isNaN(settings.martYearlyPrice) ? '' : settings.martYearlyPrice} 
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setSettings({...settings, martYearlyPrice: val === '' ? 0 : parseInt(val)});
+                    }} 
+                    className="w-20 bg-transparent border-b border-white/20 text-right text-lg font-black outline-none focus:border-brandRed disabled:opacity-50" 
+                  />
                 </div>
               </div>
 
+              {/* LIFETIME */}
               <div className={`flex items-center gap-4 p-4 rounded-2xl border transition-all ${settings.martLifetimeActive ? 'bg-brandRed/10 border-brandRed' : 'bg-white/5 border-white/10'}`}>
                 <input type="checkbox" checked={settings.martLifetimeActive} onChange={(e) => setSettings({...settings, martLifetimeActive: e.target.checked})} className="w-5 h-5 accent-brandRed" />
                 <div className="flex-1 flex items-center gap-2"><Infinity size={16} className="text-zinc-400" /> <span className="text-sm font-bold uppercase">Lifetime</span></div>
                 <div className="flex items-center gap-1">
                   <span className="text-zinc-500 font-bold">₹</span>
-                  <input type="number" disabled={!settings.martLifetimeActive} value={settings.martLifetimePrice} onChange={(e) => setSettings({...settings, martLifetimePrice: parseInt(e.target.value)})} className="w-20 bg-transparent border-b border-white/20 text-right text-lg font-black outline-none focus:border-brandRed disabled:opacity-50" />
+                  {/* 🔥 FIX */}
+                  <input 
+                    type="number" 
+                    disabled={!settings.martLifetimeActive} 
+                    value={settings.martLifetimePrice === 0 || isNaN(settings.martLifetimePrice) ? '' : settings.martLifetimePrice} 
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setSettings({...settings, martLifetimePrice: val === '' ? 0 : parseInt(val)});
+                    }} 
+                    className="w-20 bg-transparent border-b border-white/20 text-right text-lg font-black outline-none focus:border-brandRed disabled:opacity-50" 
+                  />
                 </div>
               </div>
             </div>
@@ -177,7 +215,16 @@ export default function AdminPaymentSettings() {
             <div className="pt-6 border-t border-white/5 space-y-6 relative z-10">
               <div className="space-y-3">
                 <label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 flex items-center gap-2"><IndianRupee size={14} className="text-brandRed" /> Membership Price</label>
-                <input type="number" value={settings.membershipPrice} onChange={(e) => setSettings({...settings, membershipPrice: parseInt(e.target.value)})} className="w-full bg-black border border-white/10 p-5 rounded-2xl text-xl font-black italic focus:border-brandRed outline-none" />
+                {/* 🔥 FIX */}
+                <input 
+                  type="number" 
+                  value={settings.membershipPrice === 0 || isNaN(settings.membershipPrice) ? '' : settings.membershipPrice} 
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setSettings({...settings, membershipPrice: val === '' ? 0 : parseInt(val)});
+                  }} 
+                  className="w-full bg-black border border-white/10 p-5 rounded-2xl text-xl font-black italic focus:border-brandRed outline-none" 
+                />
               </div>
               <div className="space-y-3">
                 <label className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-500 flex items-center gap-2"><ListChecks size={14} className="text-brandRed" /> Benefits (Comma Separated)</label>
@@ -211,7 +258,7 @@ export default function AdminPaymentSettings() {
             <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em]">Live Transaction History</p>
           </div>
 
-          {/* 🔥 NEW: SEARCH & FILTER TABS */}
+          {/* SEARCH & FILTER TABS */}
           <div className="flex flex-col md:flex-row gap-4 justify-between items-center bg-zinc-950 p-4 rounded-[20px] border border-white/10">
             {/* Search Bar */}
             <div className="relative w-full md:w-96">
@@ -257,6 +304,7 @@ export default function AdminPaymentSettings() {
                     <th className="p-6">User Identity</th>
                     <th className="p-6">Subscription</th>
                     <th className="p-6">Duration</th>
+                    <th className="p-6">Amount</th>
                     <th className="p-6">Order ID</th>
                     <th className="p-6">Timestamp</th>
                     <th className="p-6">Status</th>
@@ -265,27 +313,30 @@ export default function AdminPaymentSettings() {
                 <tbody className="divide-y divide-white/5 text-sm font-bold">
                   {filteredPayments.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="p-10 text-center text-zinc-500 italic">No matching transactions found.</td>
+                      <td colSpan={7} className="p-10 text-center text-zinc-500 italic">No matching transactions found.</td>
                     </tr>
                   ) : (
                     filteredPayments.map((payment, index) => (
                       <tr key={index} className="hover:bg-white/5 transition-colors">
-                        <td className="p-6 text-zinc-300">{payment.user_email || 'Unknown User'}</td>
+                        <td className="p-6 text-zinc-300">{payment.email || 'Unknown User'}</td>
                         <td className="p-6">
                           <span className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest ${
-                            payment.type === 'LIFETIME' ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 'bg-brandRed/10 text-brandRed border border-brandRed/20'
+                            payment.payment_type === 'LIFETIME' ? 'bg-yellow-500/10 text-yellow-500 border border-yellow-500/20' : 'bg-brandRed/10 text-brandRed border border-brandRed/20'
                           }`}>
-                            {payment.type === 'LIFETIME' ? 'VIP Premium' : 'Mallu Mart'}
+                            {payment.payment_type === 'LIFETIME' ? 'VIP Premium' : 'Mallu Mart'}
                           </span>
                         </td>
                         <td className="p-6 text-zinc-300 uppercase text-[11px] tracking-widest">
-                          {payment.plan || (payment.type === 'LIFETIME' ? 'LIFETIME' : 'N/A')}
+                          {payment.plan || (payment.payment_type === 'LIFETIME' ? 'LIFETIME' : 'N/A')}
+                        </td>
+                        <td className="p-6 text-white font-mono">
+                          ₹{payment.amount || 0}
                         </td>
                         <td className="p-6">
                           <span className="font-mono text-xs text-zinc-500">{payment.razorpay_order_id}</span>
                         </td>
                         <td className="p-6 text-zinc-400 text-xs">
-                          {formatDate(payment.createdAt)}
+                          {formatDate(payment.created_at)}
                         </td>
                         <td className="p-6">
                           <span className="flex items-center gap-1 text-emerald-500 text-[10px] uppercase font-black tracking-widest">

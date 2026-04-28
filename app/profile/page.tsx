@@ -3,9 +3,9 @@ import { useEffect, useState, useRef, useMemo } from 'react';
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
 import { 
-  User, Mail, Lock, Camera, Check, AlertCircle, 
+  User, Mail, Camera, Check, AlertCircle, 
   Loader2, Shield, Trash2, MapPin, Phone, Briefcase, 
-  Calendar, AlertTriangle, CheckCircle2, Smartphone
+  Calendar, AlertTriangle, CheckCircle2, Smartphone, Lock
 } from 'lucide-react';
 import TribeCalendar from '@/components/ui/TribeCalendar';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -19,6 +19,7 @@ const DEV_MODE_PHONE = false;
 
 export default function ProfilePage() {
   const [user, setUser] = useState<any>(null);
+  const [isMember, setIsMember] = useState(false); // 🔥 Gatekeeper State
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -38,7 +39,7 @@ export default function ProfilePage() {
   // PHONE OTP STATES
   const [otp, setOtp] = useState('');
   const [showOtpField, setShowOtpField] = useState(false);
-  const [isPhoneVerified, setIsPhoneVerified] = useState(true); // Default true for existing phone
+  const [isPhoneVerified, setIsPhoneVerified] = useState(true); 
   const [otpLoading, setOtpLoading] = useState(false);
   const [timer, setTimer] = useState(0);
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
@@ -53,6 +54,11 @@ export default function ProfilePage() {
   const router = useRouter();
   const [showCalendar, setShowCalendar] = useState(false);
   const dateContainerRef = useRef<HTMLDivElement>(null);
+
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 
   // --- AGE LOGIC ---
   const maxDobDate = useMemo(() => {
@@ -74,41 +80,21 @@ export default function ProfilePage() {
   const isPhoneValid = useMemo(() => phone.length === 10, [phone]);
 
   const PUNE_AREAS = [
-    "Pune", "Shivajinagar", "Kothrud", "Karve Nagar", "Erandwane", "Deccan", 
-    "Sadashiv Peth", "Swargate", "Bibwewadi", "Dhankawadi", "Sahakar Nagar", 
-    "Parvati", "Camp", "Koregaon Park", "Mundhwa", "Hadapsar", "Magarpatta", 
-    "Wanowrie", "Fatima Nagar", "Kondhwa", "NIBM", "Undri", "Katraj", 
-    "Sinhagad Road", "Warje", "Baner", "Balewadi", "Aundh", "Pashan", 
-    "Sus", "Bavdhan", "Model Colony", "Viman Nagar", "Yerwada", 
-    "Kalyani Nagar", "Lohegaon", "Dhanori", "Vishrantwadi", "Khadki", 
-    "Ghorpadi", "Pimpri", "Chinchwad", "Akurdi", "Nigdi", "Bhosari", 
-    "Wakad", "Hinjewadi", "Ravet", "Pimple Saudagar", "Pimple Gurav", 
-    "Pimple Nilakh", "Kalewadi", "Thergaon", "Rahatani", "Moshi", 
-    "Chikhali", "Talawade", "Punawale", "Tathawade", "Dapodi", 
-    "Sangvi", "Kasarwadi", "Phugewadi"
+    "Akurdi", "Aundh", "Balewadi", "Baner", "Bavdhan", "Bhosari", "Bibwewadi", "Camp", "Chikhali", "Chinchwad", "Dapodi", "Deccan", "Dhanori", "Erandwane", "Fatima Nagar", "Ghorpadi", "Hadapsar", "Hinjewadi", "Kalyani Nagar", "Karve Nagar", "Kasarwadi", "Katraj", "Khadki", "Kondhwa", "Koregaon Park", "Kothrud", "Lohegaon", "Magarpatta", "Model Colony", "Moshi", "Mundhwa", "NIBM", "Nigdi", "Pashan", "Phugewadi", "Pimpri", "Pimple Gurav", "Pimple Nilakh", "Pimple Saudagar", "Pune City", "Punawale", "Rahatani", "Ravet", "Sadashiv Peth", "Sahakar Nagar", "Sangvi", "Shivajinagar", "Sinhagad Road", "Sus", "Swargate", "Talawade", "Tathawade", "Thergaon", "Undri", "Viman Nagar", "Vishrantwadi", "Wakad", "Wanowrie", "Warje", "Yerwada"
   ].sort();
-
-  const supabase = createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  );
 
   // --- PRE-WARM RECAPTCHA ---
   useEffect(() => {
-    // 🔥 FIX: Added !loading check so it waits for the DOM to actually exist
     if (!loading && typeof window !== "undefined" && !recaptchaVerifierRef.current) {
-      recaptchaVerifierRef.current = new RecaptchaVerifier(auth, 'recaptcha-container', {
-        size: 'invisible'
-      });
+      recaptchaVerifierRef.current = new RecaptchaVerifier(auth, 'recaptcha-container', { size: 'invisible' });
     }
-    
     return () => {
       if (recaptchaVerifierRef.current) {
         recaptchaVerifierRef.current.clear();
         recaptchaVerifierRef.current = null;
       }
     };
-  }, [loading]); // 🔥 FIX: Added loading to the dependency array
+  }, [loading]);
 
   // --- TIMER EFFECT ---
   useEffect(() => {
@@ -121,24 +107,34 @@ export default function ProfilePage() {
     try {
       const { data: { user }, error } = await supabase.auth.getUser();
       if (error || !user) {
-        router.push('/auth/login');
+        router.push('/');
         return;
       }
       setUser(user);
-      const meta = user.user_metadata;
-      
-      setFullName(meta?.full_name || '');
-      setEmail(user.email || '');
-      setOriginalEmail(user.email || '');
-      
-      const rawPhone = user.phone || meta?.phone || '';
-      const formattedPhone = rawPhone.replace('+91', '') || '';
-      setPhone(formattedPhone);
-      setOriginalPhone(formattedPhone);
-      
-      setProfession(meta?.profession || '');
-      setLocation(meta?.location || '');
-      setDob(meta?.dob || '');
+
+      // 🔥 Pull Truth from the Profiles Table
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
+        .single();
+
+      if (profile) {
+        setIsMember(profile.is_member);
+        setFullName(profile.full_name || '');
+        setEmail(profile.email || '');
+        setOriginalEmail(profile.email || '');
+        
+        const rawPhone = profile.phone_number || '';
+        const formattedPhone = rawPhone.replace('+91', '');
+        setPhone(formattedPhone);
+        setOriginalPhone(formattedPhone);
+        
+        setProfession(profile.profession || '');
+        setLocation(profile.location || '');
+        setDob(profile.dob || '');
+      }
+
     } catch (err) {
       console.error("Fetch Error:", err);
     } finally {
@@ -229,38 +225,40 @@ export default function ProfilePage() {
     const isEmailChanged = email !== originalEmail;
     const isPhoneChanged = phone !== originalPhone;
 
-    // Build metadata payload
-    let updatedData: any = {
-      full_name: fullName.toUpperCase(),
-      profession: profession.toUpperCase(),
-      location: location,
-      dob: dob,
-    };
-
-    // If phone changed, update metadata
-    if (isPhoneChanged) {
-      updatedData.phone = `+91${phone}`;
-    }
-
-    const { error } = await supabase.auth.updateUser({
-      email: isEmailChanged ? email : undefined,
-      data: updatedData
-    });
-
-    if (error) {
-      setMessage({ type: 'error', text: error.message.toUpperCase() });
-    } else {
+    try {
+      // 1. Update Supabase Auth if Email Changed
       if (isEmailChanged) {
-        setMessage({ type: 'success', text: 'UPDATE INITIATED. PLEASE CHECK YOUR NEW EMAIL INBOX FOR A VERIFICATION LINK.' });
+        const { error: authError } = await supabase.auth.updateUser({ email: email.toLowerCase() });
+        if (authError) throw authError;
+      }
+
+      // 2. Update Public Profiles Table
+      const { error: profileError } = await supabase.from('profiles').update({
+        full_name: fullName.toUpperCase(),
+        profession: profession.toUpperCase(),
+        location: location,
+        dob: dob,
+        email: email.toLowerCase(),
+        phone_number: `+91${phone}`
+      }).eq('id', user.id);
+
+      if (profileError) throw profileError;
+
+      if (isEmailChanged) {
+        setMessage({ type: 'success', text: 'UPDATE INITIATED. CHECK INBOX TO VERIFY NEW EMAIL.' });
       } else {
         setMessage({ type: 'success', text: 'TRIBE RECORDS UPDATED SUCCESSFULLY!' });
-        if (isPhoneChanged) setOriginalPhone(phone); // Update local truth
+        if (isPhoneChanged) setOriginalPhone(phone);
       }
+
+    } catch (err: any) {
+      setMessage({ type: 'error', text: err.message.toUpperCase() });
+    } finally {
+      setUpdating(false);
     }
-    setUpdating(false);
   };
 
-  // --- AVATAR & ACCOUNT DELETION LOGIC (Unchanged) ---
+  // --- AVATAR LOGIC ---
   const uploadAvatar = async (event: React.ChangeEvent<HTMLInputElement>) => {
     try {
       setUploading(true);
@@ -294,14 +292,22 @@ export default function ProfilePage() {
     } catch (error: any) { setMessage({ type: 'error', text: error.message }); } finally { setUploading(false); }
   };
 
+  // --- ACCOUNT DELETION LOGIC ---
   const handleDeleteAccount = async () => {
     if (!confirmPassword) return;
     setIsPurging(true);
-    const { error: authError } = await supabase.auth.signInWithPassword({ email: user.email, password: confirmPassword });
+    
+    // Auth Check
+    const { error: authError } = await supabase.auth.signInWithPassword({ 
+      email: user.email, // works because of ghost email fallback
+      password: confirmPassword 
+    });
+    
     if (authError) {
       setMessage({ type: 'error', text: 'INVALID PASSWORD. PURGE DENIED.' });
       setIsPurging(false); return;
     }
+    
     try {
       const url = user?.user_metadata?.avatar_url;
       if (url && url.includes('/avatars/')) {
@@ -324,12 +330,11 @@ export default function ProfilePage() {
   return (
     <div className="min-h-screen bg-black text-white pt-32 pb-32 px-6 relative overflow-hidden">
       
-      {/* Hidden Recaptcha for Firebase Auth */}
       <div id="recaptcha-container" className="hidden"></div>
       <style jsx global>{` .grecaptcha-badge { visibility: hidden !important; } `}</style>
 
       <div className="absolute inset-0 z-0">
-        <Image src="/events/signup.jpg" alt="BG" fill className="object-cover opacity-40" priority />
+        <Image src="/events/signup.jpg" alt="BG" fill className="object-cover opacity-40" priority style={{ transform: 'translateZ(0)' }} />
         <div className="absolute inset-0 bg-black/60" />
       </div>
 
@@ -345,21 +350,13 @@ export default function ProfilePage() {
             <p className="text-zinc-500 text-[10px] text-center font-bold uppercase tracking-widest mb-8 leading-relaxed">
               Confirm your tribe password to permanently wipe your records.
             </p>
-            
             <input 
-              type="password" 
-              placeholder="CURRENT PASSWORD"
+              type="password" placeholder="CURRENT PASSWORD"
               className="w-full bg-black border border-white/10 p-5 rounded-2xl text-sm font-bold focus:border-red-500 outline-none transition-all mb-4 text-center placeholder:text-zinc-700"
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
+              value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)}
             />
-
             <div className="space-y-3">
-              <button 
-                onClick={handleDeleteAccount} 
-                disabled={!confirmPassword || isPurging}
-                className="w-full py-5 bg-red-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-red-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
-              >
+              <button onClick={handleDeleteAccount} disabled={!confirmPassword || isPurging} className="w-full py-5 bg-red-600 text-white rounded-2xl font-black uppercase text-[10px] tracking-widest hover:bg-red-700 transition-all flex items-center justify-center gap-2 disabled:opacity-50">
                 {isPurging ? <Loader2 className="animate-spin" size={14} /> : 'Confirm Purge'}
               </button>
               <button onClick={() => setShowDeleteModal(false)} className="w-full py-5 bg-zinc-900 text-zinc-400 rounded-2xl font-black uppercase text-[10px] tracking-widest hover:text-white transition-colors">Cancel</button>
@@ -370,7 +367,8 @@ export default function ProfilePage() {
 
       <div className="max-w-4xl mx-auto relative z-10">
         
-        <div className="flex flex-col md:flex-row items-center gap-10 mb-12 bg-white/[0.03] backdrop-blur-3xl p-10 rounded-[50px] border border-white/10 relative group">
+        {/* HEADER SECTION */}
+        <div className="flex flex-col md:flex-row items-center gap-10 mb-12 bg-white/[0.03] backdrop-blur-3xl p-10 rounded-[50px] border border-white/10 relative group shadow-2xl" style={{ transform: 'translateZ(0)' }}>
           <div className="relative">
             <div className="w-36 h-36 rounded-full bg-zinc-900 border-2 border-brandRed/30 overflow-hidden flex items-center justify-center shadow-2xl transition-transform duration-500 group-hover:scale-[1.02]">
               {uploading ? <Loader2 className="animate-spin text-brandRed" size={32} /> : 
@@ -390,8 +388,10 @@ export default function ProfilePage() {
             </div>
           </div>
           <div className="text-center md:text-left">
-            <h1 className="text-5xl font-black italic uppercase tracking-tighter mb-2 leading-none">{fullName || "TRIBE MEMBER"}</h1>
-            <p className="text-brandRed font-black uppercase tracking-[0.3em] text-[10px] opacity-80">{user?.email}</p>
+            <h1 className="text-5xl font-black italic uppercase tracking-tighter mb-2 leading-none truncate max-w-sm">{fullName || "GUEST"}</h1>
+            <p className="text-zinc-500 font-black uppercase tracking-[0.3em] text-[10px]">
+              {isMember ? <span className="text-brandRed flex items-center gap-2 justify-center md:justify-start"><Shield size={12}/> Verified Member</span> : 'Basic Identity'}
+            </p>
           </div>
         </div>
 
@@ -402,50 +402,35 @@ export default function ProfilePage() {
           </div>
         )}
 
-        <div className="bg-white/[0.03] backdrop-blur-3xl p-10 rounded-[50px] border border-white/10 shadow-2xl">
-          <h2 className="text-2xl font-black italic uppercase tracking-tighter mb-8 flex items-center gap-3">
-            <span className="w-8 h-[2px] bg-brandRed" /> Update Identity
+        <div className="bg-white/[0.03] backdrop-blur-3xl p-10 rounded-[50px] border border-white/10 shadow-2xl" style={{ transform: 'translateZ(0)' }}>
+          <h2 className="text-2xl font-black italic uppercase tracking-tighter mb-8 flex items-center justify-between">
+            <span className="flex items-center gap-3"><span className="w-8 h-[2px] bg-brandRed" /> Profile Data</span>
+            {!isMember && <span className="text-[9px] font-bold tracking-widest text-zinc-500 bg-black/40 px-3 py-1 rounded-full border border-white/10 flex items-center gap-2"><Lock size={10} /> Membership Required to unlock all</span>}
           </h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-6">
+            
+            {/* NAME (Always Unlocked) */}
             <div className="space-y-1.5">
               <label className="text-[9px] font-black uppercase tracking-widest text-zinc-500 ml-2">Full Name</label>
               <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} className="w-full bg-black/40 border border-white/10 p-5 rounded-2xl font-bold outline-none focus:border-brandRed transition-all uppercase text-sm text-white" />
             </div>
 
-            <div className="space-y-1.5">
-              <label className="text-[9px] font-black uppercase tracking-widest text-zinc-500 ml-2">Email Address</label>
-              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-black/40 border border-white/10 p-5 rounded-2xl font-bold outline-none focus:border-brandRed transition-all text-sm text-white" />
-              {email !== originalEmail && (
-                 <p className="text-[8px] font-black uppercase text-amber-500 tracking-widest ml-4 mt-2">
-                   Changing email requires inbox verification.
-                 </p>
-              )}
-            </div>
-
-            {/* 🔥 UPDATED PHONE FIELD (Unlocked & Validated) */}
+            {/* PHONE (Always Unlocked) */}
             <div className="space-y-1.5">
               <label className="text-[9px] font-black uppercase tracking-widest text-zinc-500 ml-2">Phone Number</label>
               <div className="relative flex items-center group">
                 <Phone className="absolute left-4 text-zinc-500" size={14} />
                 <input 
-                  type="tel" 
-                  placeholder="PHONE NUMBER" 
-                  maxLength={10} 
-                  disabled={otpLoading} 
+                  type="tel" maxLength={10} disabled={otpLoading} 
                   className={`w-full bg-black/40 border p-5 pl-11 rounded-2xl font-bold text-sm outline-none text-white border-white/10 placeholder:text-zinc-500 transition-all ${isPhoneVerified ? 'border-green-500/50 bg-green-500/5' : 'focus:border-brandRed'}`}
                   value={phone} 
                   onChange={(e) => {
                     const val = e.target.value.replace(/\D/g, '');
                     setPhone(val);
-                    if (val === originalPhone) {
-                      setIsPhoneVerified(true);
-                    } else if (isPhoneVerified) {
-                      setIsPhoneVerified(false);
-                    }
+                    if (val === originalPhone) { setIsPhoneVerified(true); } else if (isPhoneVerified) { setIsPhoneVerified(false); }
                     if (showOtpField) setShowOtpField(false);
-                    setTimer(0); 
-                    setConfirmationResult(null);
+                    setTimer(0); setConfirmationResult(null);
                   }}
                 />
                 {!isPhoneVerified && isPhoneValid && (
@@ -471,63 +456,83 @@ export default function ProfilePage() {
               </AnimatePresence>
             </div>
 
-            <div className="space-y-1.5">
+            {/* EMAIL (Locked if not member) */}
+            <div className="space-y-1.5 relative">
+              <label className="text-[9px] font-black uppercase tracking-widest text-zinc-500 ml-2">Email Address</label>
+              <input 
+                type="email" 
+                // 🔥 FIX: Hide the ghost email if they aren't a member
+                value={!isMember && email?.includes('@punerimallus.com') ? '' : email} 
+                // Add a placeholder so it doesn't just look blank/broken
+                placeholder={!isMember ? "Unlock to connect email" : "Enter Email Address"}
+                onChange={(e) => setEmail(e.target.value)} 
+                disabled={!isMember}
+                className={`w-full p-5 rounded-2xl font-bold outline-none transition-all text-sm ${isMember ? 'bg-black/40 border border-white/10 text-white focus:border-brandRed' : 'bg-black/20 border border-white/5 text-zinc-500 cursor-not-allowed'}`} 
+              />
+              {!isMember && <Lock className="absolute right-5 top-[60%] -translate-y-1/2 text-zinc-700" size={16} />}
+              {email !== originalEmail && isMember && (
+                 <p className="text-[8px] font-black uppercase text-amber-500 tracking-widest ml-4 mt-2">Changing email requires inbox verification.</p>
+              )}
+            </div>
+
+            {/* PROFESSION (Locked if not member) */}
+            <div className="space-y-1.5 relative">
               <label className="text-[9px] font-black uppercase tracking-widest text-zinc-500 ml-2">Profession</label>
               <div className="relative">
-                <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={14} />
-                <input type="text" value={profession} onChange={(e) => setProfession(e.target.value)} className="w-full bg-black/40 border border-white/10 p-5 pl-11 rounded-2xl font-bold outline-none focus:border-brandRed transition-all text-sm uppercase text-white" />
+                <Briefcase className={`absolute left-4 top-1/2 -translate-y-1/2 ${isMember ? 'text-white/20' : 'text-zinc-800'}`} size={14} />
+                <input 
+                  type="text" value={profession} onChange={(e) => setProfession(e.target.value)} disabled={!isMember}
+                  className={`w-full p-5 pl-11 rounded-2xl font-bold outline-none transition-all text-sm uppercase ${isMember ? 'bg-black/40 border border-white/10 text-white focus:border-brandRed' : 'bg-black/20 border border-white/5 text-zinc-500 cursor-not-allowed'}`} 
+                />
+                {!isMember && <Lock className="absolute right-5 top-1/2 -translate-y-1/2 text-zinc-700" size={16} />}
               </div>
             </div>
 
-            <div className="space-y-1.5">
+            {/* LOCATION (Locked if not member) */}
+            <div className="space-y-1.5 relative">
               <label className="text-[9px] font-black uppercase tracking-widest text-zinc-500 ml-2">Tribe Location</label>
               <div className="relative group">
-                <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-white/20" size={14} />
+                <MapPin className={`absolute left-4 top-1/2 -translate-y-1/2 ${isMember ? 'text-white/20' : 'text-zinc-800'}`} size={14} />
                 <select 
-                  className="w-full bg-black/40 border border-white/10 p-5 pl-11 rounded-2xl font-bold text-sm outline-none focus:border-brandRed transition-all text-white appearance-none cursor-pointer"
-                  value={location} onChange={(e) => setLocation(e.target.value)}
+                  disabled={!isMember} value={location} onChange={(e) => setLocation(e.target.value)}
+                  className={`w-full p-5 pl-11 rounded-2xl font-bold text-sm outline-none transition-all appearance-none ${isMember ? 'bg-black/40 border border-white/10 text-white focus:border-brandRed cursor-pointer' : 'bg-black/20 border border-white/5 text-zinc-500 cursor-not-allowed'}`}
                 >
                   <option value="" disabled className="bg-zinc-900">SELECT AREA</option>
-                  {PUNE_AREAS.map(area => (
-                    <option key={area} value={area} className="bg-zinc-900">{area}</option>
-                  ))}
+                  {PUNE_AREAS.map(area => <option key={area} value={area} className="bg-zinc-900">{area}</option>)}
                 </select>
+                {!isMember && <Lock className="absolute right-5 top-1/2 -translate-y-1/2 text-zinc-700" size={16} />}
               </div>
             </div>
 
-            <div className="space-y-1.5">
+            {/* BIRTH DATE (Locked if not member) */}
+            <div className="space-y-1.5 relative">
               <label className="text-[9px] font-black uppercase tracking-widest text-zinc-500 ml-2">Birth Date</label>
               <div className="relative" ref={dateContainerRef}>
                 <div 
-                  className={`relative bg-black/40 border p-5 rounded-2xl flex items-center gap-3 cursor-pointer group transition-all ${!isAdult && dob ? 'border-brandRed/50' : 'border-white/10'}`} 
-                  onClick={() => setShowCalendar(!showCalendar)}
+                  className={`relative border p-5 rounded-2xl flex items-center justify-between transition-all ${isMember ? 'bg-black/40 border-white/10 cursor-pointer group hover:border-white/30' : 'bg-black/20 border-white/5 cursor-not-allowed'}`} 
+                  onClick={() => { if(isMember) setShowCalendar(!showCalendar); }}
                 >
-                  <Calendar size={14} className="text-brandRed group-hover:scale-110 transition-transform" />
-                  <span className={`font-bold text-sm ${dob ? "text-white" : "text-zinc-600"}`}>
-                    {dob ? new Date(dob).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "NOT SET"}
-                  </span>
+                  <div className="flex items-center gap-3">
+                    <Calendar size={14} className={isMember ? "text-brandRed group-hover:scale-110 transition-transform" : "text-zinc-800"} />
+                    <span className={`font-bold text-sm ${dob ? (isMember ? "text-white" : "text-zinc-500") : "text-zinc-600"}`}>
+                      {dob ? new Date(dob).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "NOT SET"}
+                    </span>
+                  </div>
+                  {!isMember && <Lock className="text-zinc-700" size={16} />}
                 </div>
 
                 <AnimatePresence>
-                  {showCalendar && (
+                  {showCalendar && isMember && (
                     <>
                       <div className="fixed inset-0 z-[90]" onClick={() => setShowCalendar(false)} />
-                      <TribeCalendar 
-                        value={dob} 
-                        onChange={handleDateSelect} 
-                        onClose={() => setShowCalendar(false)}
-                        anchorRef={dateContainerRef}
-                        maxDate={maxDobDate} 
-                      />
+                      <TribeCalendar value={dob} onChange={handleDateSelect} onClose={() => setShowCalendar(false)} anchorRef={dateContainerRef} maxDate={maxDobDate} />
                     </>
                   )}
                 </AnimatePresence>
               </div>
               
-              {!isAdult && dob && (
-                <p className="text-[8px] font-black uppercase text-brandRed tracking-widest ml-4 mt-2 animate-pulse">
-                  Restriction: Membership requires age 16+
-                </p>
+              {!isAdult && dob && isMember && (
+                <p className="text-[8px] font-black uppercase text-brandRed tracking-widest ml-4 mt-2 animate-pulse">Restriction: Membership requires age 16+</p>
               )}
             </div>
           </div>
@@ -541,21 +546,11 @@ export default function ProfilePage() {
           </button>
         </div>
 
+        {/* SECURITY & DANGER ZONE (Always Unlocked) */}
         <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-           <div className="bg-white/[0.03] backdrop-blur-3xl p-10 rounded-[40px] border border-white/10 shadow-xl">
-              <h3 className="text-xs font-black uppercase tracking-[0.3em] mb-6 flex items-center gap-2">
-                <Shield size={16} className="text-brandRed" /> Security Vault
-              </h3>
-              <input type="password" placeholder="NEW PASSWORD" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} className="w-full bg-black/40 border border-white/10 p-4 rounded-xl font-bold mb-4 outline-none focus:border-brandRed text-white" />
-              <button onClick={async () => {
-                if(!newPassword) return;
-                const { error } = await supabase.auth.updateUser({ password: newPassword });
-                if (error) setMessage({ type: 'error', text: error.message.toUpperCase() });
-                else { setMessage({ type: 'success', text: 'PASSWORD UPDATED!' }); setNewPassword(''); }
-              }} className="w-full py-4 bg-zinc-900 text-zinc-400 font-black uppercase text-[10px] tracking-widest rounded-xl hover:bg-white hover:text-black transition-all active:scale-95">Update Access</button>
-           </div>
+          
            
-           <div className="bg-red-500/5 backdrop-blur-3xl p-10 rounded-[40px] border border-red-500/10 flex flex-col justify-center text-center group">
+           <div className="bg-red-500/5 backdrop-blur-3xl p-10 rounded-[40px] border border-red-500/10 flex flex-col justify-center text-center group" style={{ transform: 'translateZ(0)' }}>
               <h3 className="text-red-900 font-black uppercase text-[10px] tracking-[0.5em] mb-4">Danger Zone</h3>
               <p className="text-[9px] text-red-900/50 font-bold uppercase mb-6 italic">This will remove your soul from the tribe cloud permanently.</p>
               <button onClick={() => setShowDeleteModal(true)} className="w-full py-5 border border-red-900/20 text-red-900 hover:bg-red-600 hover:text-white rounded-xl text-[10px] font-black uppercase tracking-widest transition-all active:scale-95">

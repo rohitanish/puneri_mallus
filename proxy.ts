@@ -52,6 +52,8 @@ export async function proxy(request: NextRequest) {
       { path: '/api/mart', methods: ['GET'] },
       { path: '/api/partners', methods: ['GET'] },
       { path: '/api/team', methods: ['GET'] },
+      { path: '/api/profile/check-email', methods: ['GET'] },
+      { path: '/api/business/verify', methods: ['GET'] },
 
       // ⚙️ Site Configurations (Allows your homepage and UI to render for guests)
       { path: '/api/admin/popup', methods: ['GET'] },

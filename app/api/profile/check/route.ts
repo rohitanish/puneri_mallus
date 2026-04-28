@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import clientPromise from '@/lib/mongodb';
+import { createClient } from '@supabase/supabase-js';
 
 export async function GET(request: Request) {
   try {
@@ -10,21 +10,35 @@ export async function GET(request: Request) {
       return NextResponse.json({ exists: false, message: "User ID required" }, { status: 400 });
     }
 
-    const client = await clientPromise;
-    const db = client.db("punerimallus");
-    
-    // Check the 'profiles' collection for a matching Supabase ID
-    const profile = await db.collection("profiles").findOne(
-      { supabase_id: userId }
+    // 1. Initialize the Supabase Client
+    // We use the Service Role Key here because we are simply reading a profile by ID
+    // and we want to bypass RLS in case the user's session isn't fully established yet
+    // on the server-side during this specific check.
+    const supabaseAdmin = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY! 
     );
 
-    // !!profile converts the object to a boolean (true if found, false if null)
+    // 2. Query the 'profiles' table using the UUID
+    const { data: profile, error } = await supabaseAdmin
+      .from('profiles')
+      // Select the columns you need. We added mart_unlocked and is_member based on earlier logic.
+      .select('id, email, phone_number, full_name, is_member, mart_unlocked') 
+      .eq('id', userId)
+      .maybeSingle(); // maybeSingle returns null if no row is found, without throwing an error
+
+    if (error) {
+      throw error;
+    }
+
+    // 3. Return the result
     return NextResponse.json({ 
       exists: !!profile,
-      profile: profile 
+      profile: profile || null
     });
+
   } catch (error: any) {
-    console.error("Profile Lookup Error:", error);
+    console.error("Profile Lookup Error (Supabase):", error.message);
     return NextResponse.json({ 
       exists: false, 
       error: "Internal Server Error" 

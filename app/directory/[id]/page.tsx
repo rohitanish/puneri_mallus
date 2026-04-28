@@ -59,7 +59,7 @@ export default function ProfessionalDetailsPage() {
   const paywallRef = useRef<HTMLDivElement>(null);
 
   // --- INITIAL DATA FETCH ---
-  useEffect(() => {
+useEffect(() => {
     async function fetchAllData() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
@@ -99,15 +99,24 @@ export default function ProfessionalDetailsPage() {
           setItem(found);
           if (found.rating) setAvgRating(found.rating);
 
-          const isOwner = user?.email === found.userEmail;
-          const isMasterAdmin = user?.email === 'punerimallus@gmail.com';
+          // 🔥 Admin Array Setup
+          const MASTER_ADMINS = [
+            'punerimallus@gmail.com', 
+            'rohitanish86@gmail.com', 
+            'anotheradmin@punerimallus.com'
+          ];
           
+          // 🔥 Perform the checks AFTER finding the item
+          const isOwner = user?.email === found.userEmail;
+          const isMasterAdmin = user?.email ? MASTER_ADMINS.includes(user.email) : false;
+          
+          // 🔥 The Master Check (Using the updated column names)
           if (
             isOwner || 
             isMasterAdmin || 
             !settingsData.martEnabled || 
-            userProfile?.isPremiumMember || 
-            userProfile?.martUnlocked
+            userProfile?.is_member === true || 
+            userProfile?.mart_unlocked === true
           ) {
             setIsUnlocked(true);
           }
@@ -185,32 +194,43 @@ export default function ProfessionalDetailsPage() {
           },
         },
         handler: async function (response: any) {
-          const verifyRes = await fetch('/api/razorpay/verify', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              razorpay_order_id: response.razorpay_order_id,
-              razorpay_payment_id: response.razorpay_payment_id,
-              razorpay_signature: response.razorpay_signature,
-              userId: currentUser.id,
-              userEmail: currentUser?.email,
-              paymentType: 'MART',
-              plan: selectedPlan.toUpperCase()
-            })
-          });
+  setPaymentLoading(true); // Ensure spinner is visible
+  
+  const verifyRes = await fetch('/api/razorpay/verify', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      razorpay_order_id: response.razorpay_order_id,
+      razorpay_payment_id: response.razorpay_payment_id,
+      razorpay_signature: response.razorpay_signature,
+      userId: currentUser.id,
+      paymentType: 'MART', // Matches backend logic
+      plan: selectedPlan.toUpperCase(),
+      amount: martPlans[selectedPlan].price
+    })
+  });
 
-          const verifyData = await verifyRes.json();
-          if (verifyData.success) {
-            setIsUnlocked(true);
-            setAlertConfig({ isVisible: true, message: `Mallu Mart Unlocked (${selectedPlan.toUpperCase()})!`, type: 'success' });
-            
-            if (pendingAction && pendingAction !== '') {
-               window.open(pendingAction, '_blank');
-            }
-            
-            setTimeout(() => window.location.reload(), 1500);
-          }
-        },
+  const verifyData = await verifyRes.json();
+  
+  if (verifyData.success) {
+    // 🔥 1. Instant UI Feedback
+    setIsUnlocked(true); 
+    setAlertConfig({ 
+      isVisible: true, 
+      message: "Access Granted! Unlocking directory...", 
+      type: 'success' 
+    });
+    
+    // 🔥 2. Clean Redirect (Busts cache)
+    setTimeout(() => {
+      // Force a hard reload to the current page without query strings
+      window.location.href = window.location.pathname + "?unlocked=true"; 
+    }, 2000);
+  } else {
+    setAlertConfig({ isVisible: true, message: "Verification Failed", type: 'error' });
+    setPaymentLoading(false);
+  }
+},
         prefill: { email: currentUser?.email || "" },
         theme: { color: "#FF0000" },
         modal: { ondismiss: () => setPaymentLoading(false) } // 🔥 FIX 2: Revert payment loader on modal close

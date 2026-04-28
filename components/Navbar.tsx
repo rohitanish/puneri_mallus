@@ -3,11 +3,10 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { usePathname } from 'next/navigation';
-import { Menu, X, Instagram, MessageCircle, User, LogOut, Facebook, Crown } from 'lucide-react';
+import { Menu, X, Instagram, MessageCircle, User, LogOut, Facebook, Crown, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createBrowserClient } from '@supabase/ssr';
 
-// 🔥 IMPORT YOUR MEMBERSHIP COMPONENT HERE
 import MembershipCard from '@/components/Membership'; 
 
 export default function Navbar() {
@@ -16,16 +15,16 @@ export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [user, setUser] = useState<any>(null);
   
-  // --- STATES ---
   const [hasUpcoming, setHasUpcoming] = useState(false);
-  const [isPremium, setIsPremium] = useState(false);
+  const [isMember, setIsMember] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(false); // 🔥 New Admin State
   const [membershipPrice, setMembershipPrice] = useState<number>(999); 
   const [membershipBenefits, setMembershipBenefits] = useState<string[]>([
     "Lifetime Inner Circle Access",
     "VIP Event Invites",
     "Full Mallu Mart Access"
   ]);
-  // 🔥 NEW: STATE TO CONTROL THE POPUP MODAL
+  
   const [showMembershipModal, setShowMembershipModal] = useState(false);
 
   const supabase = createBrowserClient(
@@ -33,17 +32,31 @@ export default function Navbar() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  // --- PREMIUM CHECK FUNCTION ---
-  const fetchPremiumStatus = async (userId: string) => {
+  const fetchUserStatus = async (userId: string) => {
     try {
-      const res = await fetch(`/api/profile/check?id=${userId}`);
-      if (!res.ok) return;
-      const data = await res.json();
-      if (data && data.exists && data.profile) {
-        setIsPremium(data.profile.isPremiumMember || false);
+      // 1. Check Standard Profile / Membership
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('is_member, full_name, phone_number')
+        .eq('id', userId)
+        .single();
+        
+      if (profile) {
+        setIsMember(profile.is_member || false);
+        setUser((prev: any) => ({ ...prev, user_metadata: { ...prev?.user_metadata, full_name: profile.full_name } }));
       }
+
+      // 2. 🔥 Check Admin Status
+      const { data: adminData } = await supabase
+        .from('authorized_admins')
+        .select('role')
+        .eq('id', userId)
+        .maybeSingle();
+      
+      if (adminData) setIsAdmin(true);
+
     } catch (e) {
-      console.error("Premium check failed", e);
+      // Silent catch
     }
   };
 
@@ -53,9 +66,9 @@ export default function Navbar() {
     
     const fetchUser = async () => {
       const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user && (session.user.confirmed_at || session.user.last_sign_in_at)) {
+      if (session?.user) {
         setUser(session.user);
-        fetchPremiumStatus(session.user.id);
+        fetchUserStatus(session.user.id);
       } else {
         setUser(null);
       }
@@ -66,11 +79,12 @@ export default function Navbar() {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' && session?.user) {
         setUser(session.user);
-        fetchPremiumStatus(session.user.id);
+        fetchUserStatus(session.user.id);
       } else if (event === 'SIGNED_OUT') {
         setUser(null);
-        setIsPremium(false);
-        setShowMembershipModal(false); // Close modal on logout
+        setIsMember(false);
+        setIsAdmin(false);
+        setShowMembershipModal(false); 
       }
     });
 
@@ -80,7 +94,6 @@ export default function Navbar() {
     };
   }, [supabase]);
 
-  // FETCH EVENTS & DYNAMIC PRICE
   useEffect(() => {
     const fetchGlobalData = async () => {
       try {
@@ -100,7 +113,7 @@ export default function Navbar() {
           setMembershipBenefits(benefitsArray);
         }
       } catch (e) {
-        console.error("Failed to fetch global data", e);
+        // Silent catch
       }
     };
     fetchGlobalData();
@@ -177,49 +190,68 @@ export default function Navbar() {
 
           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
             <div className="hidden lg:flex items-center gap-4">
-              {user ? (
-                <div className="flex items-center gap-4 relative group">
-                  
-                  {/* 🔥 REVERTED: JUST THE BUTTON ON DESKTOP */}
-                  {!isPremium && (
-                    <button 
-                      onClick={() => setShowMembershipModal(true)}
-                      className="hidden sm:flex items-center gap-1.5 px-4 py-1.5 bg-gradient-to-r from-yellow-500 to-amber-600 text-black rounded-full font-black uppercase text-[9px] tracking-widest shadow-[0_0_15px_rgba(234,179,8,0.4)] hover:scale-105 transition-all animate-pulse"
-                    >
-                      <Crown size={12} className="text-black" fill="currentColor" />
-                      Get Premium
-                    </button>
-                  )}
+              
+              {/* JOIN TRIBE BUTTON (Hidden for Admins and Members) */}
+              {(!isMember && !isAdmin) && (
+                <button 
+                  onClick={() => { 
+                    if (user) {
+                      setShowMembershipModal(true); 
+                    }
+                  }}
+                  className="px-5 lg:px-6 xl:px-8 py-2.5 xl:py-3 rounded-full bg-brandRed text-white font-black uppercase text-[10px] tracking-widest hover:bg-white hover:text-black transition-all duration-300 shadow-[0_0_20px_rgba(255,0,0,0.3)] active:scale-95 whitespace-nowrap"
+                >
+                  {user ? "Join Tribe" : "Login / Join"}
+                </button>
+              )}
 
+              {user && (
+                <div className="flex items-center gap-4 relative group">
                   <Link
-                    href="/profile"
+                    href={isAdmin ? "/admin" : "/profile"}
                     className={`flex items-center gap-3 backdrop-blur-md border p-1.5 pr-4 xl:pr-5 rounded-full transition-all ${
-                      isPremium 
-                        ? 'bg-yellow-500/10 border-yellow-500/50 shadow-[0_0_15px_rgba(234,179,8,0.2)]' 
-                        : 'bg-white/5 border-white/10 hover:border-brandRed'
+                      isAdmin
+                        ? 'bg-brandRed/10 border-brandRed/30 shadow-[0_0_15px_rgba(255,0,0,0.2)]'
+                        : isMember 
+                          ? 'bg-yellow-500/10 border-yellow-500/50 shadow-[0_0_15px_rgba(234,179,8,0.2)]' 
+                          : 'bg-white/5 border-white/10 hover:border-brandRed'
                     }`}
                   >
-                    <div className={`w-8 h-8 xl:w-9 xl:h-9 rounded-full flex items-center justify-center overflow-hidden ${isPremium ? 'bg-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.4)]' : 'bg-brandRed shadow-[0_0_15px_rgba(255,0,0,0.4)]'}`}>
-                      {user.user_metadata?.avatar_url ? (
+                    <div className={`w-8 h-8 xl:w-9 xl:h-9 rounded-full flex items-center justify-center overflow-hidden ${
+                      isAdmin 
+                        ? 'bg-black border border-brandRed'
+                        : isMember 
+                          ? 'bg-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.4)]' 
+                          : 'bg-brandRed shadow-[0_0_15px_rgba(255,0,0,0.4)]'
+                    }`}>
+                      {isAdmin ? (
+                        <ShieldCheck size={16} className="text-brandRed" />
+                      ) : user.user_metadata?.avatar_url ? (
                         <img 
                           src={user.user_metadata.avatar_url} 
                           alt="Profile" 
                           className="w-full h-full object-cover"
                         />
                       ) : (
-                        <User size={14} className={isPremium ? "text-black" : "text-white"} />
+                        <User size={14} className={isMember ? "text-black" : "text-white"} />
                       )}
                     </div>
                     
                     <div className="flex flex-col text-left">
                       <div className="flex items-center gap-1.5">
-                        <span className={`font-black uppercase tracking-widest leading-none mb-1 ${isPremium ? 'text-[9px] text-yellow-500 drop-shadow-[0_0_5px_rgba(234,179,8,0.5)]' : 'text-[7px] text-zinc-500'}`}>
-                          {isPremium ? 'Premium Member' : 'Active Member'}
+                        <span className={`font-black uppercase tracking-widest leading-none mb-1 ${
+                          isAdmin 
+                            ? 'text-[10px] text-brandRed' 
+                            : isMember 
+                              ? 'text-[9px] text-yellow-500 drop-shadow-[0_0_5px_rgba(234,179,8,0.5)]' 
+                              : 'text-[7px] text-zinc-500'
+                        }`}>
+                          {isAdmin ? 'System Admin' : isMember ? 'Premium Member' : 'Guest Identity'}
                         </span>
-                        {isPremium && <Crown size={12} className="text-yellow-500 mb-1 drop-shadow-[0_0_5px_rgba(234,179,8,0.5)]" fill="currentColor" />}
+                        {isMember && !isAdmin && <Crown size={12} className="text-yellow-500 mb-1 drop-shadow-[0_0_5px_rgba(234,179,8,0.5)]" fill="currentColor" />}
                       </div>
                       <span className="text-[10px] font-black text-white uppercase italic leading-none truncate max-w-[100px]">
-                        {user.user_metadata?.full_name?.split(' ')[0] || 'Tribe User'}
+                        {isAdmin ? user.email?.split('@')[0] : user.user_metadata?.full_name?.split(' ')[0] || 'Tribe User'}
                       </span>
                     </div>
                   </Link>
@@ -230,21 +262,19 @@ export default function Navbar() {
                     <LogOut size={12} /> Sign Out
                   </button>
                 </div>
-              ) : (
-                <Link href="/auth/login">
-                  <button className="px-5 lg:px-6 xl:px-8 py-2.5 xl:py-3 rounded-full bg-brandRed text-white font-black uppercase text-[10px] tracking-widest hover:bg-white hover:text-black transition-all duration-300 shadow-[0_0_20px_rgba(255,0,0,0.3)] active:scale-95 whitespace-nowrap">
-                    Join Tribe
-                  </button>
-                </Link>
               )}
             </div>
 
-            {!user && (
-              <Link href="/auth/login" className="lg:hidden">
-                <button className="px-3 py-2 rounded-full bg-brandRed text-white font-black uppercase text-[9px] tracking-widest active:scale-95 whitespace-nowrap">
-                  Join
-                </button>
-              </Link>
+           {/* JOIN TRIBE BUTTON (MOBILE) */}
+            {(!isMember && !isAdmin) && (
+              <button 
+                onClick={() => { 
+                  if (user) setShowMembershipModal(true); 
+                }}
+                className="lg:hidden px-4 py-2 rounded-full bg-brandRed text-white font-black uppercase text-[10px] tracking-widest active:scale-95 whitespace-nowrap"
+              >
+                {user ? "Join" : "Login"}
+              </button>
             )}
 
             <button
@@ -271,6 +301,7 @@ export default function Navbar() {
               initial={{ x: '-100%' }} animate={{ x: 0 }} exit={{ x: '-100%' }}
               transition={{ type: 'spring', damping: 25, stiffness: 200 }}
               className="fixed top-0 left-0 h-full w-[85%] max-w-[340px] bg-zinc-950 z-[160] p-6 sm:p-8 border-r border-white/10 lg:hidden flex flex-col"
+              style={{ transform: 'translateZ(0)' }} 
             >
               <div className="flex justify-between items-center mb-10 sm:mb-14">
                 <Image src="/logo.png" alt="Logo" width={300} height={90} className="object-contain object-left w-auto h-20 sm:h-24 max-w-[220px]" />
@@ -304,43 +335,66 @@ export default function Navbar() {
               </div>
 
               <div className="pt-6 sm:pt-8 border-t border-white/10 space-y-5">
-                {user ? (
-                  <div className="flex flex-col gap-4">
-                    
-                    {/* 🔥 JUST THE BUTTON ON MOBILE MENU */}
-                    {!isPremium && (
-                      <button 
-                        onClick={() => {
-                          setIsMobileMenuOpen(false);
-                          setShowMembershipModal(true);
-                        }}
-                        className="w-full flex items-center justify-center gap-2 py-3 bg-gradient-to-r from-yellow-500 to-amber-600 text-black rounded-xl font-black uppercase text-[10px] tracking-widest shadow-[0_0_15px_rgba(234,179,8,0.4)] animate-pulse"
-                      >
-                        <Crown size={14} className="text-black" fill="currentColor" />
-                        Get Premium
-                      </button>
-                    )}
+                
+               {/* MOBILE MENU BUTTONS */}
+                {(!isMember && !isAdmin) && (
+                  <button 
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      if (user) {
+                        setShowMembershipModal(true);
+                      }
+                    }}
+                    className="w-full py-4 rounded-full bg-brandRed text-white font-black uppercase text-[11px] tracking-widest shadow-[0_0_20px_rgba(255,0,0,0.3)] mb-4"
+                  >
+                    {user ? "Join Tribe" : "Login / Join"}
+                  </button>
+                )}
 
+                {user && (
+                  <div className="flex flex-col gap-4">
                     <Link 
-                      href="/profile" 
+                      href={isAdmin ? "/admin" : "/profile"} 
                       onClick={() => setIsMobileMenuOpen(false)}
-                      className={`flex items-center gap-4 p-4 rounded-2xl border ${isPremium ? 'bg-yellow-500/10 border-yellow-500/50 shadow-[0_0_15px_rgba(234,179,8,0.2)]' : 'bg-white/5 border-white/10'}`}
+                      className={`flex items-center gap-4 p-4 rounded-2xl border ${
+                        isAdmin 
+                          ? 'bg-brandRed/10 border-brandRed/30'
+                          : isMember 
+                            ? 'bg-yellow-500/10 border-yellow-500/50 shadow-[0_0_15px_rgba(234,179,8,0.2)]' 
+                            : 'bg-white/5 border-white/10'
+                      }`}
                     >
-                      <div className={`w-10 h-10 rounded-full flex items-center justify-center overflow-hidden ${isPremium ? 'bg-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.4)]' : 'bg-brandRed'}`}>
-                        {user.user_metadata?.avatar_url ? (
+                      <div className={`w-10 h-10 rounded-full flex items-center justify-center overflow-hidden ${
+                        isAdmin
+                          ? 'bg-black border border-brandRed'
+                          : isMember 
+                            ? 'bg-yellow-500 shadow-[0_0_15px_rgba(234,179,8,0.4)]' 
+                            : 'bg-brandRed'
+                      }`}>
+                        {isAdmin ? (
+                          <ShieldCheck size={18} className="text-brandRed" />
+                        ) : user.user_metadata?.avatar_url ? (
                           <img src={user.user_metadata.avatar_url} alt="Profile" className="w-full h-full object-cover" />
                         ) : (
-                          <User size={18} className={isPremium ? "text-black" : "text-white"} />
+                          <User size={18} className={isMember ? "text-black" : "text-white"} />
                         )}
                       </div>
                       <div className="flex flex-col">
                         <div className="flex items-center gap-2">
-                          <span className={`font-black uppercase tracking-widest ${isPremium ? 'text-[10px] text-yellow-500 drop-shadow-[0_0_5px_rgba(234,179,8,0.5)]' : 'text-[8px] text-zinc-500'}`}>
-                            {isPremium ? 'Premium Member' : 'Active Member'}
+                          <span className={`font-black uppercase tracking-widest ${
+                            isAdmin 
+                              ? 'text-[11px] text-brandRed'
+                              : isMember 
+                                ? 'text-[10px] text-yellow-500 drop-shadow-[0_0_5px_rgba(234,179,8,0.5)]' 
+                                : 'text-[8px] text-zinc-500'
+                          }`}>
+                            {isAdmin ? 'System Admin' : isMember ? 'Premium Member' : 'Guest Identity'}
                           </span>
-                          {isPremium && <Crown size={14} className="text-yellow-500 drop-shadow-[0_0_5px_rgba(234,179,8,0.5)]" fill="currentColor" />}
+                          {isMember && !isAdmin && <Crown size={14} className="text-yellow-500 drop-shadow-[0_0_5px_rgba(234,179,8,0.5)]" fill="currentColor" />}
                         </div>
-                        <span className="text-sm font-black text-white uppercase italic">{user.user_metadata?.full_name || 'Tribe User'}</span>
+                        <span className="text-sm font-black text-white uppercase italic">
+                          {isAdmin ? user.email?.split('@')[0] : user.user_metadata?.full_name || 'Tribe User'}
+                        </span>
                       </div>
                     </Link>
 
@@ -351,13 +405,8 @@ export default function Navbar() {
                       <LogOut size={14} /> Sign Out
                     </button>
                   </div>
-                ) : (
-                  <Link href="/auth/login" onClick={() => setIsMobileMenuOpen(false)}>
-                    <button className="w-full py-3 rounded-full bg-brandRed text-white font-black uppercase text-[10px] tracking-widest">
-                      Join Tribe
-                    </button>
-                  </Link>
                 )}
+                
                 <div className="flex gap-4 pt-2 px-2">
                   <Instagram size={20} className="text-zinc-500 hover:text-brandRed cursor-pointer transition-colors" />
                   <Facebook size={20} className="text-zinc-500 hover:text-brandRed cursor-pointer transition-colors" />
@@ -370,27 +419,24 @@ export default function Navbar() {
         )}
       </AnimatePresence>
 
-      {/* 🔥 NEW: THE POPUP MODAL FOR THE MEMBERSHIP CARD */}
       <AnimatePresence>
         {showMembershipModal && (
           <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
-            {/* Dark blur background */}
             <motion.div 
               initial={{ opacity: 0 }} 
               animate={{ opacity: 1 }} 
               exit={{ opacity: 0 }}
               className="absolute inset-0 bg-black/80 backdrop-blur-sm"
               onClick={() => setShowMembershipModal(false)}
+              style={{ transform: 'translateZ(0)' }}
             />
             
-            {/* Modal Container */}
             <motion.div 
               initial={{ opacity: 0, scale: 0.95, y: 20 }} 
               animate={{ opacity: 1, scale: 1, y: 0 }} 
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               className="relative z-10 w-full max-w-2xl"
             >
-              {/* Close Button floating top right of the card */}
               <button 
                 onClick={() => setShowMembershipModal(false)}
                 className="absolute -top-4 -right-4 md:top-4 md:right-4 z-[210] p-2 bg-zinc-900 border border-white/20 hover:border-brandRed hover:bg-brandRed hover:text-white rounded-full text-zinc-400 transition-all shadow-xl"
@@ -400,7 +446,7 @@ export default function Navbar() {
 
               <MembershipCard 
                 price={membershipPrice} 
-                benefits={membershipBenefits} // 🔥 Now this updates from the admin panel too!
+                benefits={membershipBenefits}
                 userId={user?.id || ""}
                 userEmail={user?.email || ""}
               />
