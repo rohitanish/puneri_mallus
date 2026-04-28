@@ -6,10 +6,12 @@ import { createBrowserClient } from '@supabase/ssr';
 import { 
   CheckCircle, ArrowRight, Loader2, ArrowLeft, 
   Image as ImageIcon, MapPin, Plus, Trash2, X, 
-  Link as LinkIcon, Phone, Globe, Briefcase, Camera, Check, Clock, Instagram, Star
+  Link as LinkIcon, Phone, Globe, Briefcase, Camera, Clock, Instagram, Star
 } from 'lucide-react';
 import TribeTimePicker from '@/components/ui/TribeTimePicker';
 import TribeAlert from '@/components/TribeAlert'; 
+// 🔥 IMPORT THE GATEKEEPER
+import EmailVerificationGate from '@/components/EmailVerificationGate';
 
 const EXTERNAL_CATEGORIES = ["SAMAJAM", "TEMPLE", "CHURCH", "ORGANIZATION", "OTHER"];
 
@@ -33,7 +35,11 @@ export default function AddCommunityPage() {
 function AddCommunityForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const editId = searchParams.get('edit'); // 🔥 CAPTURE EDIT ID
+  const editId = searchParams.get('edit'); 
+
+  const [fetching, setFetching] = useState(true); // Default loading state
+  const [user, setUser] = useState<any>(null);
+  const [isVerified, setIsVerified] = useState<boolean | null>(null);
 
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1);
@@ -78,16 +84,42 @@ function AddCommunityForm() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  // 🔥 1. HYDRATION LOGIC: Load existing data if editing
+  // 🔥 1. INITIALIZATION & HYDRATION
   useEffect(() => {
-    if (editId) {
-      const fetchDraftData = async () => {
-        try {
+    const init = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return router.push('/auth/login');
+      setUser(user);
+
+      try {
+        // 🔥 Check Directory Owner Verification specifically for COMMUNITY
+        const { data: ownerRecord } = await supabase
+          .from('directory_owners')
+          .select('*')
+          .eq('user_id', user.id)
+          .eq('source', 'COMMUNITY')
+          .maybeSingle();
+
+        if (ownerRecord) {
+          setIsVerified(true);
+          // Auto-fill verified details if NOT editing
+          if (!editId) {
+             setFormData(prev => ({
+               ...prev,
+               title: ownerRecord.business_name, // Map business name to title
+               contact: ownerRecord.phone_number
+             }));
+          }
+        } else {
+          setIsVerified(false);
+        }
+
+        // Fetch draft data if editing
+        if (editId) {
           const res = await fetch(`/api/community?id=${editId}`);
           if (res.ok) {
             const data = await res.json();
             
-            // Map main fields
             setFormData({
               ...formData,
               title: data.title || '',
@@ -109,28 +141,28 @@ function AddCommunityForm() {
             if (data.services) setServices(data.services);
             if (data.category === "OTHER" || !EXTERNAL_CATEGORIES.includes(data.category)) setShowCustomCategory(true);
 
-            // 🔥 Map existing images so they don't get lost
             if (data.imagePaths) {
               const existingGallery = data.imagePaths.map((url: string) => ({
                 id: Math.random().toString(36).substr(2, 9),
-                type: 'existing', // Mark as existing to skip re-upload
+                type: 'existing', 
                 file: null,
                 previewUrl: url
               }));
               setGallery(existingGallery);
 
-              // Set thumbnail focus
               const thumb = existingGallery.find((img: any) => img.previewUrl === data.image);
               if (thumb) setThumbnailId(thumb.id);
             }
           }
-        } catch (err) {
-          console.error("Hydration Error:", err);
         }
-      };
-      fetchDraftData();
-    }
-  }, [editId]);
+      } catch (err) {
+        console.error("Initialization Error:", err);
+      } finally {
+        setFetching(false);
+      }
+    };
+    init();
+  }, [editId, router, supabase]);
 
   const addService = () => setServices([...services, { name: '', desc: '' }]);
   const removeService = (index: number) => setServices(services.filter((_, i) => i !== index));
@@ -165,7 +197,7 @@ function AddCommunityForm() {
     if (!isDraftMode) {
       if (gallery.length === 0) return triggerAlert("At least one image is required", "error");
       if (!thumbnailId) return triggerAlert("Please select a cover thumbnail", "error");
-      if (!formData.title.trim()) return triggerAlert("Circle Name is required", "error");
+      if (!formData.title.trim()) return triggerAlert("Organization Name is required", "error");
       if (!formData.area.trim()) return triggerAlert("Location Area is required", "error");
       if (!formData.description.trim() || formData.description.length < 20) {
         return triggerAlert("Community Story is too short (min 20 chars)", "error");
@@ -174,23 +206,20 @@ function AddCommunityForm() {
         return triggerAlert("Valid 10-digit WhatsApp contact required", "error");
       }
     } else {
-      // Minimal check for drafts
       if (!formData.title.trim()) return triggerAlert("Provide a name to save draft", "info");
     }
 
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
       let finalThumbnailUrl = formData.image || "";
 
-      // 🔥 Process Images: Only upload 'new' ones
       const finalPaths = await Promise.all(gallery.map(async (img) => {
         if (img.type === 'existing') {
           if (img.id === thumbnailId) finalThumbnailUrl = img.previewUrl;
           return img.previewUrl;
         }
 
-        const fileName = `user-node-${Date.now()}-${Math.random().toString(36).substr(2,5)}`;
+        const fileName = `community-node-${Date.now()}-${Math.random().toString(36).substr(2,5)}`;
         const { data, error } = await supabase.storage.from('community').upload(fileName, img.file);
         if (error) throw error;
         const { data: urlData } = supabase.storage.from('community').getPublicUrl(data.path);
@@ -203,7 +232,7 @@ function AddCommunityForm() {
       
       const payload = { 
         ...formData, 
-        _id: editId, // 🔥 CRITICAL: Ensures MongoDB updates instead of creating new
+        _id: editId, 
         category: finalCategory.toUpperCase(), 
         image: finalThumbnailUrl, 
         imagePaths: finalPaths, 
@@ -230,6 +259,34 @@ function AddCommunityForm() {
     }
   };
 
+  // 🔥 GLOBAL LOADER
+  if (fetching || isVerified === null) {
+    return <div className="min-h-screen bg-black flex items-center justify-center"><Loader2 className="animate-spin text-brandRed" /></div>;
+  }
+
+  // 🔥 THE GATEKEEPER
+  if (isVerified === false && user) {
+    return (
+      <div className="min-h-screen bg-[#030303] text-white pt-40 pb-20 px-6">
+        <EmailVerificationGate 
+          userId={user.id} 
+          source="COMMUNITY" // Specific source for this gate
+          onVerified={(ownerData) => {
+            if (!editId) {
+              setFormData(prev => ({
+                ...prev,
+                title: ownerData.businessName, // Auto-fill the organization name
+                contact: ownerData.phone
+              }));
+            }
+            setIsVerified(true);
+          }} 
+        />
+      </div>
+    );
+  }
+
+  // 🔥 MAIN FORM UI (Visible when isVerified is true)
   return (
     <div className="min-h-screen bg-[#030303] text-white pt-40 pb-20 px-6 selection:bg-brandRed/30">
       
@@ -308,74 +365,68 @@ function AddCommunityForm() {
               <h1 className="text-5xl font-black italic uppercase leading-none text-white">Visual <span className="text-brandRed">Identity .</span></h1>
             </div>
 
-            {/* 🔥 SERVICES SECTION (RESTORED & SEPARATED) */}
-<div className="border border-white/25 p-8 rounded-[40px] space-y-6">
-  <div className="flex justify-between items-center px-2">
-    <div className="flex items-center gap-3 text-brandRed">
-      <Briefcase size={20} />
-      <label className="text-[11px] font-black uppercase tracking-widest text-white">Specific Services</label>
-    </div>
-    <button 
-      onClick={addService} 
-      className="text-[10px] bg-white text-black px-5 py-2 rounded-full font-black uppercase hover:bg-brandRed hover:text-white transition-all shadow-lg active:scale-95"
-    >
-      + Add Service
-    </button>
-  </div>
+            <div className="border border-white/25 p-8 rounded-[40px] space-y-6">
+              <div className="flex justify-between items-center px-2">
+                <div className="flex items-center gap-3 text-brandRed">
+                  <Briefcase size={20} />
+                  <label className="text-[11px] font-black uppercase tracking-widest text-white">Specific Services</label>
+                </div>
+                <button 
+                  onClick={addService} 
+                  className="text-[10px] bg-white text-black px-5 py-2 rounded-full font-black uppercase hover:bg-brandRed hover:text-white transition-all shadow-lg active:scale-95"
+                >
+                  + Add Service
+                </button>
+              </div>
 
-  <div className="space-y-10">
-    {services.map((service, index) => (
-      <div key={index} className="relative group space-y-4">
-        {/* DELETE BUTTON */}
-        <button 
-          onClick={() => removeService(index)} 
-          className="absolute -top-3 -right-3 p-2 bg-red-600 text-white rounded-full z-20 opacity-0 group-hover:opacity-100 transition-all shadow-xl hover:scale-110 active:scale-90 border-2 border-[#030303]"
-        >
-          <X size={14} strokeWidth={3} />
-        </button>
+              <div className="space-y-10">
+                {services.map((service, index) => (
+                  <div key={index} className="relative group space-y-4">
+                    <button 
+                      onClick={() => removeService(index)} 
+                      className="absolute -top-3 -right-3 p-2 bg-red-600 text-white rounded-full z-20 opacity-0 group-hover:opacity-100 transition-all shadow-xl hover:scale-110 active:scale-90 border-2 border-[#030303]"
+                    >
+                      <X size={14} strokeWidth={3} />
+                    </button>
 
-        {/* SEPARATED HEADER BOX */}
-        <div className="border border-white/10 p-5 rounded-[24px] bg-zinc-950/40 focus-within:border-brandRed transition-all">
-          <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 mb-1 block tracking-widest">
-            Service Designation
-          </label>
-          <input 
-            placeholder="E.G. EMERGENCY WELFARE" 
-            className="w-full bg-transparent outline-none text-sm font-black uppercase text-white px-1" 
-            value={service.name} 
-            onChange={(e) => updateService(index, 'name', e.target.value)} 
-          />
-        </div>
+                    <div className="border border-white/10 p-5 rounded-[24px] bg-zinc-950/40 focus-within:border-brandRed transition-all">
+                      <label className="text-[9px] font-black uppercase text-zinc-500 ml-1 mb-1 block tracking-widest">
+                        Service Designation
+                      </label>
+                      <input 
+                        placeholder="E.G. EMERGENCY WELFARE" 
+                        className="w-full bg-transparent outline-none text-sm font-black uppercase text-white px-1" 
+                        value={service.name} 
+                        onChange={(e) => updateService(index, 'name', e.target.value)} 
+                      />
+                    </div>
 
-        {/* SEPARATED DESCRIPTION BOX */}
-        <div className="border border-white/10 p-5 rounded-[24px] bg-zinc-950/40 focus-within:border-brandRed transition-all">
-          <label className="text-[11px] font-black uppercase text-zinc-500 ml-1 mb-1 block tracking-widest">
-            Offer Details
-          </label>
-          <textarea 
-            placeholder="DESCRIBE THE SCOPE OF THIS SERVICE..." 
-            rows={2} 
-            className="w-full bg-transparent outline-none text-xl font-medium text-zinc-400 italic px-1 resize-none" 
-            value={service.desc} 
-            onChange={(e) => updateService(index, 'desc', e.target.value)} 
-          />
-        </div>
-      </div>
-    ))}
+                    <div className="border border-white/10 p-5 rounded-[24px] bg-zinc-950/40 focus-within:border-brandRed transition-all">
+                      <label className="text-[11px] font-black uppercase text-zinc-500 ml-1 mb-1 block tracking-widest">
+                        Offer Details
+                      </label>
+                      <textarea 
+                        placeholder="DESCRIBE THE SCOPE OF THIS SERVICE..." 
+                        rows={2} 
+                        className="w-full bg-transparent outline-none text-xl font-medium text-zinc-400 italic px-1 resize-none" 
+                        value={service.desc} 
+                        onChange={(e) => updateService(index, 'desc', e.target.value)} 
+                      />
+                    </div>
+                  </div>
+                ))}
 
-    {/* EMPTY STATE */}
-    {services.length === 0 && (
-      <div className="border border-dashed border-white/5 rounded-[32px] py-12 flex flex-col items-center justify-center gap-3">
-        <Briefcase size={24} className="text-zinc-800" />
-        <p className="text-zinc-600 text-[10px] font-black uppercase tracking-[0.2em] italic text-center">
-          Inventory Empty: No Services Cataloged
-        </p>
-      </div>
-    )}
-  </div>
-</div>
+                {services.length === 0 && (
+                  <div className="border border-dashed border-white/5 rounded-[32px] py-12 flex flex-col items-center justify-center gap-3">
+                    <Briefcase size={24} className="text-zinc-800" />
+                    <p className="text-zinc-600 text-[10px] font-black uppercase tracking-[0.2em] italic text-center">
+                      Inventory Empty: No Services Cataloged
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
 
-            {/* 🔥 GALLERY SECTION (RESTORED) */}
             <div className="border border-white/25 p-8 rounded-[40px] space-y-6">
                 <div className="flex items-center gap-3 text-brandRed px-2"><Camera size={20}/><label className="text-[11px] font-black uppercase tracking-widest text-white">Media Gallery *</label></div>
                 <div className="flex gap-6 overflow-x-auto pb-6 pt-4 no-scrollbar">
@@ -401,7 +452,6 @@ function AddCommunityForm() {
                 <textarea placeholder="TELL YOUR STORY..." className="w-full bg-transparent outline-none min-h-[150px] font-medium italic text-white text-lg leading-relaxed" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
             </div>
 
-            {/* 🔥 DIGITAL CONNECTIONS (RESTORED) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {[
                   { label: 'WhatsApp Contact *', icon: Phone, key: 'contact', placeholder: '10 DIGITS' },
