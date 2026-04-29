@@ -13,7 +13,7 @@ import TribeAlert from '@/components/TribeAlert';
 // 🔥 IMPORT THE GATEKEEPER
 import EmailVerificationGate from '@/components/EmailVerificationGate';
 
-const EXTERNAL_CATEGORIES = ["SAMAJAM", "TEMPLE", "CHURCH", "ORGANIZATION", "OTHER"];
+const EXTERNAL_CATEGORIES = ["SAMAJAM", "TEMPLE", "CHURCH", "ORGANIZATION","MOSQUE","OTHER"];
 
 const LaserDivider = () => (
   <div className="relative w-full h-px flex items-center justify-center overflow-hidden my-2">

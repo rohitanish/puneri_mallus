@@ -77,21 +77,21 @@ export default function EventsPage() {
     fetchEvents();
   }, []);
 
-  // Auto-sliding Filter Logic (Gated by isAutoPlaying)
-  useEffect(() => {
-    if (!isAutoPlaying || search !== "") return; 
-    const interval = setInterval(() => {
-      setActiveFilter((prev) => {
-        const currentIndex = FILTERS.findIndex(f => f.id === prev);
-        return FILTERS[(currentIndex + 1) % FILTERS.length].id;
-      });
-    }, 3500);
-    return () => clearInterval(interval);
-  }, [isAutoPlaying, search]);
+  // // Auto-sliding Filter Logic (Gated by isAutoPlaying)
+  // useEffect(() => {
+  //   if (!isAutoPlaying || search !== "") return; 
+  //   const interval = setInterval(() => {
+  //     setActiveFilter((prev) => {
+  //       const currentIndex = FILTERS.findIndex(f => f.id === prev);
+  //       return FILTERS[(currentIndex + 1) % FILTERS.length].id;
+  //     });
+  //   }, 3500);
+  //   return () => clearInterval(interval);
+  // }, [isAutoPlaying, search]);
 
-  const stopSlider = () => {
-    if (isAutoPlaying) setIsAutoPlaying(false);
-  };
+  // const stopSlider = () => {
+  //   if (isAutoPlaying) setIsAutoPlaying(false);
+  // };
 
   const filteredEvents = useMemo(() => {
     const safeSearch = search.toLowerCase().trim();
@@ -118,8 +118,8 @@ export default function EventsPage() {
   return (
     <div 
       className="bg-[#030303] min-h-screen relative selection:bg-brandRed/30 overflow-x-hidden"
-      onClickCapture={stopSlider}
-      onKeyDownCapture={stopSlider}
+      // onClickCapture={stopSlider}
+      // onKeyDownCapture={stopSlider}
     >
       {/* 🔥 SAFE GLASS FIX: Hardware Accelerated Background */}
       <div
@@ -153,13 +153,13 @@ export default function EventsPage() {
                     id="searchEvents"
                     placeholder="Search events..." 
                     className="w-full bg-zinc-950/40 border border-white/10 rounded-xl py-3.5 pl-11 text-[13px] font-medium outline-none focus:border-brandRed transition-all text-white md:backdrop-blur-xl placeholder:text-zinc-500" 
-                    onChange={e => {setSearch(e.target.value); stopSlider();}} value={search}
+                    onChange={e => {setSearch(e.target.value); }} value={search}
                 />
             </div>
 
             <div className="relative flex items-center bg-zinc-950/50 p-1 rounded-xl border border-white/10 w-full md:w-[450px] md:backdrop-blur-md">
                 {FILTERS.map((f) => (
-                    <button key={f.id} onClick={() => {setActiveFilter(f.id); stopSlider();}}
+                    <button key={f.id} onClick={() => {setActiveFilter(f.id); }}
                         className={`relative flex-1 py-2.5 text-[10px] font-bold uppercase tracking-widest transition-colors z-10 ${activeFilter === f.id ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
                     >
                         {f.label}
@@ -293,7 +293,7 @@ export default function EventsPage() {
                              </Link>
                            )}
                            
-                           <button onClick={() => {setExpandedId(isExpanded ? null : item._id); stopSlider();}}
+                           <button onClick={() => {setExpandedId(isExpanded ? null : item._id); }}
                               className={`flex-1 py-4 rounded-2xl font-black uppercase text-[11px] tracking-widest transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95 ${item.isUpcoming ? 'bg-white text-black hover:bg-zinc-200' : 'bg-zinc-800 text-zinc-400 hover:text-white'}`}
                            >
                              {isExpanded ? <X size={14} /> : 'Details'}

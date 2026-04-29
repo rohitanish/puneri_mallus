@@ -198,7 +198,7 @@ export default function MembershipCard({ price, benefits, userId, userEmail }: M
             </div>
             <div>
               <h3 className="text-2xl font-black uppercase italic tracking-tighter text-white">Lifetime Membership</h3>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brandRed">Official Tribe Protocol</p>
+              <p className="text-[10px] font-bold uppercase tracking-widest text-brandRed">Official Tribe Member</p>
             </div>
           </div>
           <div className="bg-black/40 px-5 py-2.5 rounded-2xl border border-white/5 text-right md:w-auto w-fit">
