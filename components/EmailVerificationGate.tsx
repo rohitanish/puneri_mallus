@@ -35,43 +35,7 @@ export default function EmailVerificationGate({ userId, source, onVerified }: Em
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
-  // --- 2. CROSS-DEVICE POLLER (WITH CACHE BUSTER) ---
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    
-    if (step === 2) {
-      interval = setInterval(async () => {
-        // 🔥 The Cache Buster: A unique string generated every 3 seconds
-        const cacheBuster = new Date().getTime().toString();
 
-        const { data, error } = await supabase
-          .from('directory_owners')
-          .select('is_verified')
-          .eq('user_id', userId)
-          .eq('source', source)
-          // 🔥 We add a fake filter that will never match. 
-          // This silently forces the browser to make a fresh network request!
-          .neq('full_name', cacheBuster) 
-          .single();
-        
-        // Log errors just in case RLS or something else is blocking it
-        if (error) console.error("Poller Check Error:", error.message);
-
-        if (data && data.is_verified === true) {
-          clearInterval(interval);
-          setStep(3); 
-
-          const cleanEmail = email.trim().toLowerCase();
-
-          setTimeout(() => {
-            onVerified({ fullName, phone, businessName, email: cleanEmail });
-          }, 1500);
-        }
-      }, 3000); 
-    }
-    
-    return () => clearInterval(interval);
-  }, [step, email, fullName, phone, businessName, supabase, userId, source, onVerified]);
   // --- 0. AUTO-FETCH EXISTING PROFILE DATA ---
   useEffect(() => {
     const fetchUserData = async () => {
@@ -83,7 +47,10 @@ export default function EmailVerificationGate({ userId, source, onVerified }: Em
         
       if (data) {
         setFullName(data.full_name || 'Unknown');
-        setPhone(data.phone_number || '');
+        
+        // 🔥 THE FIX: Strip the +91 so only the 10 digits get passed to the forms
+        const cleanPhone = data.phone_number ? data.phone_number.replace(/^\+91/, '') : '';
+        setPhone(cleanPhone);
       }
     };
     fetchUserData();
@@ -98,7 +65,6 @@ export default function EmailVerificationGate({ userId, source, onVerified }: Em
     try {
       const cleanEmail = email.trim().toLowerCase();
       
-      // 🔥 Call our new custom API instead of supabase.auth.updateUser()
       const res = await fetch('/api/business/verify', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -125,20 +91,24 @@ export default function EmailVerificationGate({ userId, source, onVerified }: Em
     }
   };
 
-  // --- 2. POLL THE CUSTOM TABLE (NOT AUTH.USERS) ---
+  // --- 2. CROSS-DEVICE POLLER (WITH CACHE BUSTER) ---
   useEffect(() => {
     let interval: NodeJS.Timeout;
     
     if (step === 2) {
       interval = setInterval(async () => {
-        // 🔥 Poll the directory_owners table, not the session!
-        const { data } = await supabase
+        const cacheBuster = new Date().getTime().toString();
+
+        const { data, error } = await supabase
           .from('directory_owners')
           .select('is_verified')
           .eq('user_id', userId)
           .eq('source', source)
+          .neq('full_name', cacheBuster) 
           .single();
         
+        if (error) console.error("Poller Check Error:", error.message);
+
         if (data && data.is_verified === true) {
           clearInterval(interval);
           setStep(3); 
@@ -146,10 +116,11 @@ export default function EmailVerificationGate({ userId, source, onVerified }: Em
           const cleanEmail = email.trim().toLowerCase();
 
           setTimeout(() => {
+            // Because we cleaned it in step 0, 'phone' is exactly 10 digits here
             onVerified({ fullName, phone, businessName, email: cleanEmail });
           }, 1500);
         }
-      }, 3000); // Check every 3 seconds
+      }, 3000); 
     }
     
     return () => clearInterval(interval);
