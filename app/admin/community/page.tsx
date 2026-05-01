@@ -103,7 +103,7 @@ export default function CommunityAdmin() {
       const res = await fetch(`/api/community/delete?id=${itemToDelete._id}`, { method: 'DELETE' });
       if (res.ok) {
         setCircles(circles.filter(c => c._id !== itemToDelete._id));
-        showAlert("Node Dissolved", "success");
+        showAlert("Community Dissolved", "success");
       }
     } catch (error) { showAlert("Action failed", "error"); }
     finally { setConfirmOpen(false); setUpdatingId(null); }

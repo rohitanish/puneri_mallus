@@ -75,7 +75,7 @@ export default function Footer() {
               {/* Responsive Logo Sizing Fix */}
               <div className="relative h-20 w-[240px] sm:h-28 sm:w-[320px] md:h-36 md:w-[400px] lg:h-48 lg:w-[480px]">
                <Image
-  src="/logo.png"
+  src="/logo_3.png"
   alt="Puneri Mallus"
   fill
   // FIXED: Tells the browser the logo is small on mobile and restricted on desktop

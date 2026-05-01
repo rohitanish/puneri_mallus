@@ -51,7 +51,7 @@ transition={{ duration: 0.6, ease: "easeInOut" }}
               transition={{ duration: 1, ease: "easeOut" }}
             >
               <Image 
-  src="/logo.png" 
+  src="/logo_3.png" 
   alt="Puneri Mallus" 
   width={450} 
   height={150} 
