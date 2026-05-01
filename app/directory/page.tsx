@@ -143,7 +143,7 @@ export default function MalluMartPage() {
       <div
         className="fixed inset-0 z-0 pointer-events-none overflow-hidden"
         style={{
-          backgroundImage: 'url(/events/mmart.png)',
+          backgroundImage: 'url(/events/mmart.webp)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           opacity: 0.3,

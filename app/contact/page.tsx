@@ -76,7 +76,7 @@ export default function ContactPage() {
       <div
         className="fixed inset-0 z-0 pointer-events-none overflow-hidden"
         style={{
-          backgroundImage: 'url(/events/contact2.png)',
+          backgroundImage: 'url(/events/contact2.webp)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           opacity: 0.38,

@@ -116,14 +116,17 @@ export default function AboutPage() {
 
       <div className="relative z-10">
         
-        {/* HERO: THE ORIGIN STORY */}
-        <section className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-20 items-center mb-40 px-6">
+       {/* HERO: THE ORIGIN STORY */}
+        <section className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-20 items-center mb-40 px-6"> 
+          
           <div className="relative aspect-square rounded-[40px] overflow-hidden border border-white/10 group shadow-2xl bg-zinc-950">
             <Image 
               src="/about/community.jpeg" 
               alt="Community" 
               fill 
-              blurDataURL={blurPlaceholder} placeholder="blur"
+              priority /* 🔥 Keeps the instant load fix */
+              blurDataURL={blurPlaceholder} 
+              placeholder="blur"
               sizes="(max-width: 768px) 100vw, 50vw" 
               className="object-cover grayscale-[20%] group-hover:grayscale-0 transition-all duration-1000 group-hover:scale-105" 
             />
@@ -274,8 +277,8 @@ export default function AboutPage() {
         <LaserDivider />
 
         {/* BEAUTY PAGEANT */}
-        <section className="max-w-7xl mx-auto mb-40">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-24 items-center">
+        <section className="max-w-7xl mx-auto mb-40 px-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-24 items-center">
             <div className="space-y-8">
                 <div className="flex items-center gap-3">
                     <span className="w-12 h-px bg-brandRed" />
@@ -286,26 +289,29 @@ export default function AboutPage() {
               </h2>
               <p className="text-xl text-zinc-400 italic font-medium">Elegance, culture, and identity on a single stage.</p>
             </div>
-            <div className="relative h-[650px] w-full rounded-[60px] overflow-hidden border border-white/10 shadow-2xl">
+            
+            <div className="relative h-[450px] md:h-[650px] w-full rounded-[32px] md:rounded-[40px] overflow-hidden shadow-2xl bg-zinc-950">
               <Image 
                 src="/about/beauty.jpeg" 
                 alt="Pageant" 
                 fill 
                 blurDataURL={blurPlaceholder} placeholder="blur"
                 sizes="(max-width: 768px) 100vw, 50vw" 
-                className={`object-cover transition-opacity duration-1000 ${cycle ? 'opacity-0' : 'opacity-80'}`} 
+                className={`object-cover transition-opacity duration-1000 ${cycle ? 'opacity-0' : 'opacity-100'}`} 
               />
               <video 
                 autoPlay loop muted playsInline 
-                className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${cycle ? 'opacity-80' : 'opacity-0'}`}
+                preload="metadata"
+                className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${cycle ? 'opacity-100' : 'opacity-0'}`}
               >
                 <source src="/videos/beauty.mp4" type="video/mp4" />
               </video>
             </div>
           </div>
         </section>
-
+        
         <LaserDivider />
+
 
        {/* DYNAMIC TEAM SECTION */}
         <section className="max-w-[90%] md:max-w-7xl mx-auto text-center mb-40">

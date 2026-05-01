@@ -294,7 +294,7 @@ useEffect(() => {
       />
 
       <motion.div style={{ y }} className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-[#030303]">
-        <Image src="/events/mmart.png" alt="BG" fill priority className="object-cover opacity-[0.2] brightness-[0.7] scale-110" />
+        <Image src="/events/mmart.webp" alt="BG" fill priority className="object-cover opacity-[0.2] brightness-[0.7] scale-110" />
         <div className="absolute inset-0 bg-gradient-to-b from-[#030303] via-transparent to-[#030303] z-[1]" />
       </motion.div>
 
