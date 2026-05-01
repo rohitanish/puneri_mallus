@@ -296,7 +296,7 @@ export default function Home() {
 
         <LaserDivider />
 
-        {/* RECENT RECAPS */}
+       {/* RECENT RECAPS */}
         <section className="py-12 sm:py-24 md:py-32 relative overflow-hidden">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-20">
             <div className="mb-8 sm:mb-12">
@@ -315,7 +315,17 @@ export default function Home() {
                     style={{ transform: 'translateZ(0)' }}
                   >                
                     <div className="absolute inset-0 z-0 opacity-40 group-hover:opacity-80 transition-opacity duration-1000">
-                      <LazyVideo src="/videos/agam-recap.mp4" className="w-full h-full object-cover" />
+                      {/* 🔥 BULLETPROOF VIDEO 1 */}
+                      <video 
+                        src="/videos/agam-recap.mp4" 
+                        className="w-full h-full object-cover"
+                        autoPlay 
+                        loop 
+                        muted 
+                        playsInline 
+                        preload="metadata"
+                        /* poster="/images/agam-poster.jpg" <-- 🔥 ADD THIS FOR INSTANT LOAD ILLUSION */
+                      />
                       <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
                     </div>
                     <div className="relative z-10">
@@ -330,7 +340,17 @@ export default function Home() {
                     style={{ transform: 'translateZ(0)' }}
                   >                
                     <div className="absolute inset-0 z-0 opacity-40 group-hover:opacity-80 transition-opacity duration-1000">
-                      <LazyVideo src="/videos/jam.mp4" className="w-full h-full object-cover" />
+                      {/* 🔥 BULLETPROOF VIDEO 2 */}
+                      <video 
+                        src="/videos/jam.mp4" 
+                        className="w-full h-full object-cover"
+                        autoPlay 
+                        loop 
+                        muted 
+                        playsInline 
+                        preload="metadata"
+                        /* poster="/images/jam-poster.jpg" <-- 🔥 ADD THIS FOR INSTANT LOAD ILLUSION */
+                      />
                       <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
                     </div>
                     <div className="relative z-10">
