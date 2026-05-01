@@ -146,7 +146,7 @@ export default function Navbar() {
 
           <Link href="/" className="block group flex-shrink-0">
             <Image
-              src="/logo_3.png"
+              src="/logo_main.png"
               alt="Puneri Mallus"
               width={400}
               height={120}
@@ -304,7 +304,7 @@ export default function Navbar() {
               style={{ transform: 'translateZ(0)' }} 
             >
               <div className="flex justify-between items-center mb-10 sm:mb-14">
-                <Image src="/logo_3.PNG" alt="Logo" width={400} height={100} className="object-contain object-left w-auto h-20 sm:h-24 max-w-[220px]" />
+                <Image src="/logo_main.png" alt="Logo" width={400} height={100} className="object-contain object-left w-auto h-20 sm:h-24 max-w-[220px]" />
                 <button onClick={() => setIsMobileMenuOpen(false)} className="p-2 text-zinc-500 hover:text-brandRed flex-shrink-0">
                   <X size={26} />
                 </button>
