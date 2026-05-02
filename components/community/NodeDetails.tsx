@@ -232,7 +232,7 @@ export default function NodeDetails({ isAdminView = false }: NodeDetailsProps) {
                 </div>
               ) : (
                 <div className="bg-zinc-900/20 border border-dashed border-white/5 rounded-[40px] p-12 text-center text-zinc-600 uppercase font-black text-[10px] tracking-widest">
-                   No listed services for this node.
+                   No listed services for this community.
                 </div>
               )}
             </section>
@@ -246,16 +246,30 @@ export default function NodeDetails({ isAdminView = false }: NodeDetailsProps) {
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
                   {item.members.map((m: any, idx: number) => (
                     <div key={idx} className="bg-zinc-900/40 p-8 rounded-[32px] border border-white/5 hover:border-brandRed/30 transition-all group shadow-xl flex flex-col items-center text-center space-y-5">
-                      <div className="w-24 h-24 relative rounded-full overflow-hidden border-2 border-white/10 group-hover:border-brandRed transition-colors shadow-lg">
-                        <Image src={m.image || "/about/placeholder.jpeg"} alt={m.name} fill className="object-cover" />
+                      
+                      {/* 🔥 INCREASED SIZE & ADDED 'unoptimized' TO STOP VANISHING */}
+                      <div className="w-36 h-36 md:w-40 md:h-40 relative rounded-full overflow-hidden border-2 border-white/10 group-hover:border-brandRed transition-colors shadow-lg">
+                        <Image 
+                          src={m.image || "/about/placeholder.jpeg"} 
+                          alt={m.name} 
+                          fill 
+                          unoptimized 
+                          className="object-cover" 
+                        />
                       </div>
-                      <div className="space-y-1 w-full">
-                        <h4 className="text-sm font-black uppercase text-white tracking-widest line-clamp-1">{m.name}</h4>
-                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brandRed line-clamp-1">{m.designation}</p>
+
+                      {/* 🔥 Slightly bumped up text size to match the bigger image */}
+                      <div className="space-y-1 w-full mt-2">
+                        <h4 className="text-base font-black uppercase text-white tracking-widest line-clamp-1">{m.name}</h4>
+                        <p className="text-[11px] font-bold uppercase tracking-[0.2em] text-brandRed line-clamp-1">{m.designation}</p>
                       </div>
+                      
                       {m.contact && (
-                        <a href={`https://wa.me/91${m.contact}`} target="_blank" className="mt-2 w-full py-3.5 bg-[#25D366]/10 text-[#25D366] rounded-2xl border border-[#25D366]/20 hover:bg-[#25D366] hover:text-white transition-all flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest active:scale-95">
-                          <MessageCircle size={14} /> Contact
+                        <a 
+                          href={`tel:${m.contact}`} 
+                          className="mt-2 w-full py-3.5 bg-zinc-900/80 text-zinc-300 rounded-2xl border border-white/10 hover:bg-brandRed hover:text-white hover:border-brandRed transition-all flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest active:scale-95"
+                        >
+                          <Phone size={14} /> Call Member
                         </a>
                       )}
                     </div>
