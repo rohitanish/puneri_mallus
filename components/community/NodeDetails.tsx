@@ -7,7 +7,7 @@ import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion'
 import { 
   MessageCircle, MapPin, Globe, Instagram, 
   ExternalLink, Maximize2, X, ShieldCheck, Share2, 
-  Zap, ListChecks, Info, Image as ImageIcon, Loader2, Clock, ChevronRight
+  Zap, ListChecks, Info, Image as ImageIcon, Loader2, Clock, ChevronRight, Users, Link as LinkIcon, Phone
 } from 'lucide-react';
 
 interface NodeDetailsProps {
@@ -29,6 +29,7 @@ export default function NodeDetails({ isAdminView = false }: NodeDetailsProps) {
   const overviewRef = useRef<HTMLDivElement>(null);
   const photosRef = useRef<HTMLDivElement>(null);
   const servicesRef = useRef<HTMLDivElement>(null);
+  const membersRef = useRef<HTMLDivElement>(null); 
   const [error, setError] = useState(false);
 
   useEffect(() => {
@@ -70,6 +71,7 @@ export default function NodeDetails({ isAdminView = false }: NodeDetailsProps) {
   const tabs = [
     { id: 'overview', label: 'Identity', icon: Info, ref: overviewRef },
     { id: 'services', label: 'Services', icon: ListChecks, ref: servicesRef },
+    ...(item.members && item.members.length > 0 ? [{ id: 'members', label: 'Members', icon: Users, ref: membersRef }] : []),
     { id: 'photos', label: 'Gallery', icon: ImageIcon, ref: photosRef },
   ];
 
@@ -81,8 +83,9 @@ export default function NodeDetails({ isAdminView = false }: NodeDetailsProps) {
   };
 
   const getWhatsAppLink = () => {
-    if (item.contact && item.contact.length === 10) return `https://wa.me/91${item.contact}`;
-    return item.link || "#";
+    const waNumber = item.whatsapp || item.contact;
+    if (waNumber && waNumber.length === 10) return `https://wa.me/91${waNumber}`;
+    return item.link || "#"; 
   };
 
   const formatTime = (time: string) => {
@@ -114,16 +117,14 @@ export default function NodeDetails({ isAdminView = false }: NodeDetailsProps) {
 
       <main className="max-w-7xl mx-auto px-6 pt-44 pb-32 relative z-10">
         
-        {/* COMPACT HEADER BLOCK - CENTERED (SYNCED WITH MART UI) */}
+        {/* COMPACT HEADER BLOCK */}
         <div className="bg-zinc-950/40 backdrop-blur-2xl border border-white/5 p-8 rounded-[40px] mb-10 shadow-3xl">
           <div className="flex flex-col md:flex-row gap-10 justify-center items-center md:items-start">
             
-            {/* LARGE THUMBNAIL */}
             <div className="w-32 h-32 md:w-44 md:h-44 relative rounded-[32px] overflow-hidden border border-white/10 bg-zinc-900 shadow-2xl shrink-0 transition-all duration-500 hover:scale-105">
               <Image src={thumbnail || "/about/placeholder.jpeg"} alt={item.title} fill priority sizes="33vw" className="object-cover" />
             </div>
 
-            {/* IDENTITY INFO */}
             <div className="flex-1 space-y-6 w-full flex flex-col items-center text-center md:items-start md:text-left">
               <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 w-full">
                 <div className="space-y-2 flex flex-col items-center md:items-start w-full md:w-auto">
@@ -139,10 +140,17 @@ export default function NodeDetails({ isAdminView = false }: NodeDetailsProps) {
 
                 {/* ACTION BUTTONS */}
                 <div className="flex items-center gap-3">
-                  <a href={getWhatsAppLink()} target="_blank" className="p-4 bg-[#25D366]/10 text-[#25D366] rounded-2xl border border-[#25D366]/20 hover:bg-[#25D366] hover:text-white transition-all shadow-xl">
+                  <a href={getWhatsAppLink()} target="_blank" className="p-4 bg-[#25D366]/10 text-[#25D366] rounded-2xl border border-[#25D366]/20 hover:bg-[#25D366] hover:text-white transition-all shadow-xl" title="Contact on WhatsApp">
                     <MessageCircle size={20} />
                   </a>
-                  <button onClick={() => navigator.share({title: item.title, url: window.location.href})} className="p-4 bg-zinc-900 text-white rounded-2xl border border-white/10 hover:border-brandRed transition-all shadow-xl">
+                  
+                  {item.contact && (
+                    <a href={`tel:${item.contact}`} className="p-4 bg-zinc-900 text-white rounded-2xl border border-white/10 hover:border-brandRed transition-all shadow-xl" title="Call Directly">
+                      <Phone size={20} />
+                    </a>
+                  )}
+
+                  <button onClick={() => navigator.share({title: item.title, url: window.location.href})} className="p-4 bg-zinc-900 text-white rounded-2xl border border-white/10 hover:border-brandRed transition-all shadow-xl" title="Share">
                     <Share2 size={20} />
                   </button>
                 </div>
@@ -229,6 +237,33 @@ export default function NodeDetails({ isAdminView = false }: NodeDetailsProps) {
               )}
             </section>
 
+            {/* MEMBERS SECTION */}
+            {item.members && item.members.length > 0 && (
+              <section ref={membersRef} className="space-y-10 scroll-mt-44">
+                <h2 className="text-xs font-black text-white uppercase tracking-[0.4em] flex items-center gap-4 pl-2">
+                  <div className="w-12 h-px bg-brandRed" /> Leadership & Members
+                </h2>
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
+                  {item.members.map((m: any, idx: number) => (
+                    <div key={idx} className="bg-zinc-900/40 p-8 rounded-[32px] border border-white/5 hover:border-brandRed/30 transition-all group shadow-xl flex flex-col items-center text-center space-y-5">
+                      <div className="w-24 h-24 relative rounded-full overflow-hidden border-2 border-white/10 group-hover:border-brandRed transition-colors shadow-lg">
+                        <Image src={m.image || "/about/placeholder.jpeg"} alt={m.name} fill className="object-cover" />
+                      </div>
+                      <div className="space-y-1 w-full">
+                        <h4 className="text-sm font-black uppercase text-white tracking-widest line-clamp-1">{m.name}</h4>
+                        <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-brandRed line-clamp-1">{m.designation}</p>
+                      </div>
+                      {m.contact && (
+                        <a href={`https://wa.me/91${m.contact}`} target="_blank" className="mt-2 w-full py-3.5 bg-[#25D366]/10 text-[#25D366] rounded-2xl border border-[#25D366]/20 hover:bg-[#25D366] hover:text-white transition-all flex items-center justify-center gap-2 text-[10px] font-black uppercase tracking-widest active:scale-95">
+                          <MessageCircle size={14} /> Contact
+                        </a>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
             {/* GALLERY SECTION */}
             <section ref={photosRef} className="space-y-10 scroll-mt-44">
               <h2 className="text-xs font-black text-white uppercase tracking-[0.4em] flex items-center gap-4 pl-2">
@@ -247,7 +282,7 @@ export default function NodeDetails({ isAdminView = false }: NodeDetailsProps) {
             </section>
           </div>
 
-          {/* SIDEBAR (SYNCED WITH MART UI) */}
+          {/* SIDEBAR */}
           <aside className="lg:col-span-4 sticky top-44 space-y-8">
             <div className="bg-zinc-950 border border-white/10 p-10 rounded-[45px] space-y-10 shadow-3xl">
               <div className="space-y-8">
@@ -270,17 +305,22 @@ export default function NodeDetails({ isAdminView = false }: NodeDetailsProps) {
                     <p className="text-[10px] text-zinc-500 font-black uppercase tracking-widest mb-1">Web Protocol</p>
                     <div className="flex flex-wrap gap-5 mt-4">
                       {item.instagram && (
-                        <a href={`https://instagram.com/${item.instagram.replace('@','')}`} target="_blank" className="text-zinc-500 hover:text-brandRed transition-all hover:scale-125">
+                        <a href={`https://instagram.com/${item.instagram.replace('@','')}`} target="_blank" className="text-zinc-500 hover:text-brandRed transition-all hover:scale-125" title="Instagram">
                           <Instagram size={28} />
                         </a>
                       )}
                       {item.website && (
-                        <a href={item.website} target="_blank" className="text-zinc-500 hover:text-brandRed transition-all hover:scale-125">
+                        <a href={item.website} target="_blank" className="text-zinc-500 hover:text-brandRed transition-all hover:scale-125" title="Website">
                           <Globe size={28} />
                         </a>
                       )}
-                      {(item.link || item.contact) && (
-                        <a href={getWhatsAppLink()} target="_blank" className="text-zinc-500 hover:text-brandRed transition-all hover:scale-125">
+                      {item.link && (
+                        <a href={item.link} target="_blank" className="text-zinc-500 hover:text-brandRed transition-all hover:scale-125" title="Join Group">
+                          <LinkIcon size={28} />
+                        </a>
+                      )}
+                      {(item.whatsapp || item.contact) && (
+                        <a href={`https://wa.me/91${item.whatsapp || item.contact}`} target="_blank" className="text-zinc-500 hover:text-brandRed transition-all hover:scale-125" title="WhatsApp Contact">
                           <MessageCircle size={28} />
                         </a>
                       )}

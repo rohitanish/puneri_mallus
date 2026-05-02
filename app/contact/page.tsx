@@ -193,7 +193,7 @@ export default function ContactPage() {
                   
                   <div className="space-y-2">
                     <label htmlFor="email" className="text-[11px] font-bold uppercase tracking-widest text-zinc-500 ml-4">Email Address</label>
-                    <input 
+                    <input suppressHydrationWarning
                       id="email"
                       type="email" 
                       placeholder="you@example.com"

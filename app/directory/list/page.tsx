@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { createBrowserClient } from '@supabase/ssr';
 import { 
   CheckCircle, ArrowRight, Loader2, ShieldCheck, 
-  Instagram, Globe, MousePointer2, ArrowLeft, X, Image as ImageIcon, MapPin, Star,Clock, MessageCircle, Plus, Trash2, Briefcase
+  Instagram, Globe,Phone,Check, MousePointer2, ArrowLeft, X, Image as ImageIcon, MapPin, Star,Clock, MessageCircle, Plus, Trash2, Briefcase
 } from 'lucide-react';
 import Link from 'next/link';
 import TribeConfirm from '@/components/TribeConfirm';
@@ -50,7 +50,7 @@ function ListContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get('edit');
-
+  const [sameForWhatsapp, setSameForWhatsapp] = useState(true);
   const [loading, setLoading] = useState(false);
   const [fetching, setFetching] = useState(true); // 🔥 Default to true to prevent flash
   const [step, setStep] = useState(1);
@@ -76,7 +76,7 @@ function ListContent() {
     name: '', category: '', customCategory: '', area: '', mapUrl: '', 
     description: '', contact: '', instagram: '',
     website: '', buttonText: '', buttonUrl: '', openTime: '09:00 AM',
-    closeTime: '06:00 PM',
+    closeTime: '06:00 PM',whatsapp: '', 
   });
 
   const supabase = createBrowserClient(
@@ -106,7 +106,8 @@ function ListContent() {
              setFormData(prev => ({
                ...prev,
                name: ownerRecord.business_name,
-               contact: ownerRecord.phone_number
+               contact: ownerRecord.phone_number,
+               whatsapp: ownerRecord.phone_number
              }));
           }
         } else {
@@ -114,18 +115,32 @@ function ListContent() {
         }
 
         // 2. Fetch existing data if editing
+        // 2. Fetch existing data if editing
         if (editId) {
-          const res = await fetch(`/api/mart`);
+          // 🔥 THE FIX 1: Added a timestamp and 'no-store' to kill the browser cache instantly
+          const res = await fetch(`/api/mart?t=${Date.now()}`, { cache: 'no-store' });
           const data = await res.json();
           const item = data.find((i: any) => i._id === editId);
           if (item) {
             const isCustomCat = !FIXED_CATEGORIES.includes(item.category);
+            
+            // 🔥 THE FIX 2: Explicitly bind whatsapp so it never gets lost
             setFormData({
               ...item,
               category: isCustomCat ? "OTHER" : item.category,
               customCategory: isCustomCat ? item.category : '',
+              whatsapp: item.whatsapp || item.contact || '' 
             });
+            
             setShowOtherCategory(isCustomCat);
+
+            // 🔥 THE FIX 3: Tell the checkbox to uncheck itself if the numbers don't match
+            if (item.whatsapp && item.contact !== item.whatsapp) {
+              setSameForWhatsapp(false);
+            } else {
+              setSameForWhatsapp(true);
+            }
+
             setServices(item.services || []);
             const paths = item.imagePaths || (item.imagePath ? [item.imagePath] : []);
             setInitialPaths(paths);
@@ -223,7 +238,8 @@ function ListContent() {
       }
       if (gallery.length === 0) return triggerAlert("Required", "Upload at least 1 image.");
       if (!formData.description) return triggerAlert("Required", "Add a business description.");
-      if (formData.contact.length !== 10) return triggerAlert("Invalid Number", "Please enter a valid 10-digit WhatsApp number.");
+      const targetNumber = sameForWhatsapp ? formData.contact : formData.whatsapp;
+      if (targetNumber.length !== 10) return triggerAlert("Invalid Number", "Please enter a valid 10-digit WhatsApp number.");
     } else {
       if (!formData.name) return triggerAlert("Required", "Please at least provide a Business Name to save a draft.");
     }
@@ -511,9 +527,83 @@ function ListContent() {
                 )}
               </div>
 
-              <div className="space-y-8">
+              <div className="space-y-6">
                 <Field label="Instagram ID" icon={Instagram} value={formData.instagram} onChange={(e: any) => setFormData({...formData, instagram: e.target.value})} placeholder="Username" />
-                <Field label="WhatsApp (10 Digits)" icon={MessageCircle} value={formData.contact} onChange={handleContactChange} placeholder="9XXXXXXXXX" maxLength={10} type="tel"/>
+                
+                {/* 1. FIRST POINT OF CONTACT */}
+                <Field 
+                  label="First Point of Contact (10 Digits)" 
+                  icon={Phone} 
+                  value={formData.contact} 
+                  onChange={(e: any) => {
+                    const val = e.target.value.replace(/\D/g, ''); // Ensure numbers only
+                    if (val.length <= 10) {
+                      setFormData({ 
+                        ...formData, 
+                        contact: val, 
+                        // 🔥 Automatically sync to whatsapp if checkbox is checked
+                        ...(sameForWhatsapp ? { whatsapp: val } : {}) 
+                      });
+                    }
+                  }} 
+                  placeholder="9XXXXXXXXX" 
+                  maxLength={10} 
+                  type="tel"
+                />
+
+                {/* 2. THE CUSTOM CHECKBOX */}
+                <label className="flex items-center gap-3 cursor-pointer group px-2 w-fit">
+                  <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all duration-300 ${sameForWhatsapp ? 'bg-brandRed border-brandRed' : 'border-white/20 bg-black/50 group-hover:border-brandRed/50'}`}>
+                    {sameForWhatsapp && <Check size={14} className="text-white" />}
+                  </div>
+                  <input 
+                    type="checkbox" 
+                    className="hidden" 
+                    checked={sameForWhatsapp} 
+                    onChange={(e) => {
+                      const isChecked = e.target.checked;
+                      setSameForWhatsapp(isChecked);
+                      // If they check it again, instantly sync the current contact number over
+                      if (isChecked) {
+                        setFormData({ ...formData, whatsapp: formData.contact });
+                      }
+                    }} 
+                  />
+                  <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 group-hover:text-white transition-colors">
+                    Number is same for WhatsApp
+                  </span>
+                </label>
+
+                {/* 3. CONDITIONAL WHATSAPP FIELD */}
+                <AnimatePresence>
+                  {!sameForWhatsapp && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.3, ease: "easeInOut" }}
+                      className="overflow-hidden"
+                    >
+                      <div className="pt-2">
+                        <Field 
+                          label="WhatsApp Number (10 Digits)" 
+                          icon={MessageCircle} 
+                          value={formData.whatsapp} 
+                          onChange={(e: any) => {
+                            const val = e.target.value.replace(/\D/g, '');
+                            if (val.length <= 10) {
+                              setFormData({...formData, whatsapp: val});
+                            }
+                          }} 
+                          placeholder="9XXXXXXXXX" 
+                          maxLength={10} 
+                          type="tel"
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+
                 <Field 
                   label="Official Website" 
                   icon={Globe} 

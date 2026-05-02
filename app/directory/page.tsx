@@ -302,7 +302,8 @@ export default function MalluMartPage() {
                         View Profile <ArrowUpRight size={16} />
                       </button>
                     </Link>
-                    <a href={`https://wa.me/${item.contact}`} target="_blank" rel="noopener noreferrer" className="w-full bg-zinc-900 border border-white/5 py-4 rounded-2xl font-bold uppercase text-[11px] tracking-widest text-center text-zinc-400 hover:text-white transition-all flex items-center justify-center gap-2">
+                   {/* 🔥 Update the href to check for item.whatsapp first! */}
+                    <a href={`https://wa.me/91${item.whatsapp || item.contact}`} target="_blank" rel="noopener noreferrer" className="w-full bg-zinc-900 border border-white/5 py-4 rounded-2xl font-bold uppercase text-[11px] tracking-widest text-center text-zinc-400 hover:text-white transition-all flex items-center justify-center gap-2">
                       <MessageCircle size={14} /> Contact on WhatsApp
                     </a>
                   </div>

@@ -13,6 +13,9 @@ import {
   ArrowUpRight,
   X
 } from 'lucide-react';
+import MembershipCard from '@/components/Membership'; // Check your import path
+
+// 2. Add this state inside your component (before the return statement)
 
 interface TeamMember {
   name: string;
@@ -44,7 +47,7 @@ export default function AboutPage() {
   const [galleryImages, setGalleryImages] = useState<string[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
-
+  const [showMembershipModal, setShowMembershipModal] = useState(false);
   useEffect(() => {
     async function initializeTribeData() {
       try {
@@ -279,15 +282,33 @@ export default function AboutPage() {
         {/* BEAUTY PAGEANT */}
         <section className="max-w-7xl mx-auto mb-40 px-6">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-24 items-center">
+            
             <div className="space-y-8">
-                <div className="flex items-center gap-3">
-                    <span className="w-12 h-px bg-brandRed" />
-                    <span className="text-brandRed font-black uppercase text-[11px] tracking-widest">Annual Event</span>
-                 </div>
+              <div className="flex items-center gap-3">
+                <span className="w-12 h-px bg-brandRed" />
+                <span className="text-brandRed font-black uppercase text-[11px] tracking-widest">Annual Event</span>
+              </div>
+              
               <h2 className="text-6xl md:text-8xl font-black uppercase italic tracking-tighter leading-none">
                 The <span className="text-brandRed">Beauty</span> <br />Pageant Pune.
               </h2>
-              <p className="text-xl text-zinc-400 italic font-medium">Elegance, culture, and identity on a single stage.</p>
+              
+              <p className="text-xl text-zinc-400 italic font-medium">
+                Elegance, culture, and identity on a single stage.
+              </p>
+
+              {/* 🔥 NEW VIEW MORE BUTTON */}
+              <div className="pt-4">
+                <a 
+                  href="https://www.instagram.com/beauty_pageantpune_?igsh=MTJtcTF4NTVwdHc4"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 bg-white text-black px-8 py-4 rounded-full font-black uppercase tracking-widest text-[11px] hover:scale-105 hover:bg-brandRed hover:text-white transition-all duration-300 shadow-xl active:scale-95"
+                >
+                  View More 
+                  {/* Note: If you have lucide-react imported, you can drop an <ArrowUpRight size={16} /> here! */}
+                </a>
+              </div>
             </div>
             
             <div className="relative h-[450px] md:h-[650px] w-full rounded-[32px] md:rounded-[40px] overflow-hidden shadow-2xl bg-zinc-950">
@@ -307,6 +328,7 @@ export default function AboutPage() {
                 <source src="/videos/beauty.mp4" type="video/mp4" />
               </video>
             </div>
+            
           </div>
         </section>
         
@@ -439,19 +461,7 @@ export default function AboutPage() {
         <InstagramGlimpse />
         
         <LaserDivider />
-        
-        {/* CTA: THE TRIBE */}
-        <section className="max-w-5xl mx-auto text-center pb-40">
-          <div className="p-24 rounded-[80px] bg-gradient-to-br from-brandRed to-red-950 shadow-2xl relative overflow-hidden group">
-            <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20" />
-            <h2 className="text-5xl md:text-8xl font-black uppercase italic tracking-tighter mb-12 relative z-10 leading-none text-white">Become a part <br /> of the tribe.</h2>
-            <Link href="/auth/login" className="relative z-10 inline-flex items-center gap-4 bg-white text-black px-16 py-6 rounded-full font-black uppercase tracking-widest text-sm hover:scale-110 transition shadow-2xl">
-              Join Us Now <ArrowRight size={20} />
-            </Link>
-          </div>
-        </section>
-        
-        <LaserDivider />
+      
       </div>
     </main>
   );

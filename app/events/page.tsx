@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 
 const FILTERS = [
-    { id: 'ALL', label: 'All Events' },
+    // { id: 'ALL', label: 'All Events' },
     { id: 'UPCOMING', label: 'Upcoming Event' },
     { id: 'PAST', label: 'Past Events' }
 ];

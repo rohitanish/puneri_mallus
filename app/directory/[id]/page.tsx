@@ -325,9 +325,10 @@ useEffect(() => {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <button onClick={() => handleLockedAction(`https://wa.me/91${item.contact}`)} className="p-4 bg-[#25D366]/10 text-[#25D366] rounded-2xl border border-[#25D366]/20 hover:bg-[#25D366] hover:text-white transition-all shadow-xl">
-                    <MessageCircle size={20} />
-                  </button>
+                 {/* 🔥 Update the handleLockedAction URL! */}
+                    <button onClick={() => handleLockedAction(`https://wa.me/91${item.whatsapp || item.contact}`)} className="p-4 bg-[#25D366]/10 text-[#25D366] rounded-2xl border border-[#25D366]/20 hover:bg-[#25D366] hover:text-white transition-all shadow-xl">
+                      <MessageCircle size={20} />
+                    </button>
                   <button onClick={() => handleLockedAction(`tel:${item.contact}`)} className="p-4 bg-zinc-900 text-white rounded-2xl border border-white/10 hover:border-brandRed transition-all shadow-xl">
                     <Phone size={20} />
                   </button>

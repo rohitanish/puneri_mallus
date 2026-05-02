@@ -5,12 +5,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { createBrowserClient } from '@supabase/ssr';
 import { 
   CheckCircle, ArrowRight, Loader2, ArrowLeft, 
-  Image as ImageIcon, MapPin, Plus, Trash2, X, 
-  Link as LinkIcon, Phone, Globe, Briefcase, Camera, Clock, Instagram, Star
+  Image as ImageIcon, MapPin, Plus, Trash2, X, Check,MessageCircle,
+  Link as LinkIcon, Phone, Globe, Briefcase, Camera, Clock, Instagram, Star, Users, Camera as CameraIcon
 } from 'lucide-react';
 import TribeTimePicker from '@/components/ui/TribeTimePicker';
 import TribeAlert from '@/components/TribeAlert'; 
-// 🔥 IMPORT THE GATEKEEPER
 import EmailVerificationGate from '@/components/EmailVerificationGate';
 
 const EXTERNAL_CATEGORIES = ["SAMAJAM", "TEMPLE", "CHURCH", "ORGANIZATION","MOSQUE","OTHER"];
@@ -23,7 +22,6 @@ const LaserDivider = () => (
   </div>
 );
 
-// --- WRAPPER FOR NEXT.JS SEARCH PARAMS ---
 export default function AddCommunityPage() {
   return (
     <Suspense fallback={<div className="min-h-screen bg-black flex items-center justify-center"><Loader2 className="animate-spin text-brandRed" /></div>}>
@@ -37,7 +35,7 @@ function AddCommunityForm() {
   const searchParams = useSearchParams();
   const editId = searchParams.get('edit'); 
 
-  const [fetching, setFetching] = useState(true); // Default loading state
+  const [fetching, setFetching] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [isVerified, setIsVerified] = useState<boolean | null>(null);
 
@@ -47,6 +45,11 @@ function AddCommunityForm() {
   const [thumbnailId, setThumbnailId] = useState<string | null>(null);
   const [services, setServices] = useState<any[]>([]); 
   const [showCustomCategory, setShowCustomCategory] = useState(false);
+
+  // 🔥 NEW STATE: Top Members (Defaulting to 1 empty member)
+  const [members, setMembers] = useState<any[]>([
+    { id: Math.random().toString(), name: '', designation: '', contact: '', file: null, previewUrl: '', existingUrl: '' }
+  ]);
 
   const [alertConfig, setAlertConfig] = useState<{
     isVisible: boolean;
@@ -61,7 +64,7 @@ function AddCommunityForm() {
   const [pickerField, setPickerField] = useState<'openTime' | 'closeTime' | null>(null);
   const openTimeRef = useRef<HTMLDivElement>(null);
   const closeTimeRef = useRef<HTMLDivElement>(null);
-
+  const [sameForWhatsapp, setSameForWhatsapp] = useState(true);
   const [formData, setFormData] = useState({
     title: '', 
     category: 'SAMAJAM', 
@@ -75,6 +78,7 @@ function AddCommunityForm() {
     mapUrl: '', 
     contact: '', 
     website: '',
+    whatsapp: '', // 🔥 Add whatsapp field
     openTime: '09:00 AM', 
     closeTime: '06:00 PM'
   });
@@ -84,7 +88,6 @@ function AddCommunityForm() {
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  // 🔥 1. INITIALIZATION & HYDRATION
   useEffect(() => {
     const init = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -92,7 +95,6 @@ function AddCommunityForm() {
       setUser(user);
 
       try {
-        // 🔥 Check Directory Owner Verification specifically for COMMUNITY
         const { data: ownerRecord } = await supabase
           .from('directory_owners')
           .select('*')
@@ -102,21 +104,21 @@ function AddCommunityForm() {
 
         if (ownerRecord) {
           setIsVerified(true);
-          // Auto-fill verified details if NOT editing
           if (!editId) {
              setFormData(prev => ({
                ...prev,
-               title: ownerRecord.business_name, // Map business name to title
-               contact: ownerRecord.phone_number
+               title: ownerRecord.business_name,
+               contact: ownerRecord.phone_number,
+               whatsapp: ownerRecord.phone_number // 🔥 Sync initial
              }));
           }
         } else {
           setIsVerified(false);
         }
 
-        // Fetch draft data if editing
         if (editId) {
-          const res = await fetch(`/api/community?id=${editId}`);
+          // 🔥 CACHE BUSTER: Add timestamp to force fresh data on reload
+          const res = await fetch(`/api/community?id=${editId}&t=${Date.now()}`, { cache: 'no-store' });
           if (res.ok) {
             const data = await res.json();
             
@@ -133,6 +135,7 @@ function AddCommunityForm() {
               image: data.image || '',
               mapUrl: data.mapUrl || '',
               contact: data.contact || '',
+              whatsapp: data.whatsapp || data.contact || '', // 🔥 Map whatsapp
               website: data.website || '',
               openTime: data.openTime || '09:00 AM',
               closeTime: data.closeTime || '06:00 PM'
@@ -140,6 +143,23 @@ function AddCommunityForm() {
 
             if (data.services) setServices(data.services);
             if (data.category === "OTHER" || !EXTERNAL_CATEGORIES.includes(data.category)) setShowCustomCategory(true);
+            if (data.whatsapp && data.contact !== data.whatsapp) {
+              setSameForWhatsapp(false);
+            } else {
+              setSameForWhatsapp(true);
+            }
+            // 🔥 Hydrate Members if editing
+            if (data.members && data.members.length > 0) {
+              setMembers(data.members.map((m: any) => ({
+                id: Math.random().toString(),
+                name: m.name || '',
+                designation: m.designation || '',
+                contact: m.contact || '',
+                file: null,
+                previewUrl: m.image || '',
+                existingUrl: m.image || ''
+              })));
+            }
 
             if (data.imagePaths) {
               const existingGallery = data.imagePaths.map((url: string) => ({
@@ -172,6 +192,32 @@ function AddCommunityForm() {
     setServices(updated);
   };
 
+  // 🔥 Member Functions
+  const addMember = () => {
+    if (members.length >= 3) return triggerAlert("Max 3 members allowed", "error");
+    setMembers([...members, { id: Math.random().toString(), name: '', designation: '', contact: '', file: null, previewUrl: '', existingUrl: '' }]);
+  };
+  const removeMember = (id: string) => {
+    if (members.length <= 1) return triggerAlert("At least one member is required", "error");
+    setMembers(members.filter(m => m.id !== id));
+  };
+  // 🔥 FIX 1: Use `prevMembers` so rapid keystrokes or updates are never lost
+  const updateMember = (id: string, field: string, value: any) => {
+    setMembers(prevMembers => prevMembers.map(m => m.id === id ? { ...m, [field]: value } : m));
+  };
+
+  // 🔥 FIX 2: Update BOTH the file and the preview URL in one single sweep
+  const handleMemberImage = (id: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const newPreviewUrl = URL.createObjectURL(file);
+      
+      setMembers(prevMembers => prevMembers.map(m => 
+        m.id === id ? { ...m, file: file, previewUrl: newPreviewUrl } : m
+      ));
+    }
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       const selected = Array.from(e.target.files);
@@ -192,7 +238,6 @@ function AddCommunityForm() {
     if (thumbnailId === id) setThumbnailId(null);
   };
 
-  // 🔥 2. SMART SUBMIT LOGIC
   const handleSubmit = async (isDraftMode: boolean = false) => {
     if (!isDraftMode) {
       if (gallery.length === 0) return triggerAlert("At least one image is required", "error");
@@ -205,6 +250,21 @@ function AddCommunityForm() {
       if (!formData.contact || formData.contact.length !== 10) {
         return triggerAlert("Valid 10-digit WhatsApp contact required", "error");
       }
+      const targetNumber = sameForWhatsapp ? formData.contact : formData.whatsapp;
+      if (!targetNumber || targetNumber.length !== 10) {
+        return triggerAlert("Valid 10-digit WhatsApp contact required", "error");
+      }
+
+      // 🔥 Validate Members
+      for (let i = 0; i < members.length; i++) {
+        const m = members[i];
+        if (!m.name.trim() || !m.designation.trim() || !m.contact.trim() || (!m.file && !m.existingUrl)) {
+          return triggerAlert(`Please complete all fields and upload an image for Member ${i + 1}`, "error");
+        }
+        if (m.contact.length !== 10) {
+          return triggerAlert(`Valid 10-digit contact required for Member ${i + 1}`, "error");
+        }
+      }
     } else {
       if (!formData.title.trim()) return triggerAlert("Provide a name to save draft", "info");
     }
@@ -213,6 +273,7 @@ function AddCommunityForm() {
     try {
       let finalThumbnailUrl = formData.image || "";
 
+      // 1. Upload Gallery Images
       const finalPaths = await Promise.all(gallery.map(async (img) => {
         if (img.type === 'existing') {
           if (img.id === thumbnailId) finalThumbnailUrl = img.previewUrl;
@@ -228,6 +289,19 @@ function AddCommunityForm() {
         return urlData.publicUrl;
       }));
 
+      // 🔥 2. Upload Member Images
+      const finalMembers = await Promise.all(members.map(async (m) => {
+        let imageUrl = m.existingUrl || m.previewUrl;
+        if (m.file) {
+          const fileName = `community-member-${Date.now()}-${Math.random().toString(36).substr(2,5)}`;
+          const { data, error } = await supabase.storage.from('community').upload(fileName, m.file);
+          if (error) throw error;
+          const { data: urlData } = supabase.storage.from('community').getPublicUrl(data.path);
+          imageUrl = urlData.publicUrl;
+        }
+        return { name: m.name, designation: m.designation, contact: m.contact, image: imageUrl };
+      }));
+
       const finalCategory = formData.category === "OTHER" ? formData.customCategory : formData.category;
       
       const payload = { 
@@ -237,6 +311,7 @@ function AddCommunityForm() {
         image: finalThumbnailUrl, 
         imagePaths: finalPaths, 
         services,
+        members: finalMembers, // 🔥 Add Members to payload
         isApproved: false,
         isDraft: isDraftMode, 
         submittedBy: user?.email?.toLowerCase()
@@ -259,23 +334,21 @@ function AddCommunityForm() {
     }
   };
 
-  // 🔥 GLOBAL LOADER
   if (fetching || isVerified === null) {
     return <div className="min-h-screen bg-black flex items-center justify-center"><Loader2 className="animate-spin text-brandRed" /></div>;
   }
 
-  // 🔥 THE GATEKEEPER
   if (isVerified === false && user) {
     return (
       <div className="min-h-screen bg-[#030303] text-white pt-40 pb-20 px-6">
         <EmailVerificationGate 
           userId={user.id} 
-          source="COMMUNITY" // Specific source for this gate
+          source="COMMUNITY" 
           onVerified={(ownerData) => {
             if (!editId) {
               setFormData(prev => ({
                 ...prev,
-                title: ownerData.businessName, // Auto-fill the organization name
+                title: ownerData.businessName,
                 contact: ownerData.phone
               }));
             }
@@ -286,7 +359,6 @@ function AddCommunityForm() {
     );
   }
 
-  // 🔥 MAIN FORM UI (Visible when isVerified is true)
   return (
     <div className="min-h-screen bg-[#030303] text-white pt-40 pb-20 px-6 selection:bg-brandRed/30">
       
@@ -365,6 +437,7 @@ function AddCommunityForm() {
               <h1 className="text-5xl font-black italic uppercase leading-none text-white">Visual <span className="text-brandRed">Identity .</span></h1>
             </div>
 
+            {/* SERVICES SECTION */}
             <div className="border border-white/25 p-8 rounded-[40px] space-y-6">
               <div className="flex justify-between items-center px-2">
                 <div className="flex items-center gap-3 text-brandRed">
@@ -427,6 +500,81 @@ function AddCommunityForm() {
               </div>
             </div>
 
+            {/* 🔥 NEW MEMBERS SECTION */}
+            <div className="border border-white/25 p-8 rounded-[40px] space-y-6">
+              <div className="flex justify-between items-center px-2">
+                <div className="flex items-center gap-3 text-brandRed">
+                  <Users size={20} />
+                  <label className="text-[11px] font-black uppercase tracking-widest text-white">Top Members (Up to 3) *</label>
+                </div>
+                {members.length < 3 && (
+                  <button 
+                    onClick={addMember} 
+                    className="text-[10px] bg-white text-black px-5 py-2 rounded-full font-black uppercase hover:bg-brandRed hover:text-white transition-all shadow-lg active:scale-95"
+                  >
+                    + Add Member
+                  </button>
+                )}
+              </div>
+
+              <div className="space-y-6">
+                {members.map((member, index) => (
+                  <div key={member.id} className="relative group border border-white/10 p-5 md:p-6 rounded-[32px] bg-zinc-950/40 focus-within:border-brandRed transition-all">
+                    
+                    {members.length > 1 && (
+                      <button 
+                        onClick={() => removeMember(member.id)} 
+                        className="absolute -top-3 -right-3 p-2 bg-red-600 text-white rounded-full z-20 opacity-0 group-hover:opacity-100 transition-all shadow-xl hover:scale-110 active:scale-90 border-2 border-[#030303]"
+                      >
+                        <X size={14} strokeWidth={3} />
+                      </button>
+                    )}
+
+                    <div className="flex flex-col md:flex-row gap-6 items-start">
+                      {/* Member Image Upload */}
+                      <label className="shrink-0 relative w-24 h-24 rounded-full border-2 border-dashed border-white/20 hover:border-brandRed transition-all flex flex-col items-center justify-center cursor-pointer overflow-hidden bg-black/50 group/img">
+                        {member.previewUrl ? (
+                          <img src={member.previewUrl} className="w-full h-full object-cover group-hover/img:opacity-50 transition-all" alt="Member" />
+                        ) : (
+                          <CameraIcon size={20} className="text-zinc-600 group-hover/img:text-brandRed" />
+                        )}
+                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleMemberImage(member.id, e)} />
+                      </label>
+
+                      {/* Member Details */}
+                      <div className="flex-1 w-full space-y-4">
+                        <input 
+                          placeholder="FULL NAME *" 
+                          className="w-full bg-transparent outline-none text-base font-black uppercase text-white border-b border-white/10 pb-2 focus:border-brandRed transition-all" 
+                          value={member.name} 
+                          onChange={(e) => updateMember(member.id, 'name', e.target.value)} 
+                        />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <input 
+                            placeholder="DESIGNATION *" 
+                            className="w-full bg-transparent outline-none text-xs font-bold uppercase text-zinc-400 border-b border-white/10 pb-2 focus:border-brandRed transition-all" 
+                            value={member.designation} 
+                            onChange={(e) => updateMember(member.id, 'designation', e.target.value)} 
+                          />
+                          <input 
+                            placeholder="CONTACT NUMBER *" 
+                            maxLength={10}
+                            className="w-full bg-transparent outline-none text-xs font-bold text-zinc-400 border-b border-white/10 pb-2 focus:border-brandRed transition-all" 
+                            value={member.contact} 
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/\D/g, '');
+                              updateMember(member.id, 'contact', val);
+                            }} 
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* GALLERY SECTION */}
             <div className="border border-white/25 p-8 rounded-[40px] space-y-6">
                 <div className="flex items-center gap-3 text-brandRed px-2"><Camera size={20}/><label className="text-[11px] font-black uppercase tracking-widest text-white">Media Gallery *</label></div>
                 <div className="flex gap-6 overflow-x-auto pb-6 pt-4 no-scrollbar">
@@ -447,14 +595,92 @@ function AddCommunityForm() {
                 </div>
             </div>
 
+            {/* DESCRIPTION SECTION */}
             <div className="border border-white/25 p-8 rounded-[40px] focus-within:border-brandRed transition-all">
                 <label className="text-[10px] font-black uppercase text-zinc-500 mb-4 block ml-2">Description / Bio *</label>
                 <textarea placeholder="TELL YOUR STORY..." className="w-full bg-transparent outline-none min-h-[150px] font-medium italic text-white text-lg leading-relaxed" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} />
             </div>
 
+            {/* CONTACT LINKS SECTION */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                
+                {/* 1. FIRST POINT OF CONTACT */}
+                <div className="border border-white/25 p-6 rounded-[32px] focus-within:border-brandRed transition-all flex flex-col justify-center">
+                  <label className="text-[10px] font-black uppercase text-zinc-500 ml-2">First Point of Contact (10 Digits) *</label>
+                  <div className="flex items-center mt-2">
+                    <Phone className="text-zinc-600 mr-3" size={16} />
+                    <input 
+                      placeholder="10 DIGITS" 
+                      className="w-full bg-transparent outline-none font-bold text-white text-sm" 
+                      value={formData.contact} 
+                      onChange={e => {
+                        const val = e.target.value.replace(/\D/g, ''); // Numbers only
+                        if (val.length <= 10) {
+                          setFormData({
+                            ...formData, 
+                            contact: val,
+                            ...(sameForWhatsapp ? { whatsapp: val } : {}) // Auto-sync
+                          });
+                        }
+                      }} 
+                    />
+                  </div>
+                </div>
+
+                {/* 2. THE CUSTOM CHECKBOX & CONDITIONAL WHATSAPP */}
+                <div className="flex flex-col justify-center gap-4 border border-white/25 p-6 rounded-[32px] focus-within:border-brandRed transition-all">
+                  <label className="flex items-center gap-3 cursor-pointer group w-fit ml-2">
+                    <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all duration-300 ${sameForWhatsapp ? 'bg-brandRed border-brandRed' : 'border-white/20 bg-black/50 group-hover:border-brandRed/50'}`}>
+                      {sameForWhatsapp && <Check size={14} className="text-white" />}
+                    </div>
+                    <input 
+                      type="checkbox" 
+                      className="hidden" 
+                      checked={sameForWhatsapp} 
+                      onChange={(e) => {
+                        const isChecked = e.target.checked;
+                        setSameForWhatsapp(isChecked);
+                        if (isChecked) {
+                          setFormData({ ...formData, whatsapp: formData.contact });
+                        }
+                      }} 
+                    />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 group-hover:text-white transition-colors">
+                      Same for WhatsApp
+                    </span>
+                  </label>
+
+                  <AnimatePresence>
+                    {!sameForWhatsapp && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: 'auto' }}
+                        exit={{ opacity: 0, height: 0 }}
+                        transition={{ duration: 0.3, ease: "easeInOut" }}
+                        className="overflow-hidden"
+                      >
+                        <div className="pt-3 border-t border-white/10 mt-1">
+                          <label className="text-[10px] font-black uppercase text-zinc-500 ml-2">Custom WhatsApp (10 Digits) *</label>
+                          <div className="flex items-center mt-2">
+                            <MessageCircle className="text-zinc-600 mr-3" size={16} />
+                            <input 
+                              placeholder="10 DIGITS" 
+                              className="w-full bg-transparent outline-none font-bold text-white text-sm" 
+                              value={formData.whatsapp} 
+                              onChange={e => {
+                                const val = e.target.value.replace(/\D/g, '');
+                                if (val.length <= 10) setFormData({...formData, whatsapp: val});
+                              }} 
+                            />
+                          </div>
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* THE REMAINING LINKS */}
                 {[
-                  { label: 'WhatsApp Contact *', icon: Phone, key: 'contact', placeholder: '10 DIGITS' },
                   { label: 'Group Link', icon: LinkIcon, key: 'link', placeholder: 'HTTPS://CHAT...' },
                   { label: 'Instagram Handle', icon: Instagram, key: 'instagram', placeholder: '@USERNAME' },
                   { label: 'Official Website', icon: Globe, key: 'website', placeholder: 'WWW.DOMAIN.COM' }
@@ -463,12 +689,18 @@ function AddCommunityForm() {
                     <label className="text-[10px] font-black uppercase text-zinc-500 ml-2">{field.label}</label>
                     <div className="flex items-center mt-2">
                       <field.icon className="text-zinc-600 mr-3" size={16} />
-                      <input placeholder={field.placeholder} className="w-full bg-transparent outline-none font-bold text-white text-sm" value={formData[field.key as keyof typeof formData]} onChange={e => setFormData({...formData, [field.key]: e.target.value})} />
+                      <input 
+                        placeholder={field.placeholder} 
+                        className="w-full bg-transparent outline-none font-bold text-white text-sm" 
+                        value={formData[field.key as keyof typeof formData]} 
+                        onChange={e => setFormData({...formData, [field.key]: e.target.value})} 
+                      />
                     </div>
                   </div>
                 ))}
             </div>
 
+            {/* ACTION BUTTONS */}
             <div className="flex flex-col md:flex-row gap-4 pt-6">
               <motion.button whileHover={{ y: -5 }} onClick={() => handleSubmit(true)} disabled={loading} className="flex-1 py-7 bg-zinc-900 text-zinc-400 border border-white/10 rounded-[32px] font-black uppercase tracking-[0.2em] text-[15px] flex items-center justify-center gap-2">
                 {loading ? <Loader2 className="animate-spin" size={18} /> : "Save as Draft"}
