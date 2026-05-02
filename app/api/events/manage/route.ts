@@ -3,10 +3,15 @@ import clientPromise from '@/lib/mongodb';
 import { ObjectId } from 'mongodb';
 import { createClient } from '@supabase/supabase-js';
 
+// 🔥 ADD THIS LINE to stop Next.js from trying to statically compile the DB query
+export const dynamic = 'force-dynamic';
+
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
   process.env.SUPABASE_SERVICE_ROLE_KEY! 
 );
+
+
 
 // Helper to extract filename from Supabase URL
 const getFileName = (url: string) => {
