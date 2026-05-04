@@ -8,7 +8,6 @@ import {
 } from 'lucide-react';
 
 const FILTERS = [
-    // { id: 'ALL', label: 'All Events' },
     { id: 'UPCOMING', label: 'Upcoming Event' },
     { id: 'PAST', label: 'Past Events' }
 ];
@@ -46,11 +45,10 @@ export default function EventsPage() {
   const y = useTransform(scrollY, [0, 500], isMobile ? [0, 0] : [0, 150]);
 
   useEffect(() => {
-    // Only allow auto-play if screen is larger than 1024px (Desktop)
     if (window.innerWidth > 1024) {
         setIsAutoPlaying(true);
     } else {
-        setIsAutoPlaying(false); // Force manual mode on mobile/tablets
+        setIsAutoPlaying(false); 
     }
 
     const fetchEvents = async () => {
@@ -58,7 +56,6 @@ export default function EventsPage() {
         const res = await fetch('/api/events');
         const data = await res.json();
         
-        // Ensure data is actually an array before sorting
         if (Array.isArray(data)) {
             const sortedData = data.sort((a: any, b: any) => {
               if (a.isUpcoming !== b.isUpcoming) return a.isUpcoming ? -1 : 1;
@@ -77,26 +74,9 @@ export default function EventsPage() {
     fetchEvents();
   }, []);
 
-  // // Auto-sliding Filter Logic (Gated by isAutoPlaying)
-  // useEffect(() => {
-  //   if (!isAutoPlaying || search !== "") return; 
-  //   const interval = setInterval(() => {
-  //     setActiveFilter((prev) => {
-  //       const currentIndex = FILTERS.findIndex(f => f.id === prev);
-  //       return FILTERS[(currentIndex + 1) % FILTERS.length].id;
-  //     });
-  //   }, 3500);
-  //   return () => clearInterval(interval);
-  // }, [isAutoPlaying, search]);
-
-  // const stopSlider = () => {
-  //   if (isAutoPlaying) setIsAutoPlaying(false);
-  // };
-
   const filteredEvents = useMemo(() => {
     const safeSearch = search.toLowerCase().trim();
     return events.filter(e => {
-      // 🔥 QA BUG FIX: Bulletproof null check on title to prevent rendering crashes
       const safeTitle = e.title ? String(e.title).toLowerCase() : "";
       const matchesSearch = safeTitle.includes(safeSearch);
       
@@ -118,12 +98,10 @@ export default function EventsPage() {
   return (
     <div 
       className="bg-[#030303] min-h-screen relative selection:bg-brandRed/30 overflow-x-hidden"
-      // onClickCapture={stopSlider}
-      // onKeyDownCapture={stopSlider}
     >
-      {/* 🔥 SAFE GLASS FIX: Hardware Accelerated Background */}
+      {/* 🔥 MOBILE OPTIMIZATION: Hidden background image on mobile to remove glass composite lag */}
       <div
-        className="fixed inset-0 z-0 pointer-events-none overflow-hidden"
+        className="fixed inset-0 z-0 pointer-events-none overflow-hidden hidden md:block"
         style={{
           backgroundImage: 'url(/events/eventsback.jpg)',
           backgroundSize: 'cover',
@@ -134,8 +112,8 @@ export default function EventsPage() {
         }}
       />
       <div className="fixed inset-0 z-0 pointer-events-none">
-        <div className="absolute inset-0 brightness-[0.8] saturate-[1.2]" />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#030303] z-[1]" />
+        <div className="absolute inset-0 brightness-[0.8] saturate-[1.2] hidden md:block" />
+        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#030303] z-[1] hidden md:block" />
       </div>
 
       <div className="max-w-7xl mx-auto relative z-10 pt-32 pb-32 px-6">
@@ -152,12 +130,14 @@ export default function EventsPage() {
                 <input 
                     id="searchEvents"
                     placeholder="Search events..." 
-                    className="w-full bg-zinc-950/40 border border-white/10 rounded-xl py-3.5 pl-11 text-[13px] font-medium outline-none focus:border-brandRed transition-all text-white md:backdrop-blur-xl placeholder:text-zinc-500" 
+                    // 🔥 MOBILE OPTIMIZATION: Solid bg-zinc-900 on mobile, translucent on md:
+                    className="w-full bg-zinc-900 md:bg-zinc-950/40 border border-white/10 rounded-xl py-3.5 pl-11 text-[13px] font-medium outline-none focus:border-brandRed transition-all text-white md:backdrop-blur-xl placeholder:text-zinc-500" 
                     onChange={e => {setSearch(e.target.value); }} value={search}
                 />
             </div>
 
-            <div className="relative flex items-center bg-zinc-950/50 p-1 rounded-xl border border-white/10 w-full md:w-[450px] md:backdrop-blur-md">
+            {/* 🔥 MOBILE OPTIMIZATION: Solid bg-zinc-900 on mobile */}
+            <div className="relative flex items-center bg-zinc-900 md:bg-zinc-950/50 p-1 rounded-xl border border-white/10 w-full md:w-[450px] md:backdrop-blur-md">
                 {FILTERS.map((f) => (
                     <button key={f.id} onClick={() => {setActiveFilter(f.id); }}
                         className={`relative flex-1 py-2.5 text-[10px] font-bold uppercase tracking-widest transition-colors z-10 ${activeFilter === f.id ? 'text-white' : 'text-zinc-500 hover:text-zinc-300'}`}
@@ -192,7 +172,8 @@ export default function EventsPage() {
                   initial={{ opacity: 0 }} 
                   animate={{ opacity: 1 }} 
                   exit={{ opacity: 0 }}
-                  className="group relative border border-white/5 rounded-[40px] overflow-hidden transition-all duration-500 hover:border-brandRed/30 shadow-xl md:backdrop-blur-2xl h-fit bg-white/[0.03]"
+                  // 🔥 MOBILE OPTIMIZATION: Solid bg-zinc-900 on mobile, glass on md:
+                  className="group relative border border-white/10 md:border-white/5 rounded-[40px] overflow-hidden transition-all duration-500 hover:border-brandRed/30 shadow-xl md:backdrop-blur-2xl h-fit bg-zinc-900 md:bg-white/[0.03]"
                   style={{ transform: 'translateZ(0)' }}
                 >
                   <div className="relative w-full h-56 overflow-hidden">
@@ -203,7 +184,7 @@ export default function EventsPage() {
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                       className={`object-cover group-hover:scale-105 transition-all duration-700 will-change-transform ${!item.isUpcoming ? 'grayscale opacity-60' : 'grayscale-0'}`} 
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-transparent to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 md:from-zinc-950 via-transparent to-transparent" />
                     
                     <div className="absolute top-6 left-6 flex flex-col items-center bg-white rounded-2xl overflow-hidden shadow-2xl group-hover:scale-110 transition-transform duration-500">
                         <div className={`w-full px-3 py-1 text-center text-[10px] font-black text-white uppercase tracking-tighter ${item.isUpcoming ? 'bg-brandRed' : 'bg-zinc-600'}`}>{month}</div>
@@ -218,10 +199,11 @@ export default function EventsPage() {
                           className={`absolute inset-0 rounded-full blur-lg ${item.isUpcoming ? 'bg-brandRed' : 'bg-zinc-600'}`} 
                         />
                         
-                        <div className={`relative w-full h-full rounded-full border-2 overflow-hidden flex items-center justify-center backdrop-blur-md transition-all duration-500 ${
+                        {/* 🔥 MOBILE OPTIMIZATION: Solid colors on mobile for the logo badge */}
+                        <div className={`relative w-full h-full rounded-full border-2 overflow-hidden flex items-center justify-center transition-all duration-500 md:backdrop-blur-md ${
                           item.isUpcoming 
-                          ? 'bg-zinc-950/90 border-white/20 shadow-2xl' 
-                          : 'bg-zinc-900/90 border-white/5 grayscale opacity-60'
+                          ? 'bg-zinc-950 md:bg-zinc-950/90 border-white/20 shadow-2xl' 
+                          : 'bg-zinc-900 md:bg-zinc-900/90 border-white/5 grayscale opacity-60'
                         }`}>
                           {item.categoryLogo ? (
                             <img 
