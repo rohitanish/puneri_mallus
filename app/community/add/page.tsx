@@ -47,6 +47,10 @@ function AddCommunityForm() {
   const [services, setServices] = useState<any[]>([]); 
   const [showCustomCategory, setShowCustomCategory] = useState(false);
 
+  // 🔥 UNIVERSAL NAME CHECKER STATES
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [checkingName, setCheckingName] = useState(false);
+
   const [members, setMembers] = useState<any[]>([
     { id: Math.random().toString(), name: '', designation: '', contact: '', file: null, previewUrl: '', existingUrl: '' }
   ]);
@@ -83,7 +87,6 @@ function AddCommunityForm() {
       setUser(user);
 
       try {
-        // 🔥 FIX 1: Change maybeSingle to limit(1) to prevent multiple-row crashes
         const { data: ownerRecords } = await supabase
           .from('directory_owners')
           .select('*')
@@ -95,7 +98,6 @@ function AddCommunityForm() {
 
         if (ownerRecord) {
           setIsVerified(true);
-          // 🔥 FIX 2: Chain fallbacks so it absolutely never drops the email
           setVerifiedEmail(ownerRecord.verified_email || ownerRecord.email || user.email || ''); 
           if (!editId) {
              setFormData(prev => ({
@@ -172,6 +174,25 @@ function AddCommunityForm() {
     };
     init();
   }, [editId, router, supabase]);
+
+  // 🔥 UNIVERSAL NAME CHECKER FUNCTION
+  const verifyNameAvailability = async (title: string) => {
+    if (!title.trim()) return setNameError(null);
+    setCheckingName(true);
+    try {
+      const res = await fetch(`/api/check-name?name=${encodeURIComponent(title)}${editId ? `&excludeId=${editId}` : ''}`);
+      const data = await res.json();
+      if (data.exists) {
+        setNameError(`This name is already registered in ${data.source}.`);
+      } else {
+        setNameError(null);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setCheckingName(false);
+    }
+  };
 
   const addService = () => setServices([...services, { name: '', desc: '' }]);
   const removeService = (index: number) => setServices(services.filter((_, i) => i !== index));
@@ -250,7 +271,6 @@ function AddCommunityForm() {
       if (!formData.title.trim()) return triggerAlert("Provide a name to save draft", "info");
     }
 
-    // 🔥 FIX 3: THE ULTIMATE GHOST BLOCKER. This forces the email before it saves.
     let submitEmail = verifiedEmail || user?.email || "";
     if (!submitEmail || submitEmail.includes('supabase.co')) {
       const manualEmail = window.prompt("We need a valid email address to send your approval notification. Please enter it below:");
@@ -294,7 +314,7 @@ function AddCommunityForm() {
 
       const finalCategory = formData.category === "OTHER" ? formData.customCategory : formData.category;
       
-     const payload = { 
+      const payload = { 
         ...formData, 
         _id: editId, 
         category: finalCategory.toUpperCase(), 
@@ -305,7 +325,6 @@ function AddCommunityForm() {
         isApproved: false,
         isDraft: isDraftMode, 
         submittedBy: submitEmail.toLowerCase(),
-        // 🚀 THE SILVER BULLET: Permanently bind this node to the user's UUID
         userId: user?.id 
       };
 
@@ -337,7 +356,6 @@ function AddCommunityForm() {
           userId={user.id} 
           source="COMMUNITY" 
           onVerified={(ownerData) => {
-            // 🔥 Fix 4: Safely grab the gate's email
             setVerifiedEmail(ownerData.verified_email || ownerData.email || user.email || '');
             if (!editId) {
               setFormData(prev => ({
@@ -380,9 +398,24 @@ function AddCommunityForm() {
             </header>
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-2 md:col-span-2 border border-white/25 p-6 rounded-[32px] focus-within:border-brandRed transition-all">
-                <label className="text-[10px] font-black uppercase text-zinc-500 ml-2">Organization Name *</label>
-                <input placeholder="E.G. PUNE MALAYALEE ASSOCIATION" className="w-full bg-transparent outline-none font-bold text-white text-xl uppercase" value={formData.title} onChange={e => setFormData({...formData, title: e.target.value})} />
+              
+              {/* 🔥 UPDATED: UNIVERSAL NAME CHECKER FIELD */}
+              <div className={`space-y-2 md:col-span-2 border p-6 rounded-[32px] transition-all relative ${nameError ? 'border-red-500' : 'border-white/25 focus-within:border-brandRed'}`}>
+                <div className="flex justify-between items-center mr-2">
+                   <label className={`text-[10px] font-black uppercase ml-2 ${nameError ? 'text-red-500' : 'text-zinc-500'}`}>Organization Name *</label>
+                   {checkingName && <Loader2 size={12} className="animate-spin text-brandRed" />}
+                </div>
+                <input 
+                  placeholder="E.G. PUNE MALAYALEE ASSOCIATION" 
+                  className="w-full bg-transparent outline-none font-bold text-white text-xl uppercase" 
+                  value={formData.title} 
+                  onChange={e => {
+                    setFormData({...formData, title: e.target.value});
+                    if (nameError) setNameError(null); 
+                  }} 
+                  onBlur={(e) => verifyNameAvailability(e.target.value)}
+                />
+                {nameError && <p className="text-red-500 text-[9px] font-bold uppercase tracking-widest absolute bottom-2 left-6">{nameError}</p>}
               </div>
 
               <div className="space-y-2 border border-white/25 p-6 rounded-[32px] focus-within:border-brandRed transition-all">
@@ -420,7 +453,15 @@ function AddCommunityForm() {
               </div>
             </div>
             
-            <button onClick={() => setStep(2)} className="w-full py-8 bg-white text-black rounded-[32px] font-black uppercase tracking-[0.3em] transition-all hover:bg-brandRed hover:text-white flex items-center justify-center gap-4">
+            {/* 🔥 UPDATED: Blocks advancement if name is taken */}
+            <button 
+              onClick={() => {
+                if (nameError) return triggerAlert("Please choose a different organization name. This one is taken.", "error");
+                if (checkingName) return;
+                setStep(2);
+              }} 
+              className="w-full py-8 bg-white text-black rounded-[32px] font-black uppercase tracking-[0.3em] transition-all hover:bg-brandRed hover:text-white flex items-center justify-center gap-4"
+            >
               <span>Next: Services & Media</span><ArrowRight size={20} />
             </button>
           </motion.div>

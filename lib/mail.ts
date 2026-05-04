@@ -275,12 +275,12 @@ export async function sendMartVerificationPendingEmail(userEmail: string, busine
 
 /**
  * 📧 NOTIFY ADMIN: New Verification Audit Required
- * Sent to punerimallus@gmail.com to alert you of new documents.
+ * Sent to punerimallus1@gmail.com to alert you of new documents.
  */
 export async function sendAdminVerificationAlert(businessName: string) {
   const mailOptions = {
     from: `"Tribe System" <${process.env.EMAIL_USER}>`,
-    to: "punerimallus@gmail.com", // Your admin email
+    to: "punerimallus1@gmail.com", // Your admin email
     subject: `🚨 ACTION REQUIRED: Verification Audit for ${businessName}`,
     html: `
       <div style="font-family: sans-serif; background: #f9f9f9; padding: 40px; color: #333;">

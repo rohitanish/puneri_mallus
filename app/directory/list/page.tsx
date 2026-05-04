@@ -10,7 +10,6 @@ import {
 import Link from 'next/link';
 import TribeConfirm from '@/components/TribeConfirm';
 import TribeTimePicker from '@/components/ui/TribeTimePicker';
-// 🔥 Import the new gate
 import EmailVerificationGate from '@/components/EmailVerificationGate'; 
 
 const FIXED_CATEGORIES = [
@@ -33,16 +32,21 @@ interface UnifiedImage {
   previewUrl: string;
 }
 
-const Field = ({ label, icon: Icon, placeholder, value, onChange, type = "text", maxLength }: any) => (
-  <div className="space-y-2 w-full group">
-    <div className="flex items-center gap-2 ml-2">
-      {Icon && <Icon size={14} className="text-brandRed" />}
-      <label className="text-[11px] font-black uppercase text-white tracking-[0.2em]">{label}</label>
+// 🔥 UPDATED: Field component now handles errors, loading spinners, and onBlur events natively
+const Field = ({ label, icon: Icon, placeholder, value, onChange, onBlur, error, loading, type = "text", maxLength }: any) => (
+  <div className="space-y-2 w-full group relative mb-2">
+    <div className="flex items-center justify-between ml-2">
+      <div className="flex items-center gap-2">
+        {Icon && <Icon size={14} className="text-brandRed" />}
+        <label className={`text-[11px] font-black uppercase tracking-[0.2em] ${error ? 'text-red-500' : 'text-white'}`}>{label}</label>
+      </div>
+      {loading && <Loader2 size={12} className="animate-spin text-brandRed mr-2" />}
     </div>
     <input 
-      type={type} value={value || ''} onChange={onChange} placeholder={placeholder} maxLength={maxLength}
-      className="w-full bg-zinc-900 border-2 border-white/20 rounded-2xl p-5 text-white font-bold outline-none focus:border-brandRed transition-all placeholder:text-zinc-600"
+      type={type} value={value || ''} onChange={onChange} onBlur={onBlur} placeholder={placeholder} maxLength={maxLength}
+      className={`w-full bg-zinc-900 border-2 rounded-2xl p-5 text-white font-bold outline-none transition-all placeholder:text-zinc-600 ${error ? 'border-red-500 focus:border-red-500' : 'border-white/20 focus:border-brandRed'}`}
     />
+    {error && <p className="text-red-500 text-[10px] font-bold uppercase tracking-widest ml-2 absolute -bottom-5 left-0">{error}</p>}
   </div>
 );
 
@@ -67,6 +71,10 @@ function ListContent() {
   const [draftSaved, setDraftSaved] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [confirmConfig, setConfirmConfig] = useState({ title: '', message: '' });
+
+  // 🔥 UNIVERSAL NAME CHECKER STATES
+  const [nameError, setNameError] = useState<string | null>(null);
+  const [checkingName, setCheckingName] = useState(false);
   
   const openTimeRef = useRef<HTMLDivElement>(null);
   const closeTimeRef = useRef<HTMLDivElement>(null);
@@ -91,7 +99,6 @@ function ListContent() {
       setUser(user);
 
       try {
-        // 🔥 FIX 1: Change maybeSingle to limit(1) to prevent multiple-row crashes
         const { data: ownerRecords } = await supabase
           .from('directory_owners')
           .select('*')
@@ -103,7 +110,6 @@ function ListContent() {
 
         if (ownerRecord) {
           setIsVerified(true);
-          // 🔥 FIX 2: Chain fallbacks so it absolutely never drops the email
           setVerifiedEmail(ownerRecord.verified_email || ownerRecord.email || user.email || ''); 
           
           if (!editId) {
@@ -158,6 +164,25 @@ function ListContent() {
     init();
   }, [editId, router, supabase]);
 
+  // 🔥 UNIVERSAL NAME CHECKER FUNCTION
+  const verifyNameAvailability = async (nameVal: string) => {
+    if (!nameVal.trim()) return setNameError(null);
+    setCheckingName(true);
+    try {
+      const res = await fetch(`/api/check-name?name=${encodeURIComponent(nameVal)}${editId ? `&excludeId=${editId}` : ''}`);
+      const data = await res.json();
+      if (data.exists) {
+        setNameError(`This name is already registered in ${data.source}.`);
+      } else {
+        setNameError(null);
+      }
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setCheckingName(false);
+    }
+  };
+
   const triggerAlert = (title: string, message: string) => {
     setConfirmConfig({ title, message });
     setConfirmOpen(true);
@@ -174,6 +199,7 @@ function ListContent() {
     const { name, category, area, mapUrl, customCategory } = formData;
     if (!name || !category || !area || !mapUrl) return false;
     if (category === "OTHER" && !customCategory) return false;
+    if (nameError) return false; // 🔥 Block if name is taken
     return true;
   };
 
@@ -243,7 +269,6 @@ function ListContent() {
       if (!formData.name) return triggerAlert("Required", "Please at least provide a Business Name to save a draft.");
     }
 
-    // 🔥 FIX 3: THE ULTIMATE GHOST EMAIL BLOCKER
     let submitEmail = verifiedEmail || user?.email || "";
     if (!submitEmail || submitEmail.includes('supabase.co')) {
       const manualEmail = window.prompt("We need a valid email address to send your approval notification. Please enter it below:");
@@ -281,8 +306,8 @@ function ListContent() {
         category: finalCategory ? finalCategory.toUpperCase() : "OTHER",
         imagePaths: finalPaths, 
         services,
-        userEmail: submitEmail.toLowerCase(), // 🔥 Safe payload delivery
-        userId: user?.id, // 🚀 THE SILVER BULLET
+        userEmail: submitEmail.toLowerCase(), 
+        userId: user?.id, 
         isApproved: false, 
         isVerified: false,
         isDraft: isDraftMode 
@@ -317,7 +342,6 @@ function ListContent() {
           userId={user.id} 
           source="MALLU_MART"
           onVerified={(ownerData) => {
-            // 🔥 Fix 4: Safely grab the gate's email
             setVerifiedEmail(ownerData.verified_email || ownerData.email || user?.email || '');
             if (!editId) {
               setFormData(prev => ({
@@ -383,8 +407,19 @@ function ListContent() {
             </div>
 
             <div className="grid grid-cols-1 gap-8">
-              {/* ROW 1: FULL WIDTH NAME */}
-              <Field label="Business Name" value={formData.name} onChange={(e: any) => setFormData({...formData, name: e.target.value})} placeholder="e.g. THE MALABAR KITCHEN" />
+              {/* 🔥 ROW 1: FULL WIDTH NAME WITH CHECKER */}
+              <Field 
+                label="Business Name" 
+                value={formData.name} 
+                onChange={(e: any) => {
+                  setFormData({...formData, name: e.target.value});
+                  if (nameError) setNameError(null);
+                }} 
+                onBlur={(e: any) => verifyNameAvailability(e.target.value)}
+                error={nameError}
+                loading={checkingName}
+                placeholder="e.g. THE MALABAR KITCHEN" 
+              />
 
               {/* ROW 2: SECTOR & AREA */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -447,7 +482,11 @@ function ListContent() {
               {/* SUBMIT BUTTON */}
               <div className="pt-4">
                 <button 
-                  onClick={() => validateStep1() ? setStep(2) : triggerAlert("Required", "Fill all Step 1 fields.")} 
+                  onClick={() => {
+                    if (nameError) return triggerAlert("Name Unavailable", "Please choose a different business name. This one is taken.");
+                    if (checkingName) return;
+                    validateStep1() ? setStep(2) : triggerAlert("Required", "Fill all Step 1 fields.");
+                  }} 
                   className="w-full py-8 bg-white text-black rounded-[30px] font-black uppercase tracking-[0.4em] text-sm hover:bg-brandRed hover:text-white transition-all shadow-2xl flex items-center justify-center gap-3 active:scale-95"
                 >
                   Next: Services & Visuals <ArrowRight size={20} />

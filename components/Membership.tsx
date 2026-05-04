@@ -15,9 +15,23 @@ interface MembershipCardProps {
 
 const PUNE_AREAS = ["Akurdi", "Aundh", "Balewadi", "Baner", "Bavdhan", "Bhosari", "Bibwewadi", "Camp", "Chikhali", "Chinchwad", "Dapodi", "Deccan", "Dhanori", "Erandwane", "Fatima Nagar", "Ghorpadi", "Hadapsar", "Hinjewadi", "Kalyani Nagar", "Karve Nagar", "Kasarwadi", "Katraj", "Khadki", "Kondhwa", "Koregaon Park", "Kothrud", "Lohegaon", "Magarpatta", "Model Colony", "Moshi", "Mundhwa", "NIBM", "Nigdi", "Pashan", "Phugewadi", "Pimpri", "Pimple Gurav", "Pimple Nilakh", "Pimple Saudagar", "Pune City", "Punawale", "Rahatani", "Ravet", "Sadashiv Peth", "Sahakar Nagar", "Sangvi", "Shivajinagar", "Sinhagad Road", "Sus", "Swargate", "Talawade", "Tathawade", "Thergaon", "Undri", "Viman Nagar", "Vishrantwadi", "Wakad", "Wanowrie", "Warje", "Yerwada"].sort();
 
+// 🔥 Snappy animation variants to prevent mobile horizontal scrollbar bugs
+const stepVariants = {
+  hidden: { opacity: 0, y: 10 },
+  visible: { 
+    opacity: 1, 
+    y: 0, 
+    transition: { duration: 0.3, ease: "easeOut" as const } 
+  },
+  exit: { 
+    opacity: 0, 
+    y: -10, 
+    transition: { duration: 0.2, ease: "easeIn" as const } 
+  }
+};
+
 export default function MembershipCard({ price, benefits, userId, userEmail }: MembershipCardProps) {
   const [upgrading, setUpgrading] = useState(false);
-  // 🔥 New Step Logic: 1 (Benefits) -> 2 (Form) -> 3 (Wait) -> 4 (Pay)
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1); 
   const { showAlert } = useAlert();
   
@@ -59,13 +73,13 @@ export default function MembershipCard({ price, benefits, userId, userEmail }: M
   useEffect(() => {
     let interval: NodeJS.Timeout;
     
-    if (step === 3) { // Changed from 1.5 to 3
+    if (step === 3) { 
       interval = setInterval(async () => {
         const { data: { user } } = await supabase.auth.getUser();
         
         if (user && user.email === email.trim().toLowerCase()) {
           clearInterval(interval);
-          setStep(4); // Changed from 2 to 4
+          setStep(4); 
           showAlert("Identity Verified! Initiating secure payment gateway...", "success");
           setTimeout(() => { triggerRazorpay(); }, 1000);
         }
@@ -181,13 +195,15 @@ export default function MembershipCard({ price, benefits, userId, userEmail }: M
 
   return (
     <motion.div 
+      layout // 🔥 Animates height changes smoothly when switching steps
       initial={{ opacity: 0, scale: 0.95 }}
       whileInView={{ opacity: 1, scale: 1 }}
-      /* 🔥 Adjusted to max-w-lg for a perfect focused wizard card on desktop and mobile */
-      className="w-full max-w-lg mx-auto bg-zinc-950/95 backdrop-blur-2xl border border-white/10 rounded-[40px] p-6 md:p-10 relative overflow-hidden group shadow-2xl"
-      style={{ transform: 'translateZ(0)' }}
+      transition={{ duration: 0.4, ease: "easeOut" }}
+      className="w-full max-w-lg mx-auto bg-zinc-950/95 backdrop-blur-xl border border-white/10 rounded-[32px] md:rounded-[40px] p-6 md:p-10 relative overflow-hidden group shadow-2xl"
+      style={{ transform: 'translateZ(0)', willChange: 'transform, height' }}
     >
-      <div className="absolute -top-24 -right-24 w-80 h-80 bg-brandRed/10 blur-[120px] rounded-full group-hover:bg-brandRed/20 transition-all duration-700" />
+      {/* 🔥 pointer-events-none added to prevent hit-test lag, blur reduced slightly on mobile */}
+      <div className="absolute -top-24 -right-24 w-80 h-80 bg-brandRed/10 blur-[80px] md:blur-[120px] rounded-full group-hover:bg-brandRed/20 transition-all duration-700 pointer-events-none" />
       
       <div className="relative z-10">
         
@@ -214,7 +230,12 @@ export default function MembershipCard({ price, benefits, userId, userEmail }: M
           
           {/* STEP 1: BENEFITS OVERVIEW */}
           {step === 1 && (
-            <motion.div key="step1" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8">
+            <motion.div 
+              key="step1" 
+              variants={stepVariants} 
+              initial="hidden" animate="visible" exit="exit" 
+              className="space-y-8"
+            >
               <div className="space-y-2 text-center md:text-left">
                 <h4 className="text-xl font-black uppercase tracking-tight text-white italic">Unlock Your Tribe</h4>
                 <p className="text-xs text-zinc-400 font-medium">Join the inner circle and get lifetime access to premium features.</p>
@@ -244,10 +265,14 @@ export default function MembershipCard({ price, benefits, userId, userEmail }: M
 
           {/* STEP 2: DATA COLLECTION FORM */}
           {step === 2 && (
-            <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
-              
+            <motion.div 
+              key="step2" 
+              variants={stepVariants} 
+              initial="hidden" animate="visible" exit="exit" 
+              className="space-y-6"
+            >
               <div className="flex items-center gap-4 border-b border-white/5 pb-6">
-                <button onClick={() => setStep(1)} className="p-2.5 bg-zinc-900 rounded-xl hover:bg-brandRed text-zinc-400 hover:text-white transition-all">
+                <button onClick={() => setStep(1)} className="p-2.5 bg-zinc-900 rounded-xl hover:bg-brandRed text-zinc-400 hover:text-white transition-all active:scale-90">
                   <ArrowLeft size={18} />
                 </button>
                 <div>
@@ -260,14 +285,15 @@ export default function MembershipCard({ price, benefits, userId, userEmail }: M
                 {/* 1. EMAIL */}
                 <div className="relative group">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-brandRed transition-colors" size={16} />
-                  <input type="email" placeholder="Email Address" required className="w-full bg-black/50 border border-white/10 p-4 pl-12 rounded-2xl font-medium text-[13px] focus:border-brandRed outline-none text-white placeholder:text-zinc-500 transition-colors" value={email} onChange={(e) => setEmail(e.target.value)} />
+                  {/* 🔥 text-base forces iOS to NOT zoom in */}
+                  <input type="email" placeholder="Email Address" required className="w-full bg-black/50 border border-white/10 p-4 pl-12 rounded-2xl font-medium text-base md:text-[13px] focus:border-brandRed outline-none text-white placeholder:text-zinc-500 transition-colors" value={email} onChange={(e) => setEmail(e.target.value)} />
                 </div>
 
                 {/* 2. BIRTH DATE */}
                 <div className="relative" ref={dateContainerRef}>
                   <div className="bg-black/50 border border-white/10 p-4 rounded-2xl flex items-center gap-3 cursor-pointer hover:border-white/30 transition-colors h-full" onClick={() => setShowCalendar(!showCalendar)}>
                     <CalendarIcon size={16} className={dob ? "text-brandRed" : "text-zinc-500"} />
-                    <span className={`font-medium text-[13px] truncate ${dob ? "text-white" : "text-zinc-500"}`}>{dob ? new Date(dob).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "Birth Date"}</span>
+                    <span className={`font-medium text-base md:text-[13px] truncate ${dob ? "text-white" : "text-zinc-500"}`}>{dob ? new Date(dob).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "Birth Date"}</span>
                   </div>
                   <AnimatePresence>
                     {showCalendar && (
@@ -279,13 +305,13 @@ export default function MembershipCard({ price, benefits, userId, userEmail }: M
                 {/* 3. PROFESSION */}
                 <div className="relative group">
                   <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-brandRed transition-colors" size={16} />
-                  <input type="text" placeholder="Profession" required className="w-full bg-black/50 border border-white/10 p-4 pl-12 rounded-2xl font-medium text-[13px] focus:border-brandRed outline-none text-white placeholder:text-zinc-500 transition-colors uppercase" value={profession} onChange={(e) => setProfession(e.target.value)} />
+                  <input type="text" placeholder="Profession" required className="w-full bg-black/50 border border-white/10 p-4 pl-12 rounded-2xl font-medium text-base md:text-[13px] focus:border-brandRed outline-none text-white placeholder:text-zinc-500 transition-colors uppercase" value={profession} onChange={(e) => setProfession(e.target.value)} />
                 </div>
 
                 {/* 4. LOCATION */}
                 <div className="relative group">
                   <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-brandRed transition-colors" size={16} />
-                  <select required className="w-full bg-black/60 border border-white/10 p-4 pl-12 rounded-2xl font-medium text-[13px] focus:border-brandRed outline-none text-white appearance-none cursor-pointer transition-colors" value={location} onChange={(e) => setLocation(e.target.value)}>
+                  <select required className="w-full bg-black/60 border border-white/10 p-4 pl-12 rounded-2xl font-medium text-base md:text-[13px] focus:border-brandRed outline-none text-white appearance-none cursor-pointer transition-colors" value={location} onChange={(e) => setLocation(e.target.value)}>
                     <option value="" disabled>Select Area (Pune)</option>
                     {PUNE_AREAS.map(area => <option key={area} value={area} className="bg-zinc-900">{area}</option>)}
                   </select>
@@ -304,7 +330,12 @@ export default function MembershipCard({ price, benefits, userId, userEmail }: M
 
           {/* STEP 3: CROSS-DEVICE SYNC WAITING ROOM */}
           {step === 3 && (
-            <motion.div key="step3" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="py-8 text-center space-y-6">
+            <motion.div 
+              key="step3" 
+              variants={stepVariants} 
+              initial="hidden" animate="visible" exit="exit" 
+              className="py-8 text-center space-y-6"
+            >
               <div className="relative w-24 h-24 mx-auto">
                 <div className="absolute inset-0 bg-brandRed/20 rounded-full animate-ping" />
                 <div className="relative w-full h-full bg-zinc-900 border border-brandRed/50 rounded-full flex items-center justify-center">
@@ -326,7 +357,12 @@ export default function MembershipCard({ price, benefits, userId, userEmail }: M
 
           {/* STEP 4: PAYMENT OVERVIEW */}
           {step === 4 && (
-            <motion.div key="step4" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="space-y-8 py-4">
+            <motion.div 
+              key="step4" 
+              variants={stepVariants} 
+              initial="hidden" animate="visible" exit="exit" 
+              className="space-y-8 py-4"
+            >
               <div className="text-center space-y-2">
                 <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4 shadow-[0_0_20px_rgba(34,197,94,0.2)]">
                   <CheckCircle2 size={32} className="text-green-500" />

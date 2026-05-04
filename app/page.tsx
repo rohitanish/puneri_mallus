@@ -132,17 +132,19 @@ export default function Home() {
 
       <div className="relative z-10">
         
-        {/* HERO SECTION */}
+      {/* HERO SECTION */}
         <section className="relative h-screen w-full overflow-hidden bg-[#030303] z-20 flex flex-col items-center justify-center">
           {slides.length > 0 && slides.map((slide, index) => {
             const isActive = index === currentSlide;
-            const isAdjacent = Math.abs(index - currentSlide) <= 1;
-            if (!isActive && !isAdjacent) return null;
+            
+            // 🔥 FIX 1: Do not use return null; for videos! 
+            // If we unmount the video, the browser has to reload it from scratch next time.
+            // We keep it in the DOM but hide it visually and disable pointers.
 
             return (
               <div
                 key={index}
-                style={{ willChange: 'transform, opacity' }} // 🔥 GPU Acceleration for slider
+                style={{ willChange: 'transform, opacity' }} 
                 className={`absolute inset-0 transition-all duration-1000 ease-in-out ${
                   isActive
                     ? 'opacity-100 scale-100 z-20 pointer-events-auto'
@@ -151,7 +153,15 @@ export default function Home() {
               >
                 <div className="absolute inset-0 z-0">
                   {isVideo(slide.mediaUrl) ? (
-                    <video autoPlay loop muted playsInline preload="none"
+                    <video 
+                      autoPlay 
+                      loop 
+                      muted 
+                      playsInline 
+                      // 🔥 FIX 2: Change preload="none" to preload="auto" so it loads during the preloader
+                      preload="auto" 
+                      // 🔥 FIX 3: Add a poster image if you have one to cover the first frame delay
+                      // poster={slide.posterUrl || "/events/mmart.webp"} 
                       className="w-full h-full object-cover transition-opacity duration-700"
                       style={{ opacity: Math.min(((slide.visibility || 60) + 20) / 100, 1), objectPosition: `50% ${slide.vOffset || 50}%` }}
                     >
@@ -163,6 +173,7 @@ export default function Home() {
                       quality={80}
                       className="object-cover transition-opacity duration-700"
                       style={{ opacity: Math.min(((slide.visibility || 60) + 20) / 100, 1), objectPosition: `50% ${slide.vOffset || 50}%` }}
+                      // 🔥 FIX 4: Only priority load the first slide's image
                       priority={index === 0}
                     />
                   )}
@@ -199,7 +210,7 @@ export default function Home() {
             <div className="absolute bottom-8 sm:bottom-12 left-1/2 -translate-x-1/2 z-50 flex gap-3 sm:gap-4 pointer-events-auto">
               {slides.map((_, i) => (
                 <button key={i} onClick={() => setCurrentSlide(i)}
-                  aria-label={`Go to slide ${i + 1}`} // 🔥 Accessibility Fix
+                  aria-label={`Go to slide ${i + 1}`}
                   className={`cursor-pointer h-1.5 transition-all duration-500 rounded-full ${i === currentSlide ? 'w-10 sm:w-12 bg-brandRed' : 'w-3 sm:w-4 bg-white/40'}`}
                 />
               ))}

@@ -16,6 +16,7 @@ import {
 import MartVerificationModal from '@/components/MartVerificationModal';
 import TribeAlert from '@/components/TribeAlert';
 import TribeConfirm from '@/components/TribeConfirm';
+import MartInvoiceGate from '@/components/MartInvoiceGate'; // 🔥 Added Invoice Gate
 
 interface UserProfile {
   martUnlocked?: boolean;
@@ -27,7 +28,7 @@ export default function ProfessionalDetailsPage() {
   const router = useRouter();
   const [item, setItem] = useState<any>(null);
   const [loading, setLoading] = useState(true);
-  const [paymentLoading, setPaymentLoading] = useState(false); // 🔥 NEW: Separate payment loading state
+  const [paymentLoading, setPaymentLoading] = useState(false); 
   const [zoomImage, setZoomImage] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState('overview');
   const pathname = usePathname();
@@ -44,6 +45,10 @@ export default function ProfessionalDetailsPage() {
 
   const [martPlans, setMartPlans] = useState<any>(null);
   const [selectedPlan, setSelectedPlan] = useState<string>('');
+
+  // 🔥 INVOICE GATE STATES
+  const [showInvoiceGate, setShowInvoiceGate] = useState(false);
+  const [verifiedInvoiceEmail, setVerifiedInvoiceEmail] = useState("");
 
   const { scrollY } = useScroll();
   const y = useTransform(scrollY, [0, 500], [0, 150]);
@@ -64,6 +69,16 @@ useEffect(() => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         setCurrentUser(user);
+
+        // 🔥 Fetch Saved Invoice Email if it exists
+        if (user?.id) {
+          const { data: invoiceData } = await supabase
+            .from('mallu_invoice')
+            .select('invoice_email')
+            .eq('user_id', user.id)
+            .maybeSingle();
+          if (invoiceData?.invoice_email) setVerifiedInvoiceEmail(invoiceData.invoice_email);
+        }
 
         const [martRes, settingsRes, profileRes] = await Promise.all([
           fetch('/api/mart'),
@@ -99,18 +114,15 @@ useEffect(() => {
           setItem(found);
           if (found.rating) setAvgRating(found.rating);
 
-          // 🔥 Admin Array Setup
           const MASTER_ADMINS = [
-            'punerimallus@gmail.com', 
+            'punerimallus1@gmail.com', 
             'rohitanish86@gmail.com', 
             'anotheradmin@punerimallus.com'
           ];
           
-          // 🔥 Perform the checks AFTER finding the item
           const isOwner = user?.email === found.userEmail;
           const isMasterAdmin = user?.email ? MASTER_ADMINS.includes(user.email) : false;
           
-          // 🔥 The Master Check (Using the updated column names)
           if (
             isOwner || 
             isMasterAdmin || 
@@ -140,9 +152,8 @@ useEffect(() => {
     if (isPaymentEnabled) {
       setPendingAction(target);
       
-      // 🔥 FIX 1: Precise mathematical offset scroll instead of erratic scrollIntoView
       if (paywallRef.current) {
-        const offset = 150; // Keeps it nicely below the top edge
+        const offset = 150; 
         const elementPosition = paywallRef.current.getBoundingClientRect().top + window.pageYOffset;
         window.scrollTo({ top: elementPosition - offset, behavior: 'smooth' });
       }
@@ -154,10 +165,30 @@ useEffect(() => {
     }
   };
 
-  // --- PAYMENT EXECUTION ---
-  const handleConfirmPayment = async () => {
+  // 🔥 PRE-PAYMENT CHECKER
+  const handleCheckoutInitiation = () => {
     setConfirmOpen(false);
-    setPaymentLoading(true); // 🔥 FIX 2: Use payment-specific loader so page doesn't unmount
+    
+    if (!currentUser) return router.push(`/auth/login?next=${pathname}`);
+
+    // Check if the user has a REAL email attached to their auth session
+    const hasRealAuthEmail = currentUser?.email && 
+                             !currentUser.email.includes('supabase.co') && 
+                             !currentUser.email.includes('@punerimallus.com'); // Add any other ghost domains you use
+
+    // If they do NOT have a real auth email AND haven't saved an invoice email -> Show the Gate!
+    if (!hasRealAuthEmail && !verifiedInvoiceEmail) {
+      setShowInvoiceGate(true);
+      return;
+    }
+
+    // Otherwise proceed to Razorpay immediately
+    triggerRazorpay(verifiedInvoiceEmail || currentUser.email);
+  };
+
+  // --- PAYMENT EXECUTION ---
+  const triggerRazorpay = async (finalEmail: string) => {
+    setPaymentLoading(true); 
 
     try {
       const orderRes = await fetch('/api/razorpay/order', {
@@ -179,61 +210,43 @@ useEffect(() => {
         name: "PUNERI MALLUS",
         description: `Unlock Mallu Mart Access (${selectedPlan.toUpperCase()})`,
         order_id: orderData.id,
-        method: {
-          netbanking: true,
-          card: true,
-          upi: true,
-          wallet: true,
-          emi: false,      
-          paylater: false  
-        },
-        config: {
-          display: {
-            sequence: ['block.banks', 'block.cards'],
-            preferences: { show_default_blocks: true },
-          },
-        },
+        method: { netbanking: true, card: true, upi: true, wallet: true, emi: false, paylater: false },
+        config: { display: { sequence: ['block.banks', 'block.cards'], preferences: { show_default_blocks: true } } },
         handler: async function (response: any) {
-  setPaymentLoading(true); // Ensure spinner is visible
-  
-  const verifyRes = await fetch('/api/razorpay/verify', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      razorpay_order_id: response.razorpay_order_id,
-      razorpay_payment_id: response.razorpay_payment_id,
-      razorpay_signature: response.razorpay_signature,
-      userId: currentUser.id,
-      paymentType: 'MART', // Matches backend logic
-      plan: selectedPlan.toUpperCase(),
-      amount: martPlans[selectedPlan].price
-    })
-  });
+          setPaymentLoading(true); 
+          
+          const verifyRes = await fetch('/api/razorpay/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              userId: currentUser.id,
+              paymentType: 'MART', 
+              plan: selectedPlan.toUpperCase(),
+              amount: martPlans[selectedPlan].price,
+              invoiceEmail: finalEmail // 🔥 Pass the real email to the backend to trigger the invoice!
+            })
+          });
 
-  const verifyData = await verifyRes.json();
-  
-  if (verifyData.success) {
-    // 🔥 1. Instant UI Feedback
-    setIsUnlocked(true); 
-    setAlertConfig({ 
-      isVisible: true, 
-      message: "Access Granted! Unlocking directory...", 
-      type: 'success' 
-    });
-    
-    // 🔥 2. Clean Redirect (Busts cache)
-    setTimeout(() => {
-      // Force a hard reload to the current page without query strings
-      window.location.href = window.location.pathname + "?unlocked=true"; 
-    }, 2000);
-  } else {
-    setAlertConfig({ isVisible: true, message: "Verification Failed", type: 'error' });
-    setPaymentLoading(false);
-  }
-},
-        prefill: { email: currentUser?.email || "" },
+          const verifyData = await verifyRes.json();
+          
+          if (verifyData.success) {
+            setIsUnlocked(true); 
+            setAlertConfig({ isVisible: true, message: "Access Granted! Unlocking directory...", type: 'success' });
+            setTimeout(() => { window.location.href = window.location.pathname + "?unlocked=true"; }, 2000);
+          } else {
+            setAlertConfig({ isVisible: true, message: "Verification Failed", type: 'error' });
+            setPaymentLoading(false);
+          }
+        },
+        prefill: { 
+          email: finalEmail, // 🔥 Tells Razorpay where to send the receipt
+          contact: currentUser?.phone || "" 
+        },
         theme: { color: "#FF0000" },
-        modal: { ondismiss: () => setPaymentLoading(false) } // 🔥 FIX 2: Revert payment loader on modal close
+        modal: { ondismiss: () => setPaymentLoading(false) } 
       };
 
       const rzp = new (window as any).Razorpay(options);
@@ -241,8 +254,7 @@ useEffect(() => {
 
     } catch (err) {
       setAlertConfig({ isVisible: true, message: "Gateway Error", type: 'error' });
-    } finally {
-      setPaymentLoading(false); // 🔥 FIX 2: Revert payment loader
+      setPaymentLoading(false);
     }
   };
 
@@ -274,6 +286,20 @@ useEffect(() => {
   return (
     <div className="min-h-screen bg-[#030303] text-zinc-100 relative overflow-x-hidden selection:bg-brandRed/30">
       
+      {/* 🔥 INVOICE GATE COMPONENT */}
+      {showInvoiceGate && currentUser && (
+        <MartInvoiceGate 
+          userId={currentUser.id}
+          userPhone={currentUser.phone}
+          onSuccess={(capturedEmail) => {
+            setShowInvoiceGate(false);
+            setVerifiedInvoiceEmail(capturedEmail);
+            triggerRazorpay(capturedEmail); // Launch Razorpay immediately
+          }}
+          onCancel={() => setShowInvoiceGate(false)}
+        />
+      )}
+
       <TribeAlert 
         isVisible={alertConfig.isVisible} 
         message={alertConfig.message} 
@@ -289,7 +315,7 @@ useEffect(() => {
             ? `A fee of ₹${martPlans[selectedPlan].price} is required to unlock this professional profile for ${selectedPlan.toUpperCase()} access.`
             : "A fee is required to unlock the full Mallu Mart directory and professional contacts."
         }
-        onConfirm={handleConfirmPayment}
+        onConfirm={handleCheckoutInitiation} // 🔥 Updated to use the pre-checker
         onCancel={() => setConfirmOpen(false)}
       />
 
@@ -325,10 +351,9 @@ useEffect(() => {
                 </div>
 
                 <div className="flex items-center gap-3">
-                 {/* 🔥 Update the handleLockedAction URL! */}
-                    <button onClick={() => handleLockedAction(`https://wa.me/91${item.whatsapp || item.contact}`)} className="p-4 bg-[#25D366]/10 text-[#25D366] rounded-2xl border border-[#25D366]/20 hover:bg-[#25D366] hover:text-white transition-all shadow-xl">
-                      <MessageCircle size={20} />
-                    </button>
+                  <button onClick={() => handleLockedAction(`https://wa.me/91${item.whatsapp || item.contact}`)} className="p-4 bg-[#25D366]/10 text-[#25D366] rounded-2xl border border-[#25D366]/20 hover:bg-[#25D366] hover:text-white transition-all shadow-xl">
+                    <MessageCircle size={20} />
+                  </button>
                   <button onClick={() => handleLockedAction(`tel:${item.contact}`)} className="p-4 bg-zinc-900 text-white rounded-2xl border border-white/10 hover:border-brandRed transition-all shadow-xl">
                     <Phone size={20} />
                   </button>
@@ -434,12 +459,10 @@ useEffect(() => {
 
                 <button 
                   onClick={() => {
-                    // 1. THE BOUNCER: Check if they are logged in!
-    if (!currentUser) {
-      // 2. THE RETURN TICKET: Send them to login, then drop them back here
-      router.push(`/auth/login?next=${pathname}`);
-      return; // Stop the code right here!
-    }
+                    if (!currentUser) {
+                      router.push(`/auth/login?next=${pathname}`);
+                      return; 
+                    }
                     if (isPaymentEnabled) {
                       if (!selectedPlan) {
                         setAlertConfig({ isVisible: true, message: "Please select an access plan.", type: 'error' });
@@ -450,7 +473,7 @@ useEffect(() => {
                       setIsUnlocked(true);
                     }
                   }} 
-                  disabled={paymentLoading} // 🔥 FIX 2: Disable button while loading
+                  disabled={paymentLoading} 
                   className={`w-full px-12 py-5 bg-brandRed text-white font-black uppercase text-xs tracking-[0.2em] rounded-2xl transition-all shadow-[0_20px_40px_rgba(255,0,0,0.3)] ${paymentLoading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-white hover:text-black active:scale-95'}`}
                 >
                   {paymentLoading ? (

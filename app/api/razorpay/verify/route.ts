@@ -28,7 +28,8 @@ export async function POST(req: Request) {
       razorpay_signature,
       paymentType, 
       plan,
-      amount // 🔥 EXTRACT THE AMOUNT HERE
+      amount, // 🔥 EXTRACT THE AMOUNT HERE
+      invoiceEmail // 🔥 NEW: Extract the captured email from the Gate
     } = await req.json();
 
     const trueUserId = user.id;
@@ -61,11 +62,14 @@ export async function POST(req: Request) {
 
     const trueUserEmail = profile?.email || user.email;
     const trueUserPhone = profile?.phone_number || '';
+    
+    // 🔥 Determine the actual email to use for the receipt
+    const finalReceiptEmail = invoiceEmail || trueUserEmail;
 
     // 6. RECORD THE TRANSACTION IN THE PAYMENTS TABLE
     await supabaseAdmin.from('payments').insert({
       user_id: trueUserId,
-      email: trueUserEmail,
+      email: finalReceiptEmail, // 🔥 Logs the actual email the invoice went to
       phone_number: trueUserPhone,
       razorpay_order_id: razorpay_order_id,
       razorpay_payment_id: razorpay_payment_id,
@@ -91,8 +95,8 @@ export async function POST(req: Request) {
         .eq('user_id', trueUserId);
         
       // Step C: Send Welcome Email
-      if (trueUserEmail) {
-        await sendPremiumMembershipEmail(trueUserEmail, razorpay_order_id, razorpay_payment_id);
+      if (finalReceiptEmail) {
+        await sendPremiumMembershipEmail(finalReceiptEmail, razorpay_order_id, razorpay_payment_id);
       }
     } 
     else if (paymentType === "MART") {
@@ -117,8 +121,9 @@ export async function POST(req: Request) {
         .update({ mart_unlocked: true }) 
         .eq('id', trueUserId);
 
-      if (trueUserEmail) {
-        await sendMartSubscriptionEmail(trueUserEmail, plan, razorpay_order_id, razorpay_payment_id);
+      // 🔥 Send invoice specifically to the captured real email
+      if (finalReceiptEmail) {
+        await sendMartSubscriptionEmail(finalReceiptEmail, plan, razorpay_order_id, razorpay_payment_id);
       }
     }
 

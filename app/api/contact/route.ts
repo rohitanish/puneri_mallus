@@ -32,7 +32,7 @@ export async function POST(req: Request) {
     // 5. Setup Cinematic Email Template
     const mailOptions = {
       from: email,
-      to: 'punerimallus@gmail.com',
+      to: 'punerimallus1@gmail.com',
       subject: `[TICKET #${ticket._id.toString().slice(-6)}] ${subject}`,
       text: `Name: ${name}\nEmail: ${email}\n\nMessage:\n${message}`,
       html: `
