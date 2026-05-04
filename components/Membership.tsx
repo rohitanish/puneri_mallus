@@ -1,6 +1,6 @@
 "use client";
 import { useState, useRef, useMemo, useEffect } from 'react';
-import { Crown, CheckCircle2, ArrowRight, ShieldCheck, Loader2, Mail, MapPin, Calendar as CalendarIcon, Briefcase, Zap } from 'lucide-react';
+import { Crown, CheckCircle2, ArrowRight, ArrowLeft, ShieldCheck, Loader2, Mail, MapPin, Calendar as CalendarIcon, Briefcase, Zap } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAlert } from '@/context/AlertContext';
 import { createBrowserClient } from '@supabase/ssr';
@@ -17,7 +17,8 @@ const PUNE_AREAS = ["Akurdi", "Aundh", "Balewadi", "Baner", "Bavdhan", "Bhosari"
 
 export default function MembershipCard({ price, benefits, userId, userEmail }: MembershipCardProps) {
   const [upgrading, setUpgrading] = useState(false);
-  const [step, setStep] = useState<1 | 1.5 | 2>(1); 
+  // 🔥 New Step Logic: 1 (Benefits) -> 2 (Form) -> 3 (Wait) -> 4 (Pay)
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1); 
   const { showAlert } = useAlert();
   
   const initialEmail = userEmail?.includes('@punerimallus.com') ? '' : (userEmail || '');
@@ -58,13 +59,13 @@ export default function MembershipCard({ price, benefits, userId, userEmail }: M
   useEffect(() => {
     let interval: NodeJS.Timeout;
     
-    if (step === 1.5) {
+    if (step === 3) { // Changed from 1.5 to 3
       interval = setInterval(async () => {
         const { data: { user } } = await supabase.auth.getUser();
         
         if (user && user.email === email.trim().toLowerCase()) {
           clearInterval(interval);
-          setStep(2);
+          setStep(4); // Changed from 2 to 4
           showAlert("Identity Verified! Initiating secure payment gateway...", "success");
           setTimeout(() => { triggerRazorpay(); }, 1000);
         }
@@ -106,7 +107,7 @@ export default function MembershipCard({ price, benefits, userId, userEmail }: M
 
       if (membershipError) throw membershipError;
       
-      setStep(1.5);
+      setStep(3); // Proceed to waiting room
 
     } catch (err: any) {
       showAlert(err.message || "Failed to save details.", "error");
@@ -182,114 +183,128 @@ export default function MembershipCard({ price, benefits, userId, userEmail }: M
     <motion.div 
       initial={{ opacity: 0, scale: 0.95 }}
       whileInView={{ opacity: 1, scale: 1 }}
-      className="w-full max-w-3xl bg-zinc-950/95 backdrop-blur-2xl border border-white/10 rounded-[40px] p-8 md:p-10 relative overflow-hidden group shadow-2xl"
+      /* 🔥 Adjusted to max-w-lg for a perfect focused wizard card on desktop and mobile */
+      className="w-full max-w-lg mx-auto bg-zinc-950/95 backdrop-blur-2xl border border-white/10 rounded-[40px] p-6 md:p-10 relative overflow-hidden group shadow-2xl"
       style={{ transform: 'translateZ(0)' }}
     >
       <div className="absolute -top-24 -right-24 w-80 h-80 bg-brandRed/10 blur-[120px] rounded-full group-hover:bg-brandRed/20 transition-all duration-700" />
       
       <div className="relative z-10">
         
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 border-b border-white/5 pb-8">
-          <div className="flex items-center gap-5">
-            <div className="w-14 h-14 bg-brandRed rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(255,0,0,0.3)] shrink-0">
-              <Crown className="text-white" size={28} />
+        {/* HEADER: ALWAYS VISIBLE */}
+        <div className="flex items-start justify-between gap-4 mb-8 border-b border-white/5 pb-8">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 md:w-14 md:h-14 bg-brandRed rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(255,0,0,0.3)] shrink-0">
+              <Crown className="text-white" size={24} />
             </div>
             <div>
-              <h3 className="text-2xl font-black uppercase italic tracking-tighter text-white">Lifetime Membership</h3>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-brandRed">Official Tribe Member</p>
+              <h3 className="text-xl md:text-2xl font-black uppercase italic tracking-tighter text-white">Lifetime</h3>
+              <p className="text-[9px] md:text-[10px] font-bold uppercase tracking-widest text-brandRed">Official Tribe Member</p>
             </div>
           </div>
-          <div className="bg-black/40 px-5 py-2.5 rounded-2xl border border-white/5 text-right md:w-auto w-fit">
-            <p className="text-[9px] font-bold uppercase tracking-widest text-zinc-500 mb-1">One-Time Due</p>
-            <h4 className="text-3xl font-black italic text-white uppercase tracking-tighter">
-              ₹{price}<span className="text-brandRed text-sm not-italic">.00</span>
+          <div className="bg-black/40 px-4 py-2 rounded-2xl border border-white/5 text-right shrink-0">
+            <p className="text-[8px] md:text-[9px] font-bold uppercase tracking-widest text-zinc-500 mb-0.5">One-Time</p>
+            <h4 className="text-xl md:text-2xl font-black italic text-white uppercase tracking-tighter">
+              ₹{price}<span className="text-brandRed text-xs not-italic">.00</span>
             </h4>
           </div>
         </div>
 
         <AnimatePresence mode="wait">
           
-          {/* STEP 1: DATA COLLECTION */}
+          {/* STEP 1: BENEFITS OVERVIEW */}
           {step === 1 && (
-            <motion.div key="step1" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10">
+            <motion.div key="step1" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-8">
+              <div className="space-y-2 text-center md:text-left">
+                <h4 className="text-xl font-black uppercase tracking-tight text-white italic">Unlock Your Tribe</h4>
+                <p className="text-xs text-zinc-400 font-medium">Join the inner circle and get lifetime access to premium features.</p>
+              </div>
               
-              {/* 🔥 FIX: Mobile Order 2, Desktop Order 1. Removed 'hidden lg:block', added nice mobile container styling */}
-              <div className="space-y-6 order-2 lg:order-1 bg-zinc-900/30 lg:bg-transparent p-6 lg:p-0 rounded-3xl lg:rounded-none border border-white/5 lg:border-none mt-4 lg:mt-0">
-                <div className="space-y-2">
-                  <h4 className="text-lg font-black uppercase tracking-tight text-white italic">Unlock Your Tribe</h4>
-                  <p className="text-xs text-zinc-400 font-medium">Join the inner circle and get lifetime access to premium features.</p>
-                </div>
-                <div className="space-y-4">
-                  {displayBenefits.map((benefit, i) => (
-                    <div key={i} className="flex items-start gap-3 group/item">
-                      <div className="mt-0.5 shrink-0 bg-brandRed/20 p-1 rounded-full">
-                        <Zap size={12} className="text-brandRed" />
-                      </div>
-                      <p className="text-[12px] font-bold uppercase tracking-tight text-zinc-300 leading-relaxed">
-                        {benefit}
-                      </p>
+              <div className="space-y-4 bg-zinc-900/30 p-6 rounded-3xl border border-white/5">
+                {displayBenefits.map((benefit, i) => (
+                  <div key={i} className="flex items-start gap-4 group/item">
+                    <div className="mt-0.5 shrink-0 bg-brandRed/20 p-1.5 rounded-full">
+                      <Zap size={14} className="text-brandRed" />
                     </div>
-                  ))}
-                </div>
+                    <p className="text-[13px] font-bold uppercase tracking-tight text-zinc-300 leading-relaxed">
+                      {benefit}
+                    </p>
+                  </div>
+                ))}
               </div>
 
-              {/* 🔥 FIX: Mobile Order 1, Desktop Order 2 */}
-              <div className="space-y-6 order-1 lg:order-2 lg:border-l lg:border-white/5 lg:pl-10">
-                <div className="space-y-2">
-                  <h4 className="text-lg font-black uppercase tracking-tight text-white italic">Identity Details</h4>
-                  <p className="text-xs text-zinc-400 font-medium">Required to activate your membership.</p>
-                </div>
-
-                <div className="space-y-3">
-                  {/* 1. EMAIL */}
-                  <div className="relative group">
-                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-brandRed transition-colors" size={16} />
-                    <input type="email" placeholder="Email Address" required className="w-full bg-black/50 border border-white/10 p-4 pl-12 rounded-2xl font-medium text-[13px] focus:border-brandRed outline-none text-white placeholder:text-zinc-500 transition-colors" value={email} onChange={(e) => setEmail(e.target.value)} />
-                  </div>
-
-                  {/* 2. BIRTH DATE */}
-                  <div className="relative" ref={dateContainerRef}>
-                    <div className="bg-black/50 border border-white/10 p-4 rounded-2xl flex items-center gap-3 cursor-pointer hover:border-white/30 transition-colors h-full" onClick={() => setShowCalendar(!showCalendar)}>
-                      <CalendarIcon size={16} className={dob ? "text-brandRed" : "text-zinc-500"} />
-                      <span className={`font-medium text-[13px] truncate ${dob ? "text-white" : "text-zinc-500"}`}>{dob ? new Date(dob).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "Birth Date"}</span>
-                    </div>
-                    <AnimatePresence>
-                      {showCalendar && (
-                        <TribeCalendar value={dob} onChange={(date) => { setDob(date); setShowCalendar(false); }} onClose={() => setShowCalendar(false)} maxDate={maxDobDate} defaultDate={maxDobDate} anchorRef={dateContainerRef} />
-                      )}
-                    </AnimatePresence>
-                  </div>
-
-                  {/* 3. PROFESSION */}
-                  <div className="relative group">
-                    <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-brandRed transition-colors" size={16} />
-                    <input type="text" placeholder="Profession" required className="w-full bg-black/50 border border-white/10 p-4 pl-12 rounded-2xl font-medium text-[13px] focus:border-brandRed outline-none text-white placeholder:text-zinc-500 transition-colors uppercase" value={profession} onChange={(e) => setProfession(e.target.value)} />
-                  </div>
-
-                  {/* 4. LOCATION */}
-                  <div className="relative group">
-                    <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-brandRed transition-colors" size={16} />
-                    <select required className="w-full bg-black/60 border border-white/10 p-4 pl-12 rounded-2xl font-medium text-[13px] focus:border-brandRed outline-none text-white appearance-none cursor-pointer transition-colors" value={location} onChange={(e) => setLocation(e.target.value)}>
-                      <option value="" disabled>Select Area (Pune)</option>
-                      {PUNE_AREAS.map(area => <option key={area} value={area} className="bg-zinc-900">{area}</option>)}
-                    </select>
-                  </div>
-                </div>
-
-                <button 
-                  disabled={!isFormValid || upgrading}
-                  onClick={handleDataSaveAndProceed}
-                  className="w-full py-5 bg-white text-black font-black uppercase tracking-widest rounded-2xl hover:bg-brandRed hover:text-white transition-all shadow-xl active:scale-95 flex items-center justify-center gap-3 text-xs disabled:opacity-50 mt-4"
-                >
-                  {upgrading ? <Loader2 className="animate-spin" size={16} /> : <>Save & Proceed <ArrowRight size={16} /></>}
-                </button>
-              </div>
+              <button 
+                onClick={() => setStep(2)}
+                className="w-full py-5 bg-white text-black font-black uppercase tracking-widest rounded-2xl hover:bg-brandRed hover:text-white transition-all shadow-xl active:scale-95 flex items-center justify-center gap-3 text-xs"
+              >
+                Proceed to Registration <ArrowRight size={16} />
+              </button>
             </motion.div>
           )}
 
-          {/* STEP 1.5: CROSS-DEVICE SYNC WAITING ROOM */}
-          {step === 1.5 && (
-            <motion.div key="step15" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="max-w-md mx-auto py-12 text-center space-y-6">
+          {/* STEP 2: DATA COLLECTION FORM */}
+          {step === 2 && (
+            <motion.div key="step2" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="space-y-6">
+              
+              <div className="flex items-center gap-4 border-b border-white/5 pb-6">
+                <button onClick={() => setStep(1)} className="p-2.5 bg-zinc-900 rounded-xl hover:bg-brandRed text-zinc-400 hover:text-white transition-all">
+                  <ArrowLeft size={18} />
+                </button>
+                <div>
+                  <h4 className="text-lg font-black uppercase tracking-tight text-white italic">Identity Details</h4>
+                  <p className="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Required to activate membership</p>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                {/* 1. EMAIL */}
+                <div className="relative group">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-brandRed transition-colors" size={16} />
+                  <input type="email" placeholder="Email Address" required className="w-full bg-black/50 border border-white/10 p-4 pl-12 rounded-2xl font-medium text-[13px] focus:border-brandRed outline-none text-white placeholder:text-zinc-500 transition-colors" value={email} onChange={(e) => setEmail(e.target.value)} />
+                </div>
+
+                {/* 2. BIRTH DATE */}
+                <div className="relative" ref={dateContainerRef}>
+                  <div className="bg-black/50 border border-white/10 p-4 rounded-2xl flex items-center gap-3 cursor-pointer hover:border-white/30 transition-colors h-full" onClick={() => setShowCalendar(!showCalendar)}>
+                    <CalendarIcon size={16} className={dob ? "text-brandRed" : "text-zinc-500"} />
+                    <span className={`font-medium text-[13px] truncate ${dob ? "text-white" : "text-zinc-500"}`}>{dob ? new Date(dob).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : "Birth Date"}</span>
+                  </div>
+                  <AnimatePresence>
+                    {showCalendar && (
+                      <TribeCalendar value={dob} onChange={(date) => { setDob(date); setShowCalendar(false); }} onClose={() => setShowCalendar(false)} maxDate={maxDobDate} defaultDate={maxDobDate} anchorRef={dateContainerRef} />
+                    )}
+                  </AnimatePresence>
+                </div>
+
+                {/* 3. PROFESSION */}
+                <div className="relative group">
+                  <Briefcase className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-brandRed transition-colors" size={16} />
+                  <input type="text" placeholder="Profession" required className="w-full bg-black/50 border border-white/10 p-4 pl-12 rounded-2xl font-medium text-[13px] focus:border-brandRed outline-none text-white placeholder:text-zinc-500 transition-colors uppercase" value={profession} onChange={(e) => setProfession(e.target.value)} />
+                </div>
+
+                {/* 4. LOCATION */}
+                <div className="relative group">
+                  <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-brandRed transition-colors" size={16} />
+                  <select required className="w-full bg-black/60 border border-white/10 p-4 pl-12 rounded-2xl font-medium text-[13px] focus:border-brandRed outline-none text-white appearance-none cursor-pointer transition-colors" value={location} onChange={(e) => setLocation(e.target.value)}>
+                    <option value="" disabled>Select Area (Pune)</option>
+                    {PUNE_AREAS.map(area => <option key={area} value={area} className="bg-zinc-900">{area}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <button 
+                disabled={!isFormValid || upgrading}
+                onClick={handleDataSaveAndProceed}
+                className="w-full py-5 bg-white text-black font-black uppercase tracking-widest rounded-2xl hover:bg-brandRed hover:text-white transition-all shadow-xl active:scale-95 flex items-center justify-center gap-3 text-xs disabled:opacity-50 mt-2"
+              >
+                {upgrading ? <Loader2 className="animate-spin" size={16} /> : <>Save & Proceed <ArrowRight size={16} /></>}
+              </button>
+            </motion.div>
+          )}
+
+          {/* STEP 3: CROSS-DEVICE SYNC WAITING ROOM */}
+          {step === 3 && (
+            <motion.div key="step3" initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.95 }} className="py-8 text-center space-y-6">
               <div className="relative w-24 h-24 mx-auto">
                 <div className="absolute inset-0 bg-brandRed/20 rounded-full animate-ping" />
                 <div className="relative w-full h-full bg-zinc-900 border border-brandRed/50 rounded-full flex items-center justify-center">
@@ -309,9 +324,9 @@ export default function MembershipCard({ price, benefits, userId, userEmail }: M
             </motion.div>
           )}
 
-          {/* STEP 2: PAYMENT OVERVIEW */}
-          {step === 2 && (
-            <motion.div key="step2" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="max-w-md mx-auto space-y-8 py-4">
+          {/* STEP 4: PAYMENT OVERVIEW */}
+          {step === 4 && (
+            <motion.div key="step4" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="space-y-8 py-4">
               <div className="text-center space-y-2">
                 <div className="w-16 h-16 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-4 shadow-[0_0_20px_rgba(34,197,94,0.2)]">
                   <CheckCircle2 size={32} className="text-green-500" />
