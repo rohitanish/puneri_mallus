@@ -99,9 +99,9 @@ export default function EventsPage() {
     <div 
       className="bg-[#030303] min-h-screen relative selection:bg-brandRed/30 overflow-x-hidden"
     >
-      {/* 🔥 MOBILE OPTIMIZATION: Hidden background image on mobile to remove glass composite lag */}
+     {/* Background Image - Now visible on mobile! */}
       <div
-        className="fixed inset-0 z-0 pointer-events-none overflow-hidden hidden md:block"
+        className="fixed inset-0 z-0 pointer-events-none overflow-hidden"
         style={{
           backgroundImage: 'url(/events/eventsback.jpg)',
           backgroundSize: 'cover',
@@ -112,8 +112,8 @@ export default function EventsPage() {
         }}
       />
       <div className="fixed inset-0 z-0 pointer-events-none">
-        <div className="absolute inset-0 brightness-[0.8] saturate-[1.2] hidden md:block" />
-        <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-[#030303] z-[1] hidden md:block" />
+        <div className="absolute inset-0 brightness-[0.8] saturate-[1.2]" />
+        <div className="absolute inset-0 bg-gradient-to-b from-[#030303]/40 via-transparent to-[#030303] z-[1]" />
       </div>
 
       <div className="max-w-7xl mx-auto relative z-10 pt-32 pb-32 px-6">
