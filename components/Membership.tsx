@@ -136,7 +136,6 @@ export default function MembershipCard({ price, benefits, userId, userEmail }: M
         method: { netbanking: true, card: true, upi: true, wallet: true, emi: false, paylater: false },
         config: { display: { sequence: ['block.banks', 'block.cards'], preferences: { show_default_blocks: true } } },
         handler: async function (response: any) {
-          // 🔥 Turn the spinner back ON while the backend verifies the payment
           setUpgrading(true); 
           try {
             const verifyRes = await fetch('/api/razorpay/verify', {
@@ -156,7 +155,6 @@ export default function MembershipCard({ price, benefits, userId, userEmail }: M
             const verifyData = await verifyRes.json();
             if (verifyData.success) {
               showAlert("Welcome to the Inner Circle!", "success");
-              // Route directly to profile to force a clean, instant UI refresh
               window.location.href = '/profile'; 
             } else {
               setUpgrading(false);
@@ -169,7 +167,7 @@ export default function MembershipCard({ price, benefits, userId, userEmail }: M
         },
         prefill: { email: email },
         theme: { color: "#FF0000" },
-        modal: { ondismiss: () => setUpgrading(false) } // Only stops spinning if user manually closes Razorpay
+        modal: { ondismiss: () => setUpgrading(false) } 
       };
 
       const rzp = new (window as any).Razorpay(options);
@@ -213,8 +211,10 @@ export default function MembershipCard({ price, benefits, userId, userEmail }: M
           
           {/* STEP 1: DATA COLLECTION */}
           {step === 1 && (
-            <motion.div key="step1" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="grid grid-cols-1 lg:grid-cols-2 gap-10">
-              <div className="space-y-6 hidden lg:block">
+            <motion.div key="step1" initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: 20 }} className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-10">
+              
+              {/* 🔥 FIX: Mobile Order 2, Desktop Order 1. Removed 'hidden lg:block', added nice mobile container styling */}
+              <div className="space-y-6 order-2 lg:order-1 bg-zinc-900/30 lg:bg-transparent p-6 lg:p-0 rounded-3xl lg:rounded-none border border-white/5 lg:border-none mt-4 lg:mt-0">
                 <div className="space-y-2">
                   <h4 className="text-lg font-black uppercase tracking-tight text-white italic">Unlock Your Tribe</h4>
                   <p className="text-xs text-zinc-400 font-medium">Join the inner circle and get lifetime access to premium features.</p>
@@ -233,7 +233,8 @@ export default function MembershipCard({ price, benefits, userId, userEmail }: M
                 </div>
               </div>
 
-              <div className="space-y-6 lg:border-l lg:border-white/5 lg:pl-10">
+              {/* 🔥 FIX: Mobile Order 1, Desktop Order 2 */}
+              <div className="space-y-6 order-1 lg:order-2 lg:border-l lg:border-white/5 lg:pl-10">
                 <div className="space-y-2">
                   <h4 className="text-lg font-black uppercase tracking-tight text-white italic">Identity Details</h4>
                   <p className="text-xs text-zinc-400 font-medium">Required to activate your membership.</p>
@@ -246,7 +247,7 @@ export default function MembershipCard({ price, benefits, userId, userEmail }: M
                     <input type="email" placeholder="Email Address" required className="w-full bg-black/50 border border-white/10 p-4 pl-12 rounded-2xl font-medium text-[13px] focus:border-brandRed outline-none text-white placeholder:text-zinc-500 transition-colors" value={email} onChange={(e) => setEmail(e.target.value)} />
                   </div>
 
-                  {/* 2. BIRTH DATE (Moved Up) */}
+                  {/* 2. BIRTH DATE */}
                   <div className="relative" ref={dateContainerRef}>
                     <div className="bg-black/50 border border-white/10 p-4 rounded-2xl flex items-center gap-3 cursor-pointer hover:border-white/30 transition-colors h-full" onClick={() => setShowCalendar(!showCalendar)}>
                       <CalendarIcon size={16} className={dob ? "text-brandRed" : "text-zinc-500"} />

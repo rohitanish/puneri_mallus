@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -46,7 +46,7 @@ export default function MalluMartPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("ALL");
-  const [user, setUser] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [error, setError] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<any>(null);
@@ -59,10 +59,35 @@ export default function MalluMartPage() {
     return () => window.removeEventListener('resize', check);
   }, []); 
 
+  // 🔥 1. FETCH SESSION WITH MASTER KEY DATA
   useEffect(() => {
-    async function init() {
+    const getSession = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
+      if (user) {
+        const { data: ownerRecords } = await supabase
+          .from('directory_owners')
+          .select('verified_email, email, phone_number')
+          .eq('user_id', user.id)
+          .limit(1);
+
+        const realEmail = ownerRecords?.[0]?.verified_email || ownerRecords?.[0]?.email || user.email;
+        const dbPhone = ownerRecords?.[0]?.phone_number || user.phone;
+        
+        setCurrentUser({ 
+          ...user, 
+          realEmail,
+          dbPhone 
+        }); 
+      } else {
+        setCurrentUser(null);
+      }
+    };
+    getSession();
+  }, []);
+
+  // 2. FETCH DIRECTORY ITEMS
+  useEffect(() => {
+    async function fetchItems() {
       try {
         const res = await fetch('/api/mart');
         const data = await res.json();
@@ -73,17 +98,42 @@ export default function MalluMartPage() {
         setLoading(false); 
       }
     }
-    init();
+    fetchItems();
   }, []);
 
+  // 🔥 3. MASTER KEY OWNERSHIP CHECKER
+  const checkOwnership = useCallback((item: any) => {
+    if (!currentUser) return false;
+    
+    // 1. Match by unique user ID (For new cards)
+    if (item.userId && item.userId === currentUser.id) return true;
+
+    // 2. Match by Phone Number (For OTP users' old cards)
+    const userPhone = currentUser.phone?.replace(/\D/g, '') || currentUser.dbPhone?.replace(/\D/g, '');
+    if (userPhone && item.contact && userPhone.includes(item.contact)) return true;
+
+    // 3. Match by Email (For Google/Apple users' old cards)
+    const realEmail = currentUser.realEmail?.toLowerCase()?.trim(); 
+    const authEmail = currentUser.email?.toLowerCase()?.trim();
+    const ownerEmail = item.userEmail?.toLowerCase()?.trim();
+    
+    if (ownerEmail && realEmail && ownerEmail === realEmail) return true;
+    if (ownerEmail && authEmail && ownerEmail === authEmail) return true;
+
+    return false;
+  }, [currentUser]);
+
+  // 4. FILTERING LOGIC
   const filteredItems = useMemo(() => {
     const query = searchQuery.toLowerCase().trim();
+    
     return items.filter(item => {
-      const isOwner = user?.email === item.userEmail;
+      const isOwner = checkOwnership(item);
+      
+      // Only the owner can see pending or draft items!
       if (!item.isApproved && !isOwner) return false;
       if (item.isDraft && !isOwner) return false;
       
-      // 🔥 QA FIX: Bullet-proof null checking to prevent silent rendering crashes
       const safeName = item.name ? String(item.name).toLowerCase() : "";
       const safeArea = item.area ? String(item.area).toLowerCase() : "";
       const safeCategory = item.category ? String(item.category).toLowerCase() : "";
@@ -96,10 +146,12 @@ export default function MalluMartPage() {
       const matchesCategoryDropdown = activeCategory === "ALL" || safeCategory.toUpperCase() === activeCategory;
       return matchesSearch && matchesCategoryDropdown;
     });
-  }, [searchQuery, activeCategory, items, user]);
+  }, [searchQuery, activeCategory, items, checkOwnership]);
 
   const handleDeleteExecute = async () => {
-    if (!itemToDelete) return;
+    // 🔥 Ensure we have the item and a logged-in user
+    if (!itemToDelete || !currentUser) return;
+
     try {
       const res = await fetch('/api/mart', {
         method: 'DELETE',
@@ -107,16 +159,24 @@ export default function MalluMartPage() {
         body: JSON.stringify({ 
           id: itemToDelete._id, 
           imagePaths: itemToDelete.imagePaths || [itemToDelete.imagePath], 
-          userEmail: user.email 
+          // 🚀 THE KEYS: Send original email AND current User ID
+          userEmail: itemToDelete.userEmail, 
+          userId: currentUser.id 
         })
       });
+
       if (res.ok) {
-        setItems(items.filter(i => i._id !== itemToDelete._id));
+        setItems(prev => prev.filter(i => i._id !== itemToDelete._id));
         setConfirmOpen(false);
         setItemToDelete(null);
+      } else {
+        const errorData = await res.json();
+        // Fallback if triggerAlert isn't defined, use window.alert or your Alert component
+        console.error("Deletion failed:", errorData.error);
+        alert(errorData.error || "Unauthorized to delete this listing.");
       }
     } catch (err) { 
-        // Handle silently
+        console.error("System error during deletion:", err);
     }
   };
 
@@ -130,7 +190,6 @@ export default function MalluMartPage() {
   return (
     <div className="min-h-screen bg-[#030303] text-white relative selection:bg-brandRed/30 overflow-x-hidden">
       
-      {/* 🔥 SIMPLE ENGLISH UX: Removed "Purge Protocol" jargon */}
       <TribeConfirm 
         isOpen={confirmOpen}
         title="Delete Business?"
@@ -139,7 +198,6 @@ export default function MalluMartPage() {
         onCancel={() => {setConfirmOpen(false); setItemToDelete(null);}}
       />
 
-      {/* 🔥 SAFE GLASS FIX: Added translateZ(0) to heavy background layer */}
       <div
         className="fixed inset-0 z-0 pointer-events-none overflow-hidden"
         style={{
@@ -243,13 +301,13 @@ export default function MalluMartPage() {
                     </motion.div>
                   )}
 
-                  {user?.email === item.userEmail && item.isDraft && (
+                  {checkOwnership(item) && item.isDraft && (
                     <div className="bg-zinc-800/90 backdrop-blur-md text-cyan-400 px-4 py-2 rounded-2xl flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest border border-white/10">
                       <Edit3 size={12} /> Work in Progress
                     </div>
                   )}
                   
-                  {user?.email === item.userEmail && !item.isApproved && !item.isDraft && (
+                  {checkOwnership(item) && !item.isApproved && !item.isDraft && (
                     <div className="bg-zinc-950/80 backdrop-blur-md text-amber-500 px-4 py-2 rounded-2xl flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest animate-pulse border border-amber-500/20">
                       <Zap size={12} className="text-amber-500 fill-amber-500" /> Review Pending
                     </div>
@@ -257,7 +315,7 @@ export default function MalluMartPage() {
                 </div>
 
                 {/* --- OWNER TOOLS: TOP RIGHT --- */}
-                {user?.email === item.userEmail && (
+                {checkOwnership(item) && (
                   <div className="absolute top-6 right-6 z-[45] flex gap-2">
                     <Link href={`/directory/list?edit=${item._id}`} aria-label="Edit listing" className="p-3 bg-black/60 backdrop-blur-md text-white hover:text-brandRed rounded-xl border border-white/10 transition-all shadow-xl">
                       <Edit3 size={16} />
@@ -302,8 +360,7 @@ export default function MalluMartPage() {
                         View Profile <ArrowUpRight size={16} />
                       </button>
                     </Link>
-                   {/* 🔥 Update the href to check for item.whatsapp first! */}
-                    <a href={`https://wa.me/91${item.whatsapp || item.contact}`} target="_blank" rel="noopener noreferrer" className="w-full bg-zinc-900 border border-white/5 py-4 rounded-2xl font-bold uppercase text-[11px] tracking-widest text-center text-zinc-400 hover:text-white transition-all flex items-center justify-center gap-2">
+                   <a href={`https://wa.me/91${item.whatsapp || item.contact}`} target="_blank" rel="noopener noreferrer" className="w-full bg-zinc-900 border border-white/5 py-4 rounded-2xl font-bold uppercase text-[11px] tracking-widest text-center text-zinc-400 hover:text-white transition-all flex items-center justify-center gap-2">
                       <MessageCircle size={14} /> Contact on WhatsApp
                     </a>
                   </div>

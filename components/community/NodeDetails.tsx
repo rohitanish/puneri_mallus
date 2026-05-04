@@ -253,7 +253,7 @@ export default function NodeDetails({ isAdminView = false }: NodeDetailsProps) {
                           src={m.image || "/about/placeholder.jpeg"} 
                           alt={m.name} 
                           fill 
-                          unoptimized 
+                          
                           className="object-cover" 
                         />
                       </div>

@@ -9,6 +9,8 @@ interface OwnerData {
   phone: string;
   businessName: string;
   email: string;
+  // 🔥 ADD THIS LINE:
+  verified_email?: string;
 }
 
 interface EmailVerificationGateProps {

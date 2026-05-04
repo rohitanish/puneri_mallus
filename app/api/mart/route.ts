@@ -9,9 +9,9 @@ import {
   sendAdminMartAlert,
   sendMartVerificationPendingEmail, 
   sendAdminVerificationAlert,
-  sendMartVerificationSuccessEmail // 🔥 Added for verification approval
+  sendMartVerificationSuccessEmail
 } from "@/lib/mail";
-// 🔥 ADD THIS LINE TO KILL THE STALE CACHE
+
 export const dynamic = 'force-dynamic';
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -26,7 +26,6 @@ export async function GET() {
     const client = await clientPromise;
     const db = client.db("punerimallus");
     
-    // Sort by: Manual Order > Verified > Premium > Newest
     const items = await db.collection("mallu_mart")
       .find({})
       .sort({ order: 1, isVerified: -1, isPremium: -1, createdAt: -1 })
@@ -83,7 +82,6 @@ export async function PATCH(req: Request) {
     const db = client.db("punerimallus");
     const body = await req.json();
 
-    // --- CASE A: BULK REORDER ---
     if (body.reorder && Array.isArray(body.newOrder)) {
       const operations = body.newOrder.map((item: any) => ({
         updateOne: {
@@ -97,15 +95,13 @@ export async function PATCH(req: Request) {
 
     const { id, userEmail, updatedData, isVerified, isPremium, isApproved, isRejected, verificationDocs, auditType } = body;
 
-    // --- CASE B: ADMIN AUDIT (Approval / Verification / Premium) ---
+    // --- ADMIN AUDIT ---
     if (id && (isVerified !== undefined || isPremium !== undefined || isApproved !== undefined || isRejected === true)) {
       const updateFields: any = { updatedAt: new Date() };
       
       if (isVerified !== undefined) {
         updateFields.isVerified = isVerified;
         updateFields.verificationStatus = isVerified ? 'VERIFIED' : null;
-
-        // 🔥 Trigger Success Email on Verification Approval
         if (isVerified === true) {
           const item = await db.collection("mallu_mart").findOne({ _id: new ObjectId(id) });
           if (item?.userEmail) {
@@ -133,15 +129,23 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ success: true, message: "Admin audit synced" });
     }
 
-    // --- CASE C: USER SUBMITTING VERIFICATION REQUEST ---
-    if (id && userEmail && verificationDocs && auditType === 'SUBMIT_VERIFICATION') {
-      const existing = await db.collection("mallu_mart").findOne({ 
-        _id: new ObjectId(id), 
-        userEmail: userEmail 
-      });
+    // 🔥 SECURITY FIX: Find the existing node without strictly enforcing email match upfront
+    if (!id) return NextResponse.json({ error: "Missing ID" }, { status: 400 });
+    const existing = await db.collection("mallu_mart").findOne({ _id: new ObjectId(id) });
+    if (!existing) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-      if (!existing) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    const authHeader = req.headers.get('cookie') || '';
+    const isAdmin = authHeader.includes('admin_token');
+    
+    // Master Key Ownership Check
+    const isOwner = (userEmail && existing.userEmail === userEmail) || (updatedData?.userId && existing.userId === updatedData.userId);
 
+    if (!isAdmin && !isOwner) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    // --- USER SUBMITTING VERIFICATION REQUEST ---
+    if (verificationDocs && auditType === 'SUBMIT_VERIFICATION') {
       await db.collection("mallu_mart").updateOne(
         { _id: new ObjectId(id) },
         { 
@@ -152,24 +156,13 @@ export async function PATCH(req: Request) {
           } 
         }
       );
-
-      await sendMartVerificationPendingEmail(userEmail, existing.name);
+      await sendMartVerificationPendingEmail(existing.userEmail || userEmail, existing.name);
       await sendAdminVerificationAlert(existing.name);
-
       return NextResponse.json({ success: true, message: "Verification files submitted" });
     }
 
-    // --- CASE D: USER EDIT (Standard) ---
-    if (!userEmail || !updatedData) {
-      return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
-    }
-
-    const existing = await db.collection("mallu_mart").findOne({ 
-      _id: new ObjectId(id), 
-      userEmail: userEmail 
-    });
-
-    if (!existing) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    // --- USER EDIT (Standard) ---
+    if (!updatedData) return NextResponse.json({ error: "Missing parameters" }, { status: 400 });
 
     const { _id: _, ...cleanData } = updatedData;
     if (cleanData.category) cleanData.category = cleanData.category.toUpperCase();
@@ -177,7 +170,7 @@ export async function PATCH(req: Request) {
     const shouldNotify = !cleanData.isDraft && (existing.isDraft || existing.isApproved);
 
     await db.collection("mallu_mart").updateOne(
-      { _id: new ObjectId(id), userEmail: userEmail },
+      { _id: new ObjectId(id) },
       { 
         $set: { 
           ...cleanData,
@@ -189,7 +182,7 @@ export async function PATCH(req: Request) {
     );
 
     if (shouldNotify) {
-      await sendMartPendingEmail(userEmail, cleanData.name || existing.name);
+      await sendMartPendingEmail(existing.userEmail || userEmail, cleanData.name || existing.name);
       await sendAdminMartAlert(cleanData.name || existing.name, cleanData.category || existing.category);
     }
 
@@ -207,13 +200,21 @@ export async function DELETE(req: Request) {
   try {
     const client = await clientPromise;
     const db = client.db("punerimallus");
-    const { id, userEmail } = await req.json();
+    const { id, userEmail, userId } = await req.json();
 
-    const query: any = { _id: new ObjectId(id) };
-    if (userEmail) query.userEmail = userEmail;
-
-    const post = await db.collection("mallu_mart").findOne(query);
+    // 🔥 SECURITY FIX: Fetch the post first to safely verify ownership
+    const post = await db.collection("mallu_mart").findOne({ _id: new ObjectId(id) });
     if (!post) return NextResponse.json({ error: "Unauthorized or not found" }, { status: 401 });
+
+    const authHeader = req.headers.get('cookie') || '';
+    const isAdmin = authHeader.includes('admin_token');
+    
+    // Check if the user is the true owner (either by matching email OR user ID)
+    const isOwner = (userEmail && post.userEmail === userEmail) || (userId && post.userId === userId);
+
+    if (!isAdmin && !isOwner) {
+        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     const posterPaths = post.imagePaths || (post.imagePath ? [post.imagePath] : []);
     const verificationPaths = post.verificationDocs ? Object.values(post.verificationDocs) : [];
@@ -229,7 +230,6 @@ export async function DELETE(req: Request) {
 
     await db.collection("mallu_mart").deleteOne({ _id: new ObjectId(id) });
     
-    // 🔥 Cleanup complete: Removed "Node" and "Purged"
     return NextResponse.json({ message: "Business and associated documents removed successfully" });
   } catch (error) {
     return NextResponse.json({ error: "Delete failed" }, { status: 500 });

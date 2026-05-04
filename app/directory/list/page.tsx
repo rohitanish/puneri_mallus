@@ -52,12 +52,12 @@ function ListContent() {
   const editId = searchParams.get('edit');
   const [sameForWhatsapp, setSameForWhatsapp] = useState(true);
   const [loading, setLoading] = useState(false);
-  const [fetching, setFetching] = useState(true); // 🔥 Default to true to prevent flash
+  const [fetching, setFetching] = useState(true);
   const [step, setStep] = useState(1);
   const [user, setUser] = useState<any>(null);
   
-  // 🔥 NEW STATE: Verification tracking
   const [isVerified, setIsVerified] = useState<boolean | null>(null);
+  const [verifiedEmail, setVerifiedEmail] = useState<string>(''); 
 
   const [gallery, setGallery] = useState<UnifiedImage[]>([]);
   const [initialPaths, setInitialPaths] = useState<string[]>([]);
@@ -91,40 +91,40 @@ function ListContent() {
       setUser(user);
 
       try {
-        // 🔥 1. Check if they are a verified directory owner
-        const { data: ownerRecord } = await supabase
+        // 🔥 FIX 1: Change maybeSingle to limit(1) to prevent multiple-row crashes
+        const { data: ownerRecords } = await supabase
           .from('directory_owners')
           .select('*')
           .eq('user_id', user.id)
           .eq('source', 'MALLU_MART')
-          .maybeSingle();
+          .limit(1);
+
+        const ownerRecord = ownerRecords?.[0];
 
         if (ownerRecord) {
           setIsVerified(true);
-          // If NOT editing, pre-fill the form with their verified details!
+          // 🔥 FIX 2: Chain fallbacks so it absolutely never drops the email
+          setVerifiedEmail(ownerRecord.verified_email || ownerRecord.email || user.email || ''); 
+          
           if (!editId) {
              setFormData(prev => ({
                ...prev,
-               name: ownerRecord.business_name,
-               contact: ownerRecord.phone_number,
-               whatsapp: ownerRecord.phone_number
+               name: ownerRecord.business_name || '',
+               contact: ownerRecord.phone_number || '',
+               whatsapp: ownerRecord.phone_number || ''
              }));
           }
         } else {
           setIsVerified(false);
         }
 
-        // 2. Fetch existing data if editing
-        // 2. Fetch existing data if editing
         if (editId) {
-          // 🔥 THE FIX 1: Added a timestamp and 'no-store' to kill the browser cache instantly
           const res = await fetch(`/api/mart?t=${Date.now()}`, { cache: 'no-store' });
           const data = await res.json();
           const item = data.find((i: any) => i._id === editId);
           if (item) {
             const isCustomCat = !FIXED_CATEGORIES.includes(item.category);
             
-            // 🔥 THE FIX 2: Explicitly bind whatsapp so it never gets lost
             setFormData({
               ...item,
               category: isCustomCat ? "OTHER" : item.category,
@@ -134,7 +134,6 @@ function ListContent() {
             
             setShowOtherCategory(isCustomCat);
 
-            // 🔥 THE FIX 3: Tell the checkbox to uncheck itself if the numbers don't match
             if (item.whatsapp && item.contact !== item.whatsapp) {
               setSameForWhatsapp(false);
             } else {
@@ -244,6 +243,18 @@ function ListContent() {
       if (!formData.name) return triggerAlert("Required", "Please at least provide a Business Name to save a draft.");
     }
 
+    // 🔥 FIX 3: THE ULTIMATE GHOST EMAIL BLOCKER
+    let submitEmail = verifiedEmail || user?.email || "";
+    if (!submitEmail || submitEmail.includes('supabase.co')) {
+      const manualEmail = window.prompt("We need a valid email address to send your approval notification. Please enter it below:");
+      if (manualEmail && manualEmail.includes('@')) {
+        submitEmail = manualEmail;
+        setVerifiedEmail(manualEmail);
+      } else {
+        return triggerAlert("Required", "A valid email is required to submit your listing.");
+      }
+    }
+
     setLoading(true);
     try {
       const currentExistingPaths = gallery.filter(img => img.type === 'existing').map(img => img.path);
@@ -270,7 +281,8 @@ function ListContent() {
         category: finalCategory ? finalCategory.toUpperCase() : "OTHER",
         imagePaths: finalPaths, 
         services,
-        userEmail: user.email,
+        userEmail: submitEmail.toLowerCase(), // 🔥 Safe payload delivery
+        userId: user?.id, // 🚀 THE SILVER BULLET
         isApproved: false, 
         isVerified: false,
         isDraft: isDraftMode 
@@ -279,7 +291,7 @@ function ListContent() {
       const res = await fetch('/api/mart', {
         method: editId ? 'PATCH' : 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(editId ? { id: editId, userEmail: user.email, updatedData: martData } : martData),
+        body: JSON.stringify(editId ? { id: editId, userEmail: martData.userEmail, updatedData: martData } : martData),
       });
 
       if(res.ok) {
@@ -294,12 +306,10 @@ function ListContent() {
     }
   };
 
-  // 🔥 GLOBAL LOADER
   if (fetching || isVerified === null) {
     return <div className="min-h-screen bg-black flex items-center justify-center"><Loader2 className="animate-spin text-brandRed" /></div>;
   }
 
-  // 🔥 THE GATEKEEPER
   if (isVerified === false && user) {
     return (
       <div className="min-h-screen bg-[#030303] text-white pt-40 pb-20 px-6">
@@ -307,12 +317,13 @@ function ListContent() {
           userId={user.id} 
           source="MALLU_MART"
           onVerified={(ownerData) => {
-            // Auto-fill their verified data into the form state!
+            // 🔥 Fix 4: Safely grab the gate's email
+            setVerifiedEmail(ownerData.verified_email || ownerData.email || user?.email || '');
             if (!editId) {
               setFormData(prev => ({
                 ...prev,
-                name: ownerData.businessName,
-                contact: ownerData.phone
+                name: ownerData.businessName || '',
+                contact: ownerData.phone || ''
               }));
             }
             setIsVerified(true);
@@ -322,7 +333,6 @@ function ListContent() {
     );
   }
 
-  // 🔥 THE MAIN FORM (Only visible if isVerified is true)
   return (
     <div className="min-h-screen bg-[#030303] text-white pt-40 pb-20 px-6">
       

@@ -1,12 +1,12 @@
 "use client";
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createBrowserClient } from '@supabase/ssr';
 import { 
   ArrowRight, Loader2, ArrowLeft, 
   Image as ImageIcon, MapPin, Plus, Trash2, X, 
-  Link as LinkIcon, Phone, Globe, Briefcase, Camera, Check, Clock, Instagram
+  Link as LinkIcon, Phone, Globe, Briefcase, Camera, Check, Clock, Instagram, Users, Camera as CameraIcon, MessageCircle
 } from 'lucide-react';
 import TribeTimePicker from '@/components/ui/TribeTimePicker';
 import TribeAlert from '@/components/TribeAlert'; 
@@ -19,9 +19,17 @@ interface GalleryItem {
 }
 
 const INTERNAL_CATEGORIES = ["JAMMING", "SPORTS", "ARTS", "TECH", "COMMUNITY", "OTHER"];
-const EXTERNAL_CATEGORIES = ["SAMAJAM", "TEMPLE", "CHURCH", "ORGANIZATION", "OTHER"];
+const EXTERNAL_CATEGORIES = ["SAMAJAM", "TEMPLE", "CHURCH", "ORGANIZATION","MOSQUE","OTHER"];
 
-export default function ListOrganization() {
+export default function ListOrganizationWrapper() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-black flex items-center justify-center"><Loader2 className="animate-spin text-cyan-400" /></div>}>
+      <ListOrganization />
+    </Suspense>
+  );
+}
+
+function ListOrganization() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get('edit');
@@ -32,6 +40,11 @@ export default function ListOrganization() {
   const [thumbnailId, setThumbnailId] = useState<string | null>(null);
   const [services, setServices] = useState<any[]>([]); 
   const [showCustomCategory, setShowCustomCategory] = useState(false);
+
+  // 🔥 Member State
+  const [members, setMembers] = useState<any[]>([
+    { id: Math.random().toString(), name: '', designation: '', contact: '', file: null, previewUrl: '', existingUrl: '' }
+  ]);
 
   const [alertConfig, setAlertConfig] = useState<{
     isVisible: boolean;
@@ -47,9 +60,13 @@ export default function ListOrganization() {
   const openTimeRef = useRef<HTMLDivElement>(null);
   const closeTimeRef = useRef<HTMLDivElement>(null);
 
+  // 🔥 Checkbox State
+  const [sameForWhatsapp, setSameForWhatsapp] = useState(true);
+
   const [formData, setFormData] = useState({
     title: '', category: 'COMMUNITY', customCategory: '', area: '', tagline: '',
     description: '', link: '', instagram: '', image: '', mapUrl: '', contact: '', website: '',
+    whatsapp: '', 
     openTime: '09:00 AM', closeTime: '06:00 PM'
   });
 
@@ -57,8 +74,10 @@ export default function ListOrganization() {
 
   useEffect(() => {
     if (editId) {
-      fetch(`/api/community?admin=true`).then(res => res.json()).then(data => {
-        const item = Array.isArray(data) ? data.find((i: any) => i._id === editId) : null;
+      // Use cache-busting timestamp
+      fetch(`/api/community?admin=true&id=${editId}&t=${Date.now()}`, { cache: 'no-store' }).then(res => res.json()).then(data => {
+        const item = data.error ? null : data; 
+        
         if (item) {
           const allStandard = [...INTERNAL_CATEGORIES, ...EXTERNAL_CATEGORIES.filter(c => c !== "OTHER")];
           const isCustom = !allStandard.includes(item.category?.toUpperCase());
@@ -74,12 +93,33 @@ export default function ListOrganization() {
             image: item.image || '',
             mapUrl: item.mapUrl || '',
             contact: item.contact || '',
+            whatsapp: item.whatsapp || item.contact || '', 
             website: item.website || '',
             openTime: item.openTime || '09:00 AM',
             closeTime: item.closeTime || '06:00 PM'
           });
           setShowCustomCategory(isCustom);
           setServices(item.services || []);
+
+          if (item.whatsapp && item.contact !== item.whatsapp) {
+            setSameForWhatsapp(false);
+          } else {
+            setSameForWhatsapp(true);
+          }
+
+          // Hydrate Members
+          if (item.members && item.members.length > 0) {
+            setMembers(item.members.map((m: any) => ({
+              id: Math.random().toString(),
+              name: m.name || '',
+              designation: m.designation || '',
+              contact: m.contact || '',
+              file: null,
+              previewUrl: m.image || '',
+              existingUrl: m.image || ''
+            })));
+          }
+
           const paths = item.imagePaths || (item.image ? [item.image] : []);
           const existingGallery: GalleryItem[] = paths.map((p: string) => ({ id: p, type: 'existing', previewUrl: p }));
           setGallery(existingGallery);
@@ -96,6 +136,28 @@ export default function ListOrganization() {
     const updated = [...services];
     updated[index][field] = value;
     setServices(updated);
+  };
+
+  // 🔥 Member Management Functions
+  const addMember = () => {
+    if (members.length >= 3) return triggerAlert("Max 3 members allowed", "error");
+    setMembers([...members, { id: Math.random().toString(), name: '', designation: '', contact: '', file: null, previewUrl: '', existingUrl: '' }]);
+  };
+  const removeMember = (id: string) => {
+    if (members.length <= 1) return triggerAlert("At least one member is required", "error");
+    setMembers(members.filter(m => m.id !== id));
+  };
+  const updateMember = (id: string, field: string, value: any) => {
+    setMembers(prevMembers => prevMembers.map(m => m.id === id ? { ...m, [field]: value } : m));
+  };
+  const handleMemberImage = (id: string, e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const newPreviewUrl = URL.createObjectURL(file);
+      setMembers(prevMembers => prevMembers.map(m => 
+        m.id === id ? { ...m, file: file, previewUrl: newPreviewUrl } : m
+      ));
+    }
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -122,15 +184,23 @@ export default function ListOrganization() {
   };
 
   const handleSubmit = async () => {
-    // Basic Mandatory Validations
+    // 1. Mandatory Validations
     if (gallery.length === 0) return triggerAlert("Gallery cannot be empty", "error");
     if (!thumbnailId) return triggerAlert("Please select a thumbnail", "error");
     if (!formData.title || !formData.area) return triggerAlert("Name and Area are mandatory", "error");
-
-    // Digital Channel Validations
-    if (formData.contact && formData.contact.length !== 10) {
-      return triggerAlert("WhatsApp Number must be 10 digits", "error");
+    if (!formData.description.trim() || formData.description.length < 20) {
+      return triggerAlert("Description must be at least 20 characters", "error");
     }
+
+    // 2. Digital Channel Validations
+    if (!formData.contact || formData.contact.length !== 10) {
+      return triggerAlert("Valid 10-digit Primary Contact required", "error");
+    }
+    const targetNumber = sameForWhatsapp ? formData.contact : formData.whatsapp;
+    if (!targetNumber || targetNumber.length !== 10) {
+      return triggerAlert("Valid 10-digit WhatsApp contact required", "error");
+    }
+
     if (formData.website && !validateURL(formData.website)) {
       return triggerAlert("Please enter a valid Website URL", "error");
     }
@@ -138,14 +208,25 @@ export default function ListOrganization() {
       return triggerAlert("Please enter a valid Group Link", "error");
     }
 
+    // 3. Member Validations
+    for (let i = 0; i < members.length; i++) {
+      const m = members[i];
+      if (!m.name.trim() || !m.designation.trim() || !m.contact.trim() || (!m.file && !m.existingUrl)) {
+        return triggerAlert(`Please complete all fields and upload an image for Member ${i + 1}`, "error");
+      }
+      if (m.contact.length !== 10) {
+        return triggerAlert(`Valid 10-digit contact required for Member ${i + 1}`, "error");
+      }
+    }
+
     setLoading(true);
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      
-      // Get admin name from metadata, fallback to email prefix if name isn't set
       const adminName = user?.user_metadata?.full_name || user?.email?.split('@')[0] || "Tribe Moderator";
 
       let finalThumbnailUrl = formData.image;
+      
+      // Upload Gallery Images
       const finalPaths = await Promise.all(gallery.map(async (img: GalleryItem) => {
         if (img.type === 'new' && img.file) {
           const fileName = `admin-node-${Date.now()}-${Math.random().toString(36).substr(2,5)}`;
@@ -159,7 +240,20 @@ export default function ListOrganization() {
         return img.previewUrl;
       }));
 
-      // Cleanup Instagram (ensure @ is handled based on your backend preference)
+      // Upload Member Images
+      const finalMembers = await Promise.all(members.map(async (m) => {
+        let imageUrl = m.existingUrl || m.previewUrl;
+        if (m.file) {
+          const fileName = `community-member-${Date.now()}-${Math.random().toString(36).substr(2,5)}`;
+          const { data, error } = await supabase.storage.from('community').upload(fileName, m.file);
+          if (error) throw error;
+          const { data: urlData } = supabase.storage.from('community').getPublicUrl(data.path);
+          imageUrl = urlData.publicUrl;
+        }
+        return { name: m.name, designation: m.designation, contact: m.contact, image: imageUrl };
+      }));
+
+      // Cleanup Instagram
       let igHandle = formData.instagram.trim();
       if (igHandle.startsWith('https://')) {
         igHandle = igHandle.split('/').filter(Boolean).pop() || '';
@@ -167,21 +261,25 @@ export default function ListOrganization() {
       igHandle = igHandle.replace('@', '');
 
       const finalCategory = formData.category === "OTHER" ? formData.customCategory : formData.category;
+      
+      const payload = { 
+        ...formData, 
+        approvedBy: adminName,
+        instagram: igHandle,
+        category: finalCategory.toUpperCase(), 
+        image: finalThumbnailUrl, 
+        imagePaths: finalPaths, 
+        services, 
+        members: finalMembers,
+        isApproved: true, 
+        submittedBy: user?.email, 
+        _id: editId 
+      };
+
       const res = await fetch('/api/community/manage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          ...formData, 
-          approvedBy: adminName, // Added admin name for email notifications
-          instagram: igHandle,
-          category: finalCategory.toUpperCase(), 
-          image: finalThumbnailUrl, 
-          imagePaths: finalPaths, 
-          services, 
-          isApproved: true, 
-          submittedBy: user?.email, 
-          _id: editId 
-        })
+        body: JSON.stringify(payload)
       });
 
       if (res.ok) { 
@@ -266,6 +364,7 @@ export default function ListOrganization() {
               <h1 className="text-5xl font-black italic uppercase tracking-tighter">Media <span className="text-cyan-400">& Offerings</span></h1>
             </div>
 
+            {/* SERVICES SECTION */}
             <div className="bg-zinc-900/30 p-8 rounded-[40px] border border-white/5 space-y-6">
                 <div className="flex justify-between items-center">
                     <div className="flex items-center gap-3 text-cyan-400"><Briefcase size={20}/><label className="text-[11px] font-black uppercase tracking-widest text-white">Services / Impact</label></div>
@@ -282,6 +381,79 @@ export default function ListOrganization() {
                 </div>
             </div>
 
+            {/* LEADERSHIP SECTION */}
+            <div className="bg-zinc-900/30 p-8 rounded-[40px] border border-white/5 space-y-6">
+              <div className="flex justify-between items-center px-2">
+                <div className="flex items-center gap-3 text-cyan-400">
+                  <Users size={20} />
+                  <label className="text-[11px] font-black uppercase tracking-widest text-white">Top Members (Up to 3) *</label>
+                </div>
+                {members.length < 3 && (
+                  <button 
+                    onClick={addMember} 
+                    className="text-[10px] bg-white text-black px-4 py-2 rounded-full font-black uppercase hover:bg-cyan-400 transition-all shadow-lg active:scale-95"
+                  >
+                    + Add Member
+                  </button>
+                )}
+              </div>
+
+              <div className="space-y-6">
+                {members.map((member) => (
+                  <div key={member.id} className="relative group border border-white/10 p-5 md:p-6 rounded-[32px] bg-black/40 focus-within:border-cyan-400 transition-all">
+                    
+                    {members.length > 1 && (
+                      <button 
+                        onClick={() => removeMember(member.id)} 
+                        className="absolute -top-3 -right-3 p-2 bg-red-600 text-white rounded-full z-20 opacity-0 group-hover:opacity-100 transition-all shadow-xl hover:scale-110 active:scale-90 border-2 border-[#030303]"
+                      >
+                        <X size={14} strokeWidth={3} />
+                      </button>
+                    )}
+
+                    <div className="flex flex-col md:flex-row gap-6 items-start">
+                      <label className="shrink-0 relative w-24 h-24 rounded-full border-2 border-dashed border-white/20 hover:border-cyan-400 transition-all flex flex-col items-center justify-center cursor-pointer overflow-hidden bg-zinc-900 group/img">
+                        {member.previewUrl ? (
+                          <img src={member.previewUrl} className="w-full h-full object-cover group-hover/img:opacity-50 transition-all" alt="Member" />
+                        ) : (
+                          <CameraIcon size={20} className="text-zinc-600 group-hover/img:text-cyan-400" />
+                        )}
+                        <input type="file" accept="image/*" className="hidden" onChange={(e) => handleMemberImage(member.id, e)} />
+                      </label>
+
+                      <div className="flex-1 w-full space-y-4">
+                        <input 
+                          placeholder="FULL NAME *" 
+                          className="w-full bg-transparent outline-none text-base font-black uppercase text-white border-b border-white/10 pb-2 focus:border-cyan-400 transition-all" 
+                          value={member.name} 
+                          onChange={(e) => updateMember(member.id, 'name', e.target.value)} 
+                        />
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          <input 
+                            placeholder="DESIGNATION *" 
+                            className="w-full bg-transparent outline-none text-xs font-bold uppercase text-zinc-400 border-b border-white/10 pb-2 focus:border-cyan-400 transition-all" 
+                            value={member.designation} 
+                            onChange={(e) => updateMember(member.id, 'designation', e.target.value)} 
+                          />
+                          <input 
+                            placeholder="CONTACT NUMBER *" 
+                            maxLength={10}
+                            className="w-full bg-transparent outline-none text-xs font-bold text-zinc-400 border-b border-white/10 pb-2 focus:border-cyan-400 transition-all" 
+                            value={member.contact} 
+                            onChange={(e) => {
+                              const val = e.target.value.replace(/\D/g, '');
+                              updateMember(member.id, 'contact', val);
+                            }} 
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* GALLERY SECTION */}
             <div className="bg-zinc-900/30 p-8 rounded-[40px] border border-white/5 space-y-6">
                 <div className="flex items-center gap-3 text-cyan-400"><Camera size={20}/><label className="text-[11px] font-black uppercase tracking-widest text-white">Community Gallery *</label></div>
                 <div className="flex gap-6 overflow-x-auto pb-6 pt-4 no-scrollbar overflow-y-visible">
@@ -320,13 +492,90 @@ export default function ListOrganization() {
 
             <div className="space-y-2"><label className="text-[10px] font-black uppercase text-zinc-500 ml-2">Description / About *</label><textarea placeholder="ENTER STORY" className="w-full bg-zinc-900 border border-white/10 p-6 rounded-3xl outline-none focus:border-cyan-400 min-h-[150px] font-medium italic text-white" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} /></div>
 
+            {/* CHANNELS SECTION */}
             <div className="bg-zinc-900/30 p-8 rounded-[40px] border border-white/5 space-y-6">
                 <h3 className="text-xs font-black uppercase tracking-widest text-cyan-400">Broadcasting Channels</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-1"><label className="text-[9px] font-black uppercase text-zinc-600 ml-2">WhatsApp Contact</label><div className="relative"><Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600" size={16} /><input placeholder="10 DIGITS" maxLength={10} className="w-full bg-black border border-white/10 p-5 pl-12 rounded-2xl outline-none focus:border-cyan-400 font-bold text-white" value={formData.contact} onChange={e => setFormData({...formData, contact: e.target.value.replace(/\D/g,'')})} /></div></div>
-                    <div className="space-y-1"><label className="text-[9px] font-black uppercase text-zinc-600 ml-2">WhatsApp Link</label><div className="relative"><LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600" size={16} /><input placeholder="URL" className="w-full bg-black border border-white/10 p-5 pl-12 rounded-2xl outline-none focus:border-cyan-400 font-bold text-xs text-white" value={formData.link} onChange={e => setFormData({...formData, link: e.target.value})} /></div></div>
-                    <div className="space-y-1"><label className="text-[9px] font-black uppercase text-zinc-600 ml-2">Instagram</label><div className="relative"><Instagram className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600" size={16} /><input placeholder="@USER" className="w-full bg-black border border-white/10 p-5 pl-12 rounded-2xl outline-none focus:border-cyan-400 font-bold text-white uppercase" value={formData.instagram} onChange={e => setFormData({...formData, instagram: e.target.value})} /></div></div>
-                    <div className="space-y-1"><label className="text-[9px] font-black uppercase text-zinc-600 ml-2">Website</label><div className="relative"><Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600" size={16} /><input placeholder="URL" className="w-full bg-black border border-white/10 p-5 pl-12 rounded-2xl outline-none focus:border-cyan-400 font-bold text-xs text-white" value={formData.website} onChange={e => setFormData({...formData, website: e.target.value})} /></div></div>
+                  
+                  {/* Primary Contact */}
+                  <div className="space-y-1">
+                    <label className="text-[9px] font-black uppercase text-zinc-600 ml-2">Primary Contact (10 Digits) *</label>
+                    <div className="relative">
+                      <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600" size={16} />
+                      <input 
+                        placeholder="10 DIGITS" 
+                        maxLength={10} 
+                        className="w-full bg-black border border-white/10 p-5 pl-12 rounded-2xl outline-none focus:border-cyan-400 font-bold text-white" 
+                        value={formData.contact} 
+                        onChange={e => {
+                          const val = e.target.value.replace(/\D/g,'');
+                          if (val.length <= 10) {
+                            setFormData({
+                              ...formData, 
+                              contact: val,
+                              ...(sameForWhatsapp ? { whatsapp: val } : {}) 
+                            });
+                          }
+                        }} 
+                      />
+                    </div>
+                  </div>
+
+                  {/* WhatsApp Logic */}
+                  <div className="flex flex-col justify-center gap-4 border border-white/10 bg-black/40 p-4 rounded-[24px] focus-within:border-cyan-400 transition-all">
+                    <label className="flex items-center gap-3 cursor-pointer group w-fit ml-2">
+                      <div className={`w-5 h-5 rounded border flex items-center justify-center transition-all duration-300 ${sameForWhatsapp ? 'bg-cyan-400 border-cyan-400' : 'border-white/20 bg-black/50 group-hover:border-cyan-400/50'}`}>
+                        {sameForWhatsapp && <Check size={14} className="text-black" />}
+                      </div>
+                      <input 
+                        type="checkbox" 
+                        className="hidden" 
+                        checked={sameForWhatsapp} 
+                        onChange={(e) => {
+                          const isChecked = e.target.checked;
+                          setSameForWhatsapp(isChecked);
+                          if (isChecked) {
+                            setFormData({ ...formData, whatsapp: formData.contact });
+                          }
+                        }} 
+                      />
+                      <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 group-hover:text-white transition-colors">
+                        Same for WhatsApp
+                      </span>
+                    </label>
+
+                    <AnimatePresence>
+                      {!sameForWhatsapp && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: 'auto' }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.3 }}
+                          className="overflow-hidden"
+                        >
+                          <div className="pt-2 border-t border-white/5 mt-1">
+                            <label className="text-[9px] font-black uppercase text-zinc-600 ml-2">Custom WhatsApp *</label>
+                            <div className="relative mt-2">
+                              <MessageCircle className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600" size={16} />
+                              <input 
+                                placeholder="10 DIGITS" 
+                                className="w-full bg-black border border-white/10 p-5 pl-12 rounded-2xl outline-none focus:border-cyan-400 font-bold text-white text-sm" 
+                                value={formData.whatsapp} 
+                                onChange={e => {
+                                  const val = e.target.value.replace(/\D/g, '');
+                                  if (val.length <= 10) setFormData({...formData, whatsapp: val});
+                                }} 
+                              />
+                            </div>
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+
+                  <div className="space-y-1"><label className="text-[9px] font-black uppercase text-zinc-600 ml-2">WhatsApp Link</label><div className="relative"><LinkIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600" size={16} /><input placeholder="URL" className="w-full bg-black border border-white/10 p-5 pl-12 rounded-2xl outline-none focus:border-cyan-400 font-bold text-xs text-white" value={formData.link} onChange={e => setFormData({...formData, link: e.target.value})} /></div></div>
+                  <div className="space-y-1"><label className="text-[9px] font-black uppercase text-zinc-600 ml-2">Instagram</label><div className="relative"><Instagram className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600" size={16} /><input placeholder="@USER" className="w-full bg-black border border-white/10 p-5 pl-12 rounded-2xl outline-none focus:border-cyan-400 font-bold text-white uppercase" value={formData.instagram} onChange={e => setFormData({...formData, instagram: e.target.value})} /></div></div>
+                  <div className="space-y-1"><label className="text-[9px] font-black uppercase text-zinc-600 ml-2">Website</label><div className="relative"><Globe className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-600" size={16} /><input placeholder="URL" className="w-full bg-black border border-white/10 p-5 pl-12 rounded-2xl outline-none focus:border-cyan-400 font-bold text-xs text-white" value={formData.website} onChange={e => setFormData({...formData, website: e.target.value})} /></div></div>
                 </div>
             </div>
 

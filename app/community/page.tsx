@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { motion, useScroll, useTransform, AnimatePresence } from 'framer-motion';
@@ -56,17 +56,12 @@ export default function CommunityPage() {
   };
 
   const handleDelete = async () => {
-    if (!deleteId || !currentUser?.email) return;
+    if (!deleteId || !currentUser) return; 
     setConfirmOpen(false);
 
     try {
-      const res = await fetch('/api/community/delete', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          id: deleteId, 
-          userEmail: currentUser.email.toLowerCase() 
-        })
+      const res = await fetch(`/api/community/delete?id=${deleteId}`, {
+        method: 'DELETE'
       });
 
       if (res.ok) {
@@ -96,7 +91,26 @@ export default function CommunityPage() {
   useEffect(() => {
     const getSession = async () => {
       const { data: { user } } = await supabase.auth.getUser();
-      setCurrentUser(user);
+      if (user) {
+        // 🔥 MULTI-FETCH: Grab verified_email, email, AND phone_number
+        const { data: ownerRecords } = await supabase
+          .from('directory_owners')
+          .select('verified_email, email, phone_number')
+          .eq('user_id', user.id)
+          .limit(1);
+
+        // 🔥 THE FIX: Extract directly using optional chaining without the `{}` fallback
+        const realEmail = ownerRecords?.[0]?.verified_email || ownerRecords?.[0]?.email || user.email;
+        const dbPhone = ownerRecords?.[0]?.phone_number || user.phone;
+        
+        setCurrentUser({ 
+          ...user, 
+          realEmail,
+          dbPhone 
+        }); 
+      } else {
+        setCurrentUser(null);
+      }
     };
     getSession();
   }, [supabase]);
@@ -117,15 +131,35 @@ export default function CommunityPage() {
     fetchCircles();
   }, []);
 
+  // 🔥 MASTER KEY OWNERSHIP CHECKER
+  const checkOwnership = useCallback((circle: any) => {
+    if (!currentUser) return false;
+    
+    // 1. MATCH BY USER ID (For newly created cards going forward)
+    if (circle.userId && circle.userId === currentUser.id) return true;
+
+    // 2. MATCH BY PHONE NUMBER (For older cards created via OTP)
+    const userPhone = currentUser.phone?.replace(/\D/g, '') || currentUser.dbPhone?.replace(/\D/g, '');
+    if (userPhone && circle.contact && userPhone.includes(circle.contact)) return true;
+
+    // 3. MATCH BY EMAIL (For older cards created via Google/Apple or direct typing)
+    const realEmail = currentUser.realEmail?.toLowerCase()?.trim(); 
+    const authEmail = currentUser.email?.toLowerCase()?.trim();
+    const ownerEmail = circle.submittedBy?.toLowerCase()?.trim();
+    
+    if (ownerEmail && realEmail && ownerEmail === realEmail) return true;
+    if (ownerEmail && authEmail && ownerEmail === authEmail) return true;
+
+    return false;
+  }, [currentUser]);
+
   const isExternal = (cat: string) => EXTERNAL_CATEGORIES.includes(cat?.toUpperCase());
 
   const filteredCircles = useMemo(() => {
     const query = searchQuery.toLowerCase();
-    const userEmail = currentUser?.email?.toLowerCase();
 
     return circles.filter(circle => {
-      const ownerEmail = circle.submittedBy?.toLowerCase();
-      const isOwner = userEmail && ownerEmail && userEmail === ownerEmail;
+      const isOwner = checkOwnership(circle);
       const isApproved = circle.isApproved === true;
       const isDraft = circle.isDraft === true;
 
@@ -144,7 +178,7 @@ export default function CommunityPage() {
 
       return matchesSearch && matchesCategoryDropdown && matchesTab;
     });
-  }, [searchQuery, activeCategory, filterTab, circles, currentUser]);
+  }, [searchQuery, activeCategory, filterTab, circles, checkOwnership]);
 
   const dropdownCategories = useMemo(() => {
     const liveCircles = circles.filter(c => c.isApproved && !c.isDraft);
@@ -168,7 +202,7 @@ export default function CommunityPage() {
           src="/events/comm_2.png" 
           alt="Atmosphere" 
           fill 
-          priority // 🔥 Critical for LCP (Largest Contentful Paint)
+          priority 
           sizes="100vw"
           className="object-cover opacity-[0.50] brightness-[0.8] scale-110 saturate-150"
         />
@@ -268,12 +302,12 @@ export default function CommunityPage() {
                   initial={{ opacity: 0, y: 20 }} 
                   animate={{ opacity: 1, y: 0 }} 
                   exit={{ opacity: 0, scale: 0.95 }}
-                  style={{ willChange: 'transform, opacity' }} // 🔥 GPU Acceleration for smooth animations
+                  style={{ willChange: 'transform, opacity' }}
                   key={circle._id} 
                   className="group relative bg-zinc-950/30 border border-white/5 rounded-[35px] overflow-hidden transition-all duration-500 hover:border-brandRed/30 shadow-xl backdrop-blur-2xl"
                 >
                   {/* OWNER TOOLS: Edit & Delete */}
-                  {currentUser?.email?.toLowerCase() === circle.submittedBy?.toLowerCase() && (
+                  {checkOwnership(circle) && (
                     <div className="absolute top-6 right-6 z-[50] flex gap-2">
                       <Link href={`/community/add?edit=${circle._id}`}>
                         <motion.button 
@@ -298,13 +332,13 @@ export default function CommunityPage() {
 
                   {/* Status Badges */}
                   <div className="absolute top-6 left-6 z-[40] flex flex-col gap-2">
-                    {currentUser?.email?.toLowerCase() === circle.submittedBy?.toLowerCase() && circle.isDraft && (
+                    {checkOwnership(circle) && circle.isDraft && (
                       <div className="bg-zinc-800/90 backdrop-blur-md text-cyan-400 px-4 py-1.5 rounded-full flex items-center gap-2 text-[8px] font-black uppercase tracking-widest border border-white/10 shadow-xl">
                         <Edit3 size={12} /> Work in Progress
                       </div>
                     )}
 
-                    {currentUser?.email?.toLowerCase() === circle.submittedBy?.toLowerCase() && !circle.isApproved && !circle.isDraft && (
+                    {checkOwnership(circle) && !circle.isApproved && !circle.isDraft && (
                       <div className="bg-zinc-950/80 backdrop-blur-md text-amber-500 px-4 py-1.5 rounded-full flex items-center gap-2 text-[8px] font-black uppercase tracking-widest animate-pulse border border-amber-500/20 shadow-xl">
                         <Clock size={12} className="fill-amber-500" /> Pending Review
                       </div>
@@ -316,10 +350,9 @@ export default function CommunityPage() {
                             src={circle.image || "/about/placeholder.jpeg"} 
                             alt={circle.title} 
                             fill  
-                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw" // 🔥 Perfect dimensions for the Grid
+                            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                             className="object-cover group-hover:scale-110 transition-transform duration-1000 will-change-transform"
                             onError={(e) => {
-                                // Fallback handler to prevent crashing
                                 const target = e.target as HTMLImageElement;
                                 if (target.src !== "/about/placeholder.jpeg") {
                                     target.src = "/about/placeholder.jpeg";

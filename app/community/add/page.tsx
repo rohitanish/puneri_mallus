@@ -34,7 +34,8 @@ function AddCommunityForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const editId = searchParams.get('edit'); 
-
+  
+  const [verifiedEmail, setVerifiedEmail] = useState<string>('');
   const [fetching, setFetching] = useState(true);
   const [user, setUser] = useState<any>(null);
   const [isVerified, setIsVerified] = useState<boolean | null>(null);
@@ -46,7 +47,6 @@ function AddCommunityForm() {
   const [services, setServices] = useState<any[]>([]); 
   const [showCustomCategory, setShowCustomCategory] = useState(false);
 
-  // 🔥 NEW STATE: Top Members (Defaulting to 1 empty member)
   const [members, setMembers] = useState<any[]>([
     { id: Math.random().toString(), name: '', designation: '', contact: '', file: null, previewUrl: '', existingUrl: '' }
   ]);
@@ -66,21 +66,9 @@ function AddCommunityForm() {
   const closeTimeRef = useRef<HTMLDivElement>(null);
   const [sameForWhatsapp, setSameForWhatsapp] = useState(true);
   const [formData, setFormData] = useState({
-    title: '', 
-    category: 'SAMAJAM', 
-    customCategory: '', 
-    area: '', 
-    tagline: '',
-    description: '', 
-    link: '', 
-    instagram: '', 
-    image: '', 
-    mapUrl: '', 
-    contact: '', 
-    website: '',
-    whatsapp: '', // 🔥 Add whatsapp field
-    openTime: '09:00 AM', 
-    closeTime: '06:00 PM'
+    title: '', category: 'SAMAJAM', customCategory: '', area: '', tagline: '',
+    description: '', link: '', instagram: '', image: '', mapUrl: '', contact: '', website: '',
+    whatsapp: '', openTime: '09:00 AM', closeTime: '06:00 PM'
   });
 
   const supabase = createBrowserClient(
@@ -95,21 +83,26 @@ function AddCommunityForm() {
       setUser(user);
 
       try {
-        const { data: ownerRecord } = await supabase
+        // 🔥 FIX 1: Change maybeSingle to limit(1) to prevent multiple-row crashes
+        const { data: ownerRecords } = await supabase
           .from('directory_owners')
           .select('*')
           .eq('user_id', user.id)
           .eq('source', 'COMMUNITY')
-          .maybeSingle();
+          .limit(1); 
+
+        const ownerRecord = ownerRecords?.[0];
 
         if (ownerRecord) {
           setIsVerified(true);
+          // 🔥 FIX 2: Chain fallbacks so it absolutely never drops the email
+          setVerifiedEmail(ownerRecord.verified_email || ownerRecord.email || user.email || ''); 
           if (!editId) {
              setFormData(prev => ({
                ...prev,
-               title: ownerRecord.business_name,
-               contact: ownerRecord.phone_number,
-               whatsapp: ownerRecord.phone_number // 🔥 Sync initial
+               title: ownerRecord.business_name || '',
+               contact: ownerRecord.phone_number || '',
+               whatsapp: ownerRecord.phone_number || '' 
              }));
           }
         } else {
@@ -117,7 +110,6 @@ function AddCommunityForm() {
         }
 
         if (editId) {
-          // 🔥 CACHE BUSTER: Add timestamp to force fresh data on reload
           const res = await fetch(`/api/community?id=${editId}&t=${Date.now()}`, { cache: 'no-store' });
           if (res.ok) {
             const data = await res.json();
@@ -135,7 +127,7 @@ function AddCommunityForm() {
               image: data.image || '',
               mapUrl: data.mapUrl || '',
               contact: data.contact || '',
-              whatsapp: data.whatsapp || data.contact || '', // 🔥 Map whatsapp
+              whatsapp: data.whatsapp || data.contact || '', 
               website: data.website || '',
               openTime: data.openTime || '09:00 AM',
               closeTime: data.closeTime || '06:00 PM'
@@ -148,7 +140,6 @@ function AddCommunityForm() {
             } else {
               setSameForWhatsapp(true);
             }
-            // 🔥 Hydrate Members if editing
             if (data.members && data.members.length > 0) {
               setMembers(data.members.map((m: any) => ({
                 id: Math.random().toString(),
@@ -164,9 +155,7 @@ function AddCommunityForm() {
             if (data.imagePaths) {
               const existingGallery = data.imagePaths.map((url: string) => ({
                 id: Math.random().toString(36).substr(2, 9),
-                type: 'existing', 
-                file: null,
-                previewUrl: url
+                type: 'existing', file: null, previewUrl: url
               }));
               setGallery(existingGallery);
 
@@ -192,7 +181,6 @@ function AddCommunityForm() {
     setServices(updated);
   };
 
-  // 🔥 Member Functions
   const addMember = () => {
     if (members.length >= 3) return triggerAlert("Max 3 members allowed", "error");
     setMembers([...members, { id: Math.random().toString(), name: '', designation: '', contact: '', file: null, previewUrl: '', existingUrl: '' }]);
@@ -201,17 +189,14 @@ function AddCommunityForm() {
     if (members.length <= 1) return triggerAlert("At least one member is required", "error");
     setMembers(members.filter(m => m.id !== id));
   };
-  // 🔥 FIX 1: Use `prevMembers` so rapid keystrokes or updates are never lost
   const updateMember = (id: string, field: string, value: any) => {
     setMembers(prevMembers => prevMembers.map(m => m.id === id ? { ...m, [field]: value } : m));
   };
 
-  // 🔥 FIX 2: Update BOTH the file and the preview URL in one single sweep
   const handleMemberImage = (id: string, e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       const newPreviewUrl = URL.createObjectURL(file);
-      
       setMembers(prevMembers => prevMembers.map(m => 
         m.id === id ? { ...m, file: file, previewUrl: newPreviewUrl } : m
       ));
@@ -224,9 +209,7 @@ function AddCommunityForm() {
       if (gallery.length + selected.length > 5) return triggerAlert("Max 5 images allowed", "error");
       const newImgs = selected.map(file => ({
         id: Math.random().toString(36).substr(2, 9),
-        type: 'new', 
-        file, 
-        previewUrl: URL.createObjectURL(file)
+        type: 'new', file, previewUrl: URL.createObjectURL(file)
       }));
       setGallery([...gallery, ...newImgs]);
       if (!thumbnailId && newImgs.length > 0) setThumbnailId(newImgs[0].id);
@@ -254,8 +237,6 @@ function AddCommunityForm() {
       if (!targetNumber || targetNumber.length !== 10) {
         return triggerAlert("Valid 10-digit WhatsApp contact required", "error");
       }
-
-      // 🔥 Validate Members
       for (let i = 0; i < members.length; i++) {
         const m = members[i];
         if (!m.name.trim() || !m.designation.trim() || !m.contact.trim() || (!m.file && !m.existingUrl)) {
@@ -269,17 +250,27 @@ function AddCommunityForm() {
       if (!formData.title.trim()) return triggerAlert("Provide a name to save draft", "info");
     }
 
+    // 🔥 FIX 3: THE ULTIMATE GHOST BLOCKER. This forces the email before it saves.
+    let submitEmail = verifiedEmail || user?.email || "";
+    if (!submitEmail || submitEmail.includes('supabase.co')) {
+      const manualEmail = window.prompt("We need a valid email address to send your approval notification. Please enter it below:");
+      if (manualEmail && manualEmail.includes('@')) {
+        submitEmail = manualEmail;
+        setVerifiedEmail(manualEmail);
+      } else {
+        return triggerAlert("A valid email is required to submit.", "error");
+      }
+    }
+
     setLoading(true);
     try {
       let finalThumbnailUrl = formData.image || "";
 
-      // 1. Upload Gallery Images
       const finalPaths = await Promise.all(gallery.map(async (img) => {
         if (img.type === 'existing') {
           if (img.id === thumbnailId) finalThumbnailUrl = img.previewUrl;
           return img.previewUrl;
         }
-
         const fileName = `community-node-${Date.now()}-${Math.random().toString(36).substr(2,5)}`;
         const { data, error } = await supabase.storage.from('community').upload(fileName, img.file);
         if (error) throw error;
@@ -289,7 +280,6 @@ function AddCommunityForm() {
         return urlData.publicUrl;
       }));
 
-      // 🔥 2. Upload Member Images
       const finalMembers = await Promise.all(members.map(async (m) => {
         let imageUrl = m.existingUrl || m.previewUrl;
         if (m.file) {
@@ -304,17 +294,19 @@ function AddCommunityForm() {
 
       const finalCategory = formData.category === "OTHER" ? formData.customCategory : formData.category;
       
-      const payload = { 
+     const payload = { 
         ...formData, 
         _id: editId, 
         category: finalCategory.toUpperCase(), 
         image: finalThumbnailUrl, 
         imagePaths: finalPaths, 
         services,
-        members: finalMembers, // 🔥 Add Members to payload
+        members: finalMembers,
         isApproved: false,
         isDraft: isDraftMode, 
-        submittedBy: user?.email?.toLowerCase()
+        submittedBy: submitEmail.toLowerCase(),
+        // 🚀 THE SILVER BULLET: Permanently bind this node to the user's UUID
+        userId: user?.id 
       };
 
       const res = await fetch('/api/community/manage', {
@@ -345,11 +337,13 @@ function AddCommunityForm() {
           userId={user.id} 
           source="COMMUNITY" 
           onVerified={(ownerData) => {
+            // 🔥 Fix 4: Safely grab the gate's email
+            setVerifiedEmail(ownerData.verified_email || ownerData.email || user.email || '');
             if (!editId) {
               setFormData(prev => ({
                 ...prev,
-                title: ownerData.businessName,
-                contact: ownerData.phone
+                title: ownerData.businessName || '',
+                contact: ownerData.phone || ''
               }));
             }
             setIsVerified(true);
