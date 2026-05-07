@@ -1,85 +1,116 @@
 "use client";
-import { useEffect, useState,useRef } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Image from 'next/image';
 
 export default function Preloader() {
   const [loading, setLoading] = useState(true);
-  
   const [percent, setPercent] = useState(0);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
   useEffect(() => {
-  intervalRef.current = setInterval(() => {
-    setPercent((prev) => {
-      if (prev >= 100) {
-        clearInterval(intervalRef.current!)
-        setTimeout(() => {
-  sessionStorage.setItem('preloader_shown', 'true');
-  setLoading(false);
-}, 800);
-        return 100;
-      }
-      return Math.min(prev + Math.floor(Math.random() * 10) + 2, 100);
-    });
-  }, 80);
-  return () => clearInterval(intervalRef.current!);
-}, []);
+    let timeoutId: NodeJS.Timeout;
+    
+    // Check if the browser has already finished loading everything
+    let assetsLoaded = document.readyState === 'complete';
+
+    // Listener for when all heavy assets (images, videos, etc.) finish downloading
+    const handleLoad = () => {
+      assetsLoaded = true;
+    };
+    
+    if (!assetsLoaded) {
+      window.addEventListener('load', handleLoad);
+    }
+
+    intervalRef.current = setInterval(() => {
+      setPercent((prev) => {
+        // If we reach 95%, WAIT for actual assets to finish loading before jumping to 100%
+        if (prev >= 95 && !assetsLoaded) {
+          return 95; // Stall the preloader here
+        }
+
+        // If assets are loaded and we are high enough, finish the sequence
+        if (prev >= 95 && assetsLoaded) {
+          clearInterval(intervalRef.current!);
+          timeoutId = setTimeout(() => {
+            setLoading(false);
+          }, 800);
+          return 100;
+        }
+
+        // Standard simulated jump
+        return Math.min(prev + Math.floor(Math.random() * 10) + 2, 100);
+      });
+    }, 80);
+
+    // CLEANUP
+    return () => {
+      window.removeEventListener('load', handleLoad);
+      if (intervalRef.current) clearInterval(intervalRef.current);
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, []);
 
   const mantra = ["ONE COMMUNITY", "MANY DREAMS", "ZERO DIVIDE"];
-  
+
   return (
     <AnimatePresence>
       {loading && (
         <motion.div
           exit={{ opacity: 0 }}
-transition={{ duration: 0.6, ease: "easeInOut" }}
+          transition={{ duration: 0.6, ease: "easeInOut" }}
           className="fixed inset-0 z-[999] bg-[#030303] flex flex-col items-center justify-center overflow-hidden"
+          style={{ transform: 'translateZ(0)' }} 
         >
           {/* 1. ATMOSPHERIC FX */}
           <div className="absolute inset-0 opacity-[0.03] bg-[url('https://grainy-gradients.vercel.app/noise.svg')] pointer-events-none" />
           
           {/* Moving Ambient Orbs */}
-          <div className="absolute top-1/4 -left-20 w-[400px] h-[400px] bg-brandRed/15 blur-[150px] rounded-full pointer-events-none" />
-<div className="absolute bottom-1/4 -right-20 w-[400px] h-[400px] bg-brandRed/10 blur-[150px] rounded-full pointer-events-none" />
+          <div 
+            className="absolute top-1/4 -left-20 w-[400px] h-[400px] bg-brandRed/15 blur-[150px] rounded-full pointer-events-none" 
+            style={{ transform: 'translateZ(0)' }}
+          />
+          <div 
+            className="absolute bottom-1/4 -right-20 w-[400px] h-[400px] bg-brandRed/10 blur-[150px] rounded-full pointer-events-none" 
+            style={{ transform: 'translateZ(0)' }}
+          />
 
           <div className="relative flex flex-col items-center w-full px-10 z-10 space-y-8 md:space-y-16">
             
-            {/* 2. LOGO: Sharp Animation */}
+            {/* 2. LOGO */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 1, ease: "easeOut" }}
             >
               <Image 
-  src="/logo_main.png" 
-  alt="Puneri Mallus" 
-  width={450} 
-  height={150} 
-  // Added sizes to fix the performance warning and improve mobile loading
-  sizes="(max-width: 768px) 200px, 450px"
-  className="h-28 md:h-44 w-auto object-contain drop-shadow-[0_0_20px_rgba(255,0,0,0.15)]"
-  priority
-/>
+                src="/logo_main.png" 
+                alt="Puneri Mallus" 
+                width={450} 
+                height={150} 
+                sizes="(max-width: 768px) 200px, 450px"
+                className="h-28 md:h-44 w-auto object-contain drop-shadow-[0_0_20px_rgba(255,0,0,0.15)]"
+                priority
+              />
             </motion.div>
 
-            {/* 3. MODERN LOADING ENGINE */}
+            {/* 3. LOADING ENGINE */}
             <div className="w-full max-w-[320px] md:max-w-[550px] space-y-6">
-              <div className="h-[2px] w-full bg-white/5 relative overflow-hidden rounded-full">
-                {/* Background "Glow" line */}
+              <div className="h-[2px] w-full bg-white/5 relative overflow-hidden rounded-full transform-gpu">
                 <div className="absolute inset-0 bg-brandRed/10" />
                 
-                {/* Main Progress */}
                 <motion.div 
-  className="absolute inset-y-0 left-0 bg-brandRed shadow-[0_0_20px_#FF0000] will-change-transform"
-  initial={{ width: 0 }}
-  animate={{ width: `${percent}%` }}
-/>
+                  className="absolute inset-y-0 left-0 w-full bg-brandRed shadow-[0_0_20px_#FF0000] origin-left"
+                  initial={{ scaleX: 0 }}
+                  animate={{ scaleX: percent / 100 }}
+                  transition={{ ease: "easeOut", duration: 0.1 }}
+                />
                 
-                {/* LASER SCANNER EFFECT */}
                 <motion.div 
-                  animate={{ left: ["-10%", "110%"] }}
+                  animate={{ x: ["-100%", "500%"] }}
                   transition={{ duration: 1.5, repeat: Infinity, ease: "linear" }}
-                  className="absolute inset-y-0 w-20 bg-gradient-to-r from-transparent via-white/40 to-transparent z-10"
+                  className="absolute inset-y-0 w-[20%] bg-gradient-to-r from-transparent via-white/40 to-transparent z-10"
                 />
               </div>
 
@@ -89,7 +120,6 @@ transition={{ duration: 0.6, ease: "easeInOut" }}
                   <span className="text-brandRed">{percent}%</span>
                 </div>
                 
-                {/* REPLACED: TOGETHER FOR GROWTH SLOGAN */}
                 <motion.p 
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
@@ -100,7 +130,7 @@ transition={{ duration: 0.6, ease: "easeInOut" }}
               </div>
             </div>
 
-            {/* 4. MANTRA: Minimalist Stack - FIXED VISIBILITY */}
+            {/* 4. MANTRA */}
             <div className="flex flex-col items-center space-y-4 pt-4">
               {mantra.map((text, i) => {
                 const isSynced = percent > (i * 33);
@@ -109,13 +139,12 @@ transition={{ duration: 0.6, ease: "easeInOut" }}
                     key={i}
                     initial={{ opacity: 0 }}
                     animate={{ 
-                      opacity: isSynced ? 1 : 0.1, // High contrast for synced items
+                      opacity: isSynced ? 1 : 0.1, 
                       x: isSynced ? 0 : -10 
                     }}
                     transition={{ duration: 0.8 }}
                     className="flex items-center gap-4"
                   >
-                    {/* Modern dash indicator */}
                     <div className={`h-[1px] transition-all duration-1000 ${isSynced ? 'w-6 bg-brandRed shadow-[0_0_8px_#FF0000]' : 'w-0 bg-zinc-800'}`} />
                     
                     <p className={`text-[10px] md:text-[12px] font-black uppercase tracking-[0.3em] md:tracking-[0.6em] transition-all duration-700 ${
@@ -130,8 +159,6 @@ transition={{ duration: 0.6, ease: "easeInOut" }}
               })}
             </div>
           </div>
-
-          
         </motion.div>
       )}
     </AnimatePresence>
