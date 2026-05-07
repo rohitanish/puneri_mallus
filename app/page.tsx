@@ -158,6 +158,7 @@ export default function Home() {
                       loop 
                       muted 
                       playsInline 
+                      
                       // 🔥 FIX 2: Change preload="none" to preload="auto" so it loads during the preloader
                       preload="auto" 
                       // 🔥 FIX 3: Add a poster image if you have one to cover the first frame delay

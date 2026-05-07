@@ -348,15 +348,19 @@ export default function AboutPage() {
             {teamMembers.length > 0 ? (
               teamMembers.map((member, idx) => (
                 <div key={idx} className="group w-full max-w-[280px]">
-                    <div className="relative aspect-[3/4] rounded-2xl md:rounded-[40px] overflow-hidden border border-white/5 mb-3 md:mb-6 bg-zinc-950 shadow-2xl transition-all duration-500 group-hover:border-brandRed/50 md:group-hover:scale-[1.02]">
+                    <div 
+                      className="relative aspect-[3/4] rounded-2xl md:rounded-[40px] overflow-hidden border border-white/5 mb-3 md:mb-6 bg-zinc-950 shadow-xl transition-colors duration-500 group-hover:border-brandRed/50"
+                      style={{ transform: 'translateZ(0)' }} // 🔥 GPU Acceleration
+                    >
                       <Image 
                         src={member.image} 
                         alt={member.name} 
                         fill
                         blurDataURL={blurPlaceholder} placeholder="blur"
                         sizes="(max-width: 768px) 50vw, 33vw"
-                        className="object-cover transition-all duration-700 brightness-[0.9] group-hover:brightness-110 saturate-[1.1]" 
+                        className="object-cover transition-transform duration-700 will-change-transform group-hover:scale-105" 
                       />
+                      <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors duration-500 pointer-events-none" />
                       <div className="absolute inset-0 bg-gradient-to-t from-brandRed/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
                     </div>
 
@@ -374,7 +378,6 @@ export default function AboutPage() {
                 </div>
               ))
             ) : (
-              // 🔥 FIX 2: QA Placeholder Bug. Changed to simple English.
               <div className="col-span-full py-12 md:py-20 border border-dashed border-white/5 rounded-2xl md:rounded-[40px] w-full">
                 <p className="text-zinc-500 font-bold uppercase tracking-widest text-[11px]">
                   Loading team members...
@@ -383,6 +386,7 @@ export default function AboutPage() {
             )}
           </div>
         </section>
+        
         <LaserDivider />
 
         {/* CONCISE GALLERY SECTION */}
@@ -392,18 +396,18 @@ export default function AboutPage() {
               The <span className="text-brandRed">Archive</span>
             </h2>
             <p className="text-zinc-500 font-bold uppercase tracking-widest text-[11px]">
-              Visual Legacy // 2026
+              Visual Legacy // {new Date().getFullYear()}
             </p>
           </div>
 
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            {(galleryImages.length > 0 ? galleryImages : [1, 2, 3, 4, 5, 6]).map((item, idx) => {
-              const src = typeof item === 'string' ? item : `/gallery/img${item}.jpg`;
-              return (
+          {galleryImages.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+              {galleryImages.map((src, idx) => (
                 <div 
                   key={idx} 
                   onClick={() => setZoomImage(src)}
-                  className="relative aspect-video md:aspect-[4/3] rounded-2xl overflow-hidden border border-white/5 group bg-zinc-900 shadow-2xl cursor-pointer"
+                  className="relative aspect-video md:aspect-[4/3] rounded-2xl overflow-hidden border border-white/5 group bg-zinc-900 shadow-xl cursor-pointer"
+                  style={{ transform: 'translateZ(0)' }}
                 >
                   <Image 
                     src={src} 
@@ -411,18 +415,22 @@ export default function AboutPage() {
                     fill 
                     blurDataURL={blurPlaceholder} placeholder="blur"
                     sizes="(max-width: 768px) 50vw, 33vw"
-                    className="object-cover transition-all duration-700 grayscale md:group-hover:grayscale-0 md:group-hover:scale-110" 
+                    className="object-cover transition-all duration-700 will-change-[transform,filter] grayscale md:group-hover:grayscale-0 md:group-hover:scale-110" 
                     loading="lazy"  
                   />
-                  <div className="absolute inset-0 bg-brandRed/10 opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
                   <div className="absolute top-4 right-4 w-6 h-[1px] bg-white/20 group-hover:bg-brandRed transition-colors" />
                   <div className="absolute top-4 right-4 h-6 w-[1px] bg-white/20 group-hover:bg-brandRed transition-colors" />
                 </div>
-              );
-            })}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <div className="py-12 md:py-20 border border-dashed border-white/5 rounded-2xl md:rounded-[40px] w-full text-center">
+              <p className="text-zinc-500 font-bold uppercase tracking-widest text-[11px]">
+                Archive compiling...
+              </p>
+            </div>
+          )}
         </section>
-
         <LaserDivider />
 
         {/* LIGHTBOX OVERLAY */}
@@ -433,13 +441,14 @@ export default function AboutPage() {
               animate={{ opacity: 1 }} 
               exit={{ opacity: 0 }} 
               onClick={() => setZoomImage(null)} 
-              className="fixed inset-0 z-[1000] bg-black/98 flex items-center justify-center p-4 sm:p-12 cursor-zoom-out backdrop-blur-xl"
-              style={{ transform: 'translateZ(0)' }}
+              className="fixed inset-0 z-[1000] bg-black/98 flex items-center justify-center p-4 sm:p-12 cursor-zoom-out backdrop-blur-md"
+              style={{ transform: 'translateZ(0)' }} 
             >
               <motion.div 
                 initial={{ scale: 0.9, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 exit={{ scale: 0.9, opacity: 0 }}
+                transition={{ type: "spring", stiffness: 300, damping: 25 }} 
                 className="relative w-full max-w-6xl h-full flex items-center justify-center"
               >
                 <Image 
@@ -447,17 +456,18 @@ export default function AboutPage() {
                   alt="Zoomed Legacy Asset" 
                   fill 
                   unoptimized 
+                  // 🔥 Added priority to skip lazy-loading and instantly render the zoomed image
+                  priority
                   className="object-contain" 
-                  blurDataURL={blurPlaceholder} placeholder="blur"
+                  // 🔥 Removed blur placeholder so it snaps in instantly from cache
                 />
               </motion.div>
-              <button className="absolute top-10 right-10 text-white p-4 bg-zinc-900 rounded-full hover:bg-brandRed transition-all shadow-2xl border border-white/10">
-                <X size={32} />
+              <button className="absolute top-6 right-6 md:top-10 md:right-10 text-white p-3 md:p-4 bg-zinc-900 rounded-full hover:bg-brandRed transition-all shadow-2xl border border-white/10 active:scale-90">
+                <X size={24} className="md:w-8 md:h-8" />
               </button>
             </motion.div>
           )}
         </AnimatePresence>
-        
         <InstagramGlimpse />
         
         <LaserDivider />
