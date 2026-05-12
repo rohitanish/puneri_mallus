@@ -16,7 +16,7 @@ import {
 import MartVerificationModal from '@/components/MartVerificationModal';
 import TribeAlert from '@/components/TribeAlert';
 import TribeConfirm from '@/components/TribeConfirm';
-import MartInvoiceGate from '@/components/MartInvoiceGate'; // 🔥 Added Invoice Gate
+import MartInvoiceGate from '@/components/MartInvoiceGate';
 
 interface UserProfile {
   martUnlocked?: boolean;
@@ -46,7 +46,6 @@ export default function ProfessionalDetailsPage() {
   const [martPlans, setMartPlans] = useState<any>(null);
   const [selectedPlan, setSelectedPlan] = useState<string>('');
 
-  // 🔥 INVOICE GATE STATES
   const [showInvoiceGate, setShowInvoiceGate] = useState(false);
   const [verifiedInvoiceEmail, setVerifiedInvoiceEmail] = useState("");
 
@@ -63,14 +62,12 @@ export default function ProfessionalDetailsPage() {
   const servicesRef = useRef<HTMLDivElement>(null);
   const paywallRef = useRef<HTMLDivElement>(null);
 
-  // --- INITIAL DATA FETCH ---
-useEffect(() => {
+  useEffect(() => {
     async function fetchAllData() {
       try {
         const { data: { user } } = await supabase.auth.getUser();
         setCurrentUser(user);
 
-        // 🔥 Fetch Saved Invoice Email if it exists
         if (user?.id) {
           const { data: invoiceData } = await supabase
             .from('mallu_invoice')
@@ -142,7 +139,6 @@ useEffect(() => {
     fetchAllData();
   }, [id, supabase]);
 
-  // --- ACTION HANDLER ---
   const handleLockedAction = (target: string, type: 'URL' | 'UNLOCK' = 'URL') => {
     if (isUnlocked) {
       if (type === 'URL' && target) window.open(target, '_blank');
@@ -165,28 +161,23 @@ useEffect(() => {
     }
   };
 
-  // 🔥 PRE-PAYMENT CHECKER
   const handleCheckoutInitiation = () => {
     setConfirmOpen(false);
     
     if (!currentUser) return router.push(`/auth/login?next=${pathname}`);
 
-    // Check if the user has a REAL email attached to their auth session
     const hasRealAuthEmail = currentUser?.email && 
                              !currentUser.email.includes('supabase.co') && 
-                             !currentUser.email.includes('@punerimallus.com'); // Add any other ghost domains you use
+                             !currentUser.email.includes('@punerimallus.com'); 
 
-    // If they do NOT have a real auth email AND haven't saved an invoice email -> Show the Gate!
     if (!hasRealAuthEmail && !verifiedInvoiceEmail) {
       setShowInvoiceGate(true);
       return;
     }
 
-    // Otherwise proceed to Razorpay immediately
     triggerRazorpay(verifiedInvoiceEmail || currentUser.email);
   };
 
-  // --- PAYMENT EXECUTION ---
   const triggerRazorpay = async (finalEmail: string) => {
     setPaymentLoading(true); 
 
@@ -226,7 +217,7 @@ useEffect(() => {
               paymentType: 'MART', 
               plan: selectedPlan.toUpperCase(),
               amount: martPlans[selectedPlan].price,
-              invoiceEmail: finalEmail // 🔥 Pass the real email to the backend to trigger the invoice!
+              invoiceEmail: finalEmail
             })
           });
 
@@ -242,7 +233,7 @@ useEffect(() => {
           }
         },
         prefill: { 
-          email: finalEmail, // 🔥 Tells Razorpay where to send the receipt
+          email: finalEmail, 
           contact: currentUser?.phone || "" 
         },
         theme: { color: "#FF0000" },
@@ -258,7 +249,6 @@ useEffect(() => {
     }
   };
 
-  // --- RENDERING LOGIC ---
   if (loading) return <div className="min-h-screen bg-black flex items-center justify-center"><Loader2 className="animate-spin text-brandRed" size={40} /></div>;
   if (!item) return <div className="min-h-screen bg-black flex flex-col items-center justify-center text-white"><h1>Profile Not Found</h1><Link href="/directory" className="px-6 py-3 bg-brandRed rounded-lg font-bold text-sm uppercase">Return</Link></div>;
 
@@ -286,7 +276,6 @@ useEffect(() => {
   return (
     <div className="min-h-screen bg-[#030303] text-zinc-100 relative overflow-x-hidden selection:bg-brandRed/30">
       
-      {/* 🔥 INVOICE GATE COMPONENT */}
       {showInvoiceGate && currentUser && (
         <MartInvoiceGate 
           userId={currentUser.id}
@@ -294,7 +283,7 @@ useEffect(() => {
           onSuccess={(capturedEmail) => {
             setShowInvoiceGate(false);
             setVerifiedInvoiceEmail(capturedEmail);
-            triggerRazorpay(capturedEmail); // Launch Razorpay immediately
+            triggerRazorpay(capturedEmail);
           }}
           onCancel={() => setShowInvoiceGate(false)}
         />
@@ -315,7 +304,7 @@ useEffect(() => {
             ? `A fee of ₹${martPlans[selectedPlan].price} is required to unlock this professional profile for ${selectedPlan.toUpperCase()} access.`
             : "A fee is required to unlock the full Mallu Mart directory and professional contacts."
         }
-        onConfirm={handleCheckoutInitiation} // 🔥 Updated to use the pre-checker
+        onConfirm={handleCheckoutInitiation} 
         onCancel={() => setConfirmOpen(false)}
       />
 
@@ -406,10 +395,15 @@ useEffect(() => {
           </motion.div>
         )}
 
-        <div className="relative" ref={paywallRef}>
+        {/* 🔥 FIX: RESTRUCTURED THE PAYWALL OVERLAY */}
+        <div className="relative w-full rounded-[40px]" ref={paywallRef}>
+          
+          {/* THE LOCKED SCREEN - Forces absolute center regardless of height */}
           {!isUnlocked && (
-            <div className="absolute inset-x-0 -top-10 bottom-0 z-[60] flex flex-col items-center justify-start pt-16 sm:pt-32 p-6 md:p-10">
-              <div className="absolute inset-0 bg-[#030303]/70 backdrop-blur-2xl rounded-[50px] border border-white/5 shadow-3xl" />
+            <div className="absolute inset-0 z-[60] flex flex-col items-center justify-center p-6 md:p-10">
+              {/* Blur Overlay - Covers the exact bounding box of the fake content */}
+              <div className="absolute inset-0 bg-[#030303]/80 backdrop-blur-xl rounded-[40px] border border-white/5 shadow-3xl" />
+              
               <div className="relative z-10 text-center space-y-8 w-full max-w-sm mx-auto">
                 <div className="w-20 h-20 bg-brandRed/10 rounded-full flex items-center justify-center mx-auto border border-brandRed/20 shadow-[0_0_50px_rgba(255,0,0,0.2)]">
                   <Lock size={32} className="text-brandRed animate-pulse" />
@@ -488,7 +482,8 @@ useEffect(() => {
             </div>
           )}
 
-          <div className={!isUnlocked ? "opacity-10 pointer-events-none select-none blur-xl" : "space-y-20 transition-all duration-1000"}>
+          {/* 🔥 FIX: CONTENT CONTAINER - Enforces a strict 650px height box when locked, making the overlay perfectly sized! */}
+          <div className={!isUnlocked ? "opacity-10 pointer-events-none select-none blur-2xl h-[650px] overflow-hidden rounded-[40px]" : "space-y-20 transition-all duration-1000"}>
             <div className="sticky top-[100px] z-[40] mb-12 bg-black/60 backdrop-blur-xl border-y border-white/5 mx-[-1.5rem] px-6">
               <div className="flex items-center gap-8 overflow-x-auto no-scrollbar py-4">
                 {tabs.map((tab) => (
