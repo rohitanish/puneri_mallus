@@ -300,7 +300,7 @@ export default function AboutPage() {
               {/* 🔥 NEW VIEW MORE BUTTON */}
               <div className="pt-4">
                 <a 
-                  href="https://www.instagram.com/beauty_pageantpune_?igsh=MTJtcTF4NTVwdHc4"
+                  href="https://misskeralapune.com/"
                   target="_blank"
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 bg-white text-black px-8 py-4 rounded-full font-black uppercase tracking-widest text-[11px] hover:scale-105 hover:bg-brandRed hover:text-white transition-all duration-300 shadow-xl active:scale-95"

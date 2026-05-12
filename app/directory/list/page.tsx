@@ -65,7 +65,9 @@ function ListContent() {
 
   const [gallery, setGallery] = useState<UnifiedImage[]>([]);
   const [initialPaths, setInitialPaths] = useState<string[]>([]);
-  const [services, setServices] = useState<ServiceItem[]>([]);
+  const [services, setServices] = useState<ServiceItem[]>([
+    { id: Math.random().toString(), name: '', desc: '' }
+  ]);
   const [showOtherCategory, setShowOtherCategory] = useState(false);
   const [showSuccessToast, setShowSuccessToast] = useState(false);
   const [draftSaved, setDraftSaved] = useState(false);
@@ -146,7 +148,7 @@ function ListContent() {
               setSameForWhatsapp(true);
             }
 
-            setServices(item.services || []);
+            setServices(item.services?.length > 0 ? item.services : [{ id: Math.random().toString(), name: '', desc: '' }]);
             const paths = item.imagePaths || (item.imagePath ? [item.imagePath] : []);
             setInitialPaths(paths);
             setGallery(paths.map((p: string) => ({
@@ -263,6 +265,11 @@ function ListContent() {
       }
       if (gallery.length === 0) return triggerAlert("Required", "Upload at least 1 image.");
       if (!formData.description) return triggerAlert("Required", "Add a business description.");
+      // 🔥 NEW: Check for at least one valid service
+      const hasValidService = services.some(s => s.name.trim() !== '' && s.desc.trim() !== '');
+      if (!hasValidService) {
+        return triggerAlert("Required", "Please add at least one specific service with a name and description.");
+      }
       const targetNumber = sameForWhatsapp ? formData.contact : formData.whatsapp;
       if (targetNumber.length !== 10) return triggerAlert("Invalid Number", "Please enter a valid 10-digit WhatsApp number.");
     } else {
@@ -517,7 +524,11 @@ function ListContent() {
 
               <div className="bg-zinc-900/50 p-8 rounded-[40px] border-2 border-white/10 space-y-6">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                   <div className="flex items-center gap-3 text-brandRed"><Briefcase size={20} /><span className="text-[12px] font-black uppercase tracking-widest text-white">Specific Services ({services.length}/10)</span></div>
+                   <div className="flex items-center gap-3 text-brandRed">
+                     <Briefcase size={20} />
+                     {/* 🔥 Added asterisk to label */}
+                     <span className="text-[12px] font-black uppercase tracking-widest text-white">Specific Services ({services.length}/10) *</span>
+                   </div>
                    <button onClick={addService} className="p-3 bg-brandRed text-white rounded-xl hover:bg-white hover:text-black transition-all flex items-center justify-center gap-2 text-[10px] font-bold w-full sm:w-auto"><Plus size={16}/> ADD SERVICE</button>
                 </div>
                 <div className="space-y-4">
@@ -525,20 +536,24 @@ function ListContent() {
                   <div key={s.id} className="flex flex-col md:flex-row gap-4 p-5 bg-black rounded-2xl border border-white/5 relative">
                       <input 
                         className="flex-1 bg-zinc-900 border border-white/10 rounded-xl p-3 text-[11px] font-bold text-white outline-none focus:border-brandRed" 
-                        placeholder="Service Name" 
+                        placeholder="Service Name *" 
                         value={s.name} 
                         onChange={(e) => updateService(s.id, 'name', e.target.value)} 
                       />
                       <input 
                         className="flex-[2] bg-zinc-900 border border-white/10 rounded-xl p-3 text-[11px] text-zinc-400 outline-none focus:border-brandRed" 
-                        placeholder="Short Description" 
+                        placeholder="Short Description *" 
                         value={s.desc} 
                         maxLength={300}
                         onChange={(e) => updateService(s.id, 'desc', e.target.value)} 
                       />
-                      <button onClick={() => setServices(services.filter(x => x.id !== s.id))} className="p-3 text-zinc-600 hover:text-brandRed transition-colors flex justify-center">
-                        <Trash2 size={18}/>
-                      </button>
+                      
+                      {/* 🔥 THE FIX: Hide trash icon if only 1 service is left */}
+                      {services.length > 1 && (
+                        <button onClick={() => setServices(services.filter(x => x.id !== s.id))} className="p-3 text-zinc-600 hover:text-brandRed transition-colors flex justify-center">
+                          <Trash2 size={18}/>
+                        </button>
+                      )}
                   </div>
                 ))}
                 </div>

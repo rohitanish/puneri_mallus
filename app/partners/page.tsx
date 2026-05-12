@@ -14,6 +14,22 @@ const HIERARCHY = [
   "Trailblazers Panel"
 ];
 
+//  FOUNDER DETAILS
+const FOUNDERS = [
+  {
+    _id: "founder-1",
+    name: "SUCHEENDRAN KC",
+    image: "/founders/suchi.jpg", // Replace with real image path
+    role: "Founder"
+  },
+  {
+    _id: "founder-2",
+    name: "SHEHANAS SHEIK",
+    image: "/founders/shehanas_2.jpeg", // Replace with real image path
+    role: "Co-Founder"
+  }
+];
+
 interface Partner {
   _id: string;
   name: string;
@@ -47,7 +63,6 @@ export default function PartnersPage() {
     }
   };
 
-  // 🔥 HIGH PERFORMANCE: Memoize the filtered lists to prevent typing lag
   const groupedPartners = useMemo(() => {
     return HIERARCHY.map(cat => ({
       cat,
@@ -77,7 +92,6 @@ export default function PartnersPage() {
   return (
     <div className="min-h-[100dvh] w-full bg-[#030303] text-white relative overflow-x-hidden selection:bg-brandRed/30">
       
-      {/* 🔥 HIGH PERFORMANCE: Replaced inline CSS background with Next.js Image for instant LCP */}
       <div className="fixed inset-0 z-0 pointer-events-none">
         <Image 
           src="/events/partner_3.png" 
@@ -85,7 +99,7 @@ export default function PartnersPage() {
           fill 
           priority 
           quality={85}
-          className="object-cover opacity-80 brightness-70  "
+          className="object-cover opacity-80 brightness-70"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-[#030303]/80 to-[#030303] z-[1]" />
       </div>
@@ -107,7 +121,7 @@ export default function PartnersPage() {
         </div>
 
         {/* SEARCH & FILTERS */}
-        <div className="sticky top-24 z-50 flex flex-col lg:flex-row items-center gap-4 lg:gap-6 mb-32 bg-black/60 backdrop-blur-2xl p-4 lg:p-6 rounded-[32px] border border-white/10 shadow-2xl">
+        <div className="sticky top-24 z-50 flex flex-col lg:flex-row items-center gap-4 lg:gap-6 mb-24 bg-black/60 backdrop-blur-2xl p-4 lg:p-6 rounded-[32px] border border-white/10 shadow-2xl">
           <div className="relative flex-1 w-full group">
             <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-brandRed transition-colors" size={18} />
             <input 
@@ -127,6 +141,7 @@ export default function PartnersPage() {
               className="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-4 pl-14 pr-10 text-[10px] font-black uppercase tracking-[0.2em] outline-none appearance-none focus:border-brandRed/50 transition-all cursor-pointer"
             >
               <option value="" disabled>JUMP TO SECTION</option> 
+              <option value="Founders" className="bg-black text-white">FOUNDERS</option>
               {HIERARCHY.map((cat) => (
                 <option key={cat} value={cat} className="bg-black text-white">
                   {cat.toUpperCase()}
@@ -138,6 +153,12 @@ export default function PartnersPage() {
 
           {/* DESKTOP TABS */}
           <div className="hidden lg:flex gap-2 px-2">
+            <button 
+              onClick={() => scrollToSection('Founders')} 
+              className="px-6 py-4 rounded-xl text-[9px] font-black uppercase tracking-widest whitespace-nowrap bg-brandRed/10 border border-brandRed/50 hover:bg-brandRed hover:text-white transition-all duration-300 shadow-xl active:scale-95 text-brandRed"
+            >
+              FOUNDERS
+            </button>
             {HIERARCHY.map((cat) => (
               <button 
                 key={cat} 
@@ -165,8 +186,57 @@ export default function PartnersPage() {
           </motion.div>
         )}
 
-        {/* SECTIONS */}
         <div className="space-y-24 md:space-y-40">
+          
+          {/* 🔥 NEW: FOUNDERS SECTION */}
+          {searchQuery === "" && (
+            <section ref={(el) => { sectionRefs.current['Founders'] = el; }} className="scroll-mt-40">
+              <div className="flex flex-col gap-3 mb-16">
+                <div className="flex items-center gap-6">
+                  <h2 className="text-4xl md:text-5xl font-black italic uppercase tracking-tighter text-white whitespace-nowrap leading-none drop-shadow-xl">
+                    Founders
+                  </h2>
+                  <div className="h-[1px] w-full bg-gradient-to-r from-brandRed/50 to-transparent" />
+                </div>
+                <div className="flex items-center gap-3 text-brandRed font-black uppercase text-[10px] tracking-[0.4em]">
+                  <span className="w-8 h-[1px] bg-brandRed" /> The Architects
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-8 md:gap-12 max-w-4xl mx-auto">
+                {FOUNDERS.map((founder) => (
+                  <Link key={founder._id} href={`/partners/${founder._id}`} className="block h-full">
+                    <div className="group h-full relative bg-brandRed/5 border border-brandRed/20 rounded-[40px] p-10 backdrop-blur-md hover:bg-brandRed/10 hover:border-brandRed transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_50px_rgba(255,0,0,0.15)] flex flex-col items-center text-center will-change-transform">
+                      
+                      <div className="relative w-48 h-48 md:w-56 md:h-56 rounded-full mb-8 p-1.5 border-2 border-brandRed/30 group-hover:border-brandRed transition-all duration-500 shadow-2xl">
+                        <div className="w-full h-full rounded-full overflow-hidden relative bg-zinc-900">
+                          <Image 
+                            src={founder.image}
+                            alt={founder.name} 
+                            fill
+                            sizes="(max-width: 640px) 100vw, 50vw"
+                            className="object-cover transition-transform duration-700 md:group-hover:scale-105" 
+                          />
+                        </div>
+                      </div>
+
+                      <div className="space-y-4 flex-1 w-full">
+                        <h3 className="text-2xl md:text-3xl font-black uppercase italic tracking-tighter text-white group-hover:text-brandRed transition-colors leading-tight px-2">
+                          {founder.name}
+                        </h3>
+                        <div className="inline-flex items-center justify-center gap-2 text-[10px] font-bold text-zinc-300 uppercase tracking-widest border-t border-white/10 pt-5 w-full px-2">
+                          <Zap size={14} className="text-brandRed shrink-0" fill="currentColor" /> 
+                          <span>{founder.role}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          )}
+
+          {/* STANDARD SECTIONS */}
           {groupedPartners.map(({ cat, members }) => (
             <section key={cat} ref={(el) => { sectionRefs.current[cat] = el; }} className="scroll-mt-40">
               
@@ -185,7 +255,6 @@ export default function PartnersPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 md:gap-8">
                 {members.map((member) => (
                   <Link key={member._id} href={`/partners/${member._id}`} className="block h-full">
-                    {/* 🔥 HIGH PERFORMANCE: Removed Framer Motion JS hover, using purely hardware-accelerated CSS */}
                     <div className="group h-full relative bg-black/40 border border-white/10 rounded-[32px] p-8 backdrop-blur-md hover:bg-white/[0.02] hover:border-brandRed/40 transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_20px_40px_rgba(255,0,0,0.1)] flex flex-col items-center text-center will-change-transform">
                       
                       <div className="relative w-40 h-40 md:w-44 md:h-44 rounded-full mb-8 p-1 border border-white/10 group-hover:border-brandRed/50 transition-all duration-500 shadow-2xl">

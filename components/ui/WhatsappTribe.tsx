@@ -9,7 +9,7 @@ interface WhatsAppTribeProps {
 
 export const WhatsAppTribe = ({ 
   link = "https://chat.whatsapp.com/Bzi4uYF4wCo5YNa5qKKBfN", 
-  label = "Join our WhatsApp community for exclusive updates" 
+  label = "Join our community for updates." 
 }: WhatsAppTribeProps) => {
   return (
     <div className="fixed bottom-6 right-6 z-[100] flex flex-col items-end gap-3">

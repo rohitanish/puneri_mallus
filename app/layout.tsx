@@ -55,7 +55,7 @@ export default function RootLayout({
           <Footer />
         </AlertProvider>
         <WhatsAppTribe 
-          label="JOIN OUR WHATSAPP COMMUNITY FOR EXCLUSIVE UPDATES" 
+          label="JOIN OUR COMMUNITY " 
         />
       </body>
     </html>
