@@ -24,7 +24,7 @@ const FOUNDERS = [
   },
   {
     _id: "founder-2",
-    name: "SHEHANAS SHEIK",
+    name: "SHEHANAS.SHEIK",
     image: "/founders/shehanas_2.jpeg", // Replace with real image path
     role: "Co-Founder"
   }

@@ -19,7 +19,7 @@ interface Admin {
   admin_audit_logs: AuditLog[];
 }
 
-const FOUNDER_EMAILS = ['vishnu@gmail.com', 'rohitanish86@gmail.com'];
+const FOUNDER_EMAILS = ['panikarvishnu7@gmail.com', 'rohitanish86@gmail.com'];
 
 export default function MemberActivityList({ admins }: { admins: Admin[] }) {
   const router = useRouter();

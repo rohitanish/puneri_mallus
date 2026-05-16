@@ -6,7 +6,7 @@ import { cookies } from 'next/headers';
 import { revalidatePath } from 'next/cache';
 
 // ONLY these emails can manage the admin whitelist (Add or Revoke)
-const FOUNDER_EMAILS = ['vishnu@gmail.com', 'rohitanish86@gmail.com']; 
+const FOUNDER_EMAILS = ['panikarvishnu7@gmail.com', 'rohitanish86@gmail.com']; 
 
 /**
  * Shared helper to initialize Supabase with Server Action cookie handling

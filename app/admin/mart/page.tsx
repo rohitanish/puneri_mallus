@@ -10,6 +10,7 @@ import Link from 'next/link';
 import TribeConfirm from '@/components/TribeConfirm';
 import { useAlert } from '@/context/AlertContext';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
+import { createBrowserClient } from '@supabase/ssr';
 
 export default function AdminMartManager() {
   const [items, setItems] = useState<any[]>([]);
@@ -17,11 +18,14 @@ export default function AdminMartManager() {
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const { showAlert } = useAlert();
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
 
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [itemToDelete, setItemToDelete] = useState<any>(null);
   
-  // 🔥 Verification Audit State
   const [auditItem, setAuditItem] = useState<any>(null);
 
   useEffect(() => { fetchItems(); }, []);
@@ -84,7 +88,7 @@ export default function AdminMartManager() {
       if (res.ok) {
         setItems(items.map(item => item._id === id ? { ...item, isVerified: !currentStatus } : item));
         showAlert(!currentStatus ? "Business Verified" : "Verification Revoked", "success");
-        setAuditItem(null); // Close audit modal if open
+        setAuditItem(null); 
       }
     } catch (err) { showAlert("Sync Failed", "error"); }
     finally { setUpdatingId(null); }
@@ -107,22 +111,42 @@ export default function AdminMartManager() {
     finally { setUpdatingId(null); }
   };
 
-  const handleDelete = async () => {
+const handleDelete = async () => {
     if (!itemToDelete) return;
-    setUpdatingId(itemToDelete._id);
+    
+    const targetId = itemToDelete._id;
+    setConfirmOpen(false); 
+    setUpdatingId(targetId);
+    
     try {
-      const res = await fetch('/api/mart', {
-        method: 'DELETE',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: itemToDelete._id })
-      });
-      if (res.ok) {
-        setItems(items.filter(i => i._id !== itemToDelete._id));
-        setConfirmOpen(false);
-        showAlert("Professional removed", "success");
+      // Get Admin email from session
+      const { data: { session } } = await supabase.auth.getSession();
+      const adminEmail = session?.user?.email;
+
+      if (!adminEmail) {
+        showAlert("You must be logged in.", "error");
+        setUpdatingId(null);
+        return;
       }
-    } catch (err) { showAlert("Purge Protocol Failed", "error"); }
-    finally { setUpdatingId(null); }
+
+      // Pass ID and Admin Email in the URL
+      const res = await fetch(`/api/mart?id=${targetId}&adminEmail=${encodeURIComponent(adminEmail)}`, {
+        method: 'DELETE'
+      });
+
+      if (res.ok) {
+        setItems(items.filter(i => i._id !== targetId));
+        showAlert("Professional removed", "success");
+      } else {
+        const errorData = await res.json();
+        showAlert(errorData.error || "Failed to delete", "error");
+      }
+    } catch (err) { 
+      showAlert("Purge Protocol Failed", "error"); 
+    } finally { 
+      setUpdatingId(null); 
+      setItemToDelete(null); 
+    }
   };
 
   const filtered = useMemo(() => {
@@ -208,23 +232,29 @@ export default function AdminMartManager() {
               </div>
 
               <div className="flex items-center gap-3">
-                <Link href={`/directory/${item._id}`} target="_blank" className="p-3 bg-zinc-900 text-zinc-500 hover:text-brandRed rounded-xl transition-all border border-white/5">
+                <Link 
+                  href={`/directory/${item._id}`} 
+                  target="_blank" 
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className="p-3 bg-zinc-900 text-zinc-500 hover:text-brandRed rounded-xl transition-all border border-white/5"
+                >
                   <ExternalLink size={18}/>
                 </Link>
 
                 <button 
                   disabled={!!updatingId}
                   onClick={() => toggleApproval(item._id, item.isApproved)}
+                  onPointerDown={(e) => e.stopPropagation()}
                   className={`flex items-center gap-2 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${item.isApproved ? 'bg-green-600 text-white shadow-[0_0_20px_rgba(34,197,94,0.3)]' : 'bg-zinc-900 text-zinc-500 hover:text-white border border-white/5'}`}
                 >
                   {item.isApproved ? <Check size={14} /> : <Zap size={14} />}
                   {item.isApproved ? 'Live' : 'Approve'}
                 </button>
 
-                {/* 🔥 NEW: AUDIT BUTTON (Only if docs submitted) */}
                 {item.verificationDocs && (
                   <button 
                     onClick={() => setAuditItem(item)}
+                    onPointerDown={(e) => e.stopPropagation()}
                     className="flex items-center gap-2 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest bg-zinc-900 text-cyan-400 hover:text-white border border-cyan-400/20 transition-all"
                   >
                     <Eye size={14} /> Audit
@@ -234,13 +264,18 @@ export default function AdminMartManager() {
                 <button 
                   disabled={!!updatingId}
                   onClick={() => toggleVerify(item._id, item.isVerified)}
+                  onPointerDown={(e) => e.stopPropagation()}
                   className={`flex items-center gap-2 px-6 py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${item.isVerified ? 'bg-brandRed text-white shadow-[0_0_20px_#FF0000]' : 'bg-zinc-900 text-zinc-500 hover:text-white border border-white/5'}`}
                 >
                   {item.isVerified ? <Check size={14} /> : <ShieldCheck size={14} />}
                   {item.isVerified ? 'Verified' : 'Verify'}
                 </button>
 
-                <button onClick={() => { setItemToDelete(item); setConfirmOpen(true); }} className="p-3 bg-zinc-900 text-zinc-600 hover:text-brandRed rounded-xl transition-all border border-white/5">
+                <button 
+                  onClick={() => { setItemToDelete(item); setConfirmOpen(true); }} 
+                  onPointerDown={(e) => e.stopPropagation()}
+                  className="p-3 bg-zinc-900 text-zinc-600 hover:text-brandRed rounded-xl transition-all border border-white/5"
+                >
                   <Trash2 size={20} />
                 </button>
               </div>
@@ -249,7 +284,6 @@ export default function AdminMartManager() {
         </Reorder.Group>
       </div>
 
-      {/* 🔥 VERIFICATION AUDIT MODAL */}
       <AnimatePresence>
         {auditItem && (
           <div className="fixed inset-0 z-[1000] flex items-center justify-center p-6">

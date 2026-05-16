@@ -114,7 +114,7 @@ export default function ProfessionalDetailsPage() {
           const MASTER_ADMINS = [
             'punerimallus1@gmail.com', 
             'rohitanish86@gmail.com', 
-            'anotheradmin@punerimallus.com'
+            'panikarvishnu7@gmail.com'
           ];
           
           const isOwner = user?.email === found.userEmail;

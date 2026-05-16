@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import clientPromise from "@/lib/mongodb";
 import { createClient } from '@supabase/supabase-js';
 import { ObjectId } from 'mongodb';
+import { cookies } from 'next/headers';
 import { 
   sendMartPendingEmail, 
   sendMartLiveEmail, 
@@ -194,44 +195,70 @@ export async function PATCH(req: Request) {
 }
 
 /**
- * 4. DELETE: REMOVE LISTING
+ * 4. DELETE: REMOVE LISTING (OWNERS & ADMINS)
  */
 export async function DELETE(req: Request) {
   try {
+    // 1. Extract ALL data from URL to bypass body-stripping on ALL hosts
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get('id');
+    const adminEmail = searchParams.get('adminEmail');
+    const userEmail = searchParams.get('userEmail');
+    const userId = searchParams.get('userId');
+
+    if (!id || !ObjectId.isValid(id)) {
+      return NextResponse.json({ error: "Valid ID required" }, { status: 400 });
+    }
+
     const client = await clientPromise;
     const db = client.db("punerimallus");
-    const { id, userEmail, userId } = await req.json();
 
-    // 🔥 SECURITY FIX: Fetch the post first to safely verify ownership
     const post = await db.collection("mallu_mart").findOne({ _id: new ObjectId(id) });
-    if (!post) return NextResponse.json({ error: "Unauthorized or not found" }, { status: 401 });
+    if (!post) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
-    const authHeader = req.headers.get('cookie') || '';
-    const isAdmin = authHeader.includes('admin_token');
-    
-    // Check if the user is the true owner (either by matching email OR user ID)
+    // 2. CHECK FOR ADMIN (Query authorized_admins table)
+    let isAdmin = false;
+    if (adminEmail) {
+      const { data: adminRecord } = await supabaseAdmin
+        .from('authorized_admins')
+        .select('email')
+        .eq('email', adminEmail)
+        .maybeSingle();
+      
+      if (adminRecord) isAdmin = true;
+    }
+
+    // 3. CHECK FOR OWNER
     const isOwner = (userEmail && post.userEmail === userEmail) || (userId && post.userId === userId);
 
     if (!isAdmin && !isOwner) {
-        return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      console.log("❌ DELETE BLOCKED - Not Admin & Not Owner");
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
+    // 4. Cleanup Supabase Storage
     const posterPaths = post.imagePaths || (post.imagePath ? [post.imagePath] : []);
     const verificationPaths = post.verificationDocs ? Object.values(post.verificationDocs) : [];
     
     const allFiles = [...posterPaths, ...verificationPaths].map(path => {
         if (typeof path === 'string' && path.includes('/')) return path.split('/').pop();
         return path;
-    }).filter(Boolean);
+    }).filter(Boolean) as string[];
     
     if (allFiles.length > 0) {
-      await supabaseAdmin.storage.from('mallu-mart').remove(allFiles);
+      try {
+        await supabaseAdmin.storage.from('mallu-mart').remove(allFiles);
+      } catch (err) {
+        console.error("SUPABASE_STORAGE_PURGE_ERROR:", err);
+      }
     }
 
+    // 5. Delete from Mongo
     await db.collection("mallu_mart").deleteOne({ _id: new ObjectId(id) });
     
-    return NextResponse.json({ message: "Business and associated documents removed successfully" });
+    return NextResponse.json({ message: "Business removed successfully" });
   } catch (error) {
+    console.error("MART_DELETE_CRITICAL_ERROR:", error);
     return NextResponse.json({ error: "Delete failed" }, { status: 500 });
   }
 }
