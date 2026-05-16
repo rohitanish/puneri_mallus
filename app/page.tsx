@@ -422,7 +422,7 @@ export default function Home() {
                   />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
                 </div>
-                <h4 className="text-2xl sm:text-3xl font-black uppercase tracking-tighter text-white">Shehanas</h4>
+                <h4 className="text-2xl sm:text-3xl font-black uppercase tracking-tighter text-white">Shehanas.SHEIK</h4>
                 <p className="text-brandRed font-black uppercase text-[12px] tracking-widest mt-2 sm:mt-3">Co-Founder</p>
               </div>
             </div>
