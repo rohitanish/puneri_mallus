@@ -309,7 +309,15 @@ export default function ProfessionalDetailsPage() {
       />
 
       <motion.div style={{ y }} className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-[#030303]">
-        <Image src="/events/mmart.webp" alt="BG" fill priority className="object-cover opacity-[0.2] brightness-[0.7] scale-110" />
+        <Image 
+          src="/events/mmart.webp" 
+          alt="BG" 
+          fill 
+          priority 
+          quality={60} // 🔥 Dropped quality for background speed
+          sizes="100vw"
+          className="object-cover opacity-[0.2] brightness-[0.7] scale-110" 
+        />
         <div className="absolute inset-0 bg-gradient-to-b from-[#030303] via-transparent to-[#030303] z-[1]" />
       </motion.div>
 
@@ -322,7 +330,9 @@ export default function ProfessionalDetailsPage() {
                 alt={item.name} 
                 fill 
                 priority 
-                unoptimized 
+                // 🔥 Removed 'unoptimized' and added explicit sizes
+                sizes="(max-width: 768px) 128px, 176px"
+                quality={80}
                 className="object-cover"
               />
             </div>
@@ -522,7 +532,16 @@ export default function ProfessionalDetailsPage() {
                     <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
                       {gallery.map((img: string, idx: number) => (
                         <div key={idx} onClick={() => setZoomImage(`https://bhfrgcphqmbocplfcvbg.supabase.co/storage/v1/object/public/mallu-mart/${img}`)} className="relative aspect-square rounded-[32px] overflow-hidden border border-white/10 bg-zinc-900 cursor-zoom-in group">
-                          <Image src={`https://bhfrgcphqmbocplfcvbg.supabase.co/storage/v1/object/public/mallu-mart/${img}`} alt="Gallery" fill unoptimized className="object-cover transition-transform duration-700 group-hover:scale-110" />
+                          <Image 
+                            src={`https://bhfrgcphqmbocplfcvbg.supabase.co/storage/v1/object/public/mallu-mart/${img}`} 
+                            alt="Gallery" 
+                            fill 
+                            // 🔥 Removed 'unoptimized', added lazy loading and sizes
+                            sizes="(max-width: 768px) 50vw, 33vw"
+                            quality={75}
+                            loading="lazy"
+                            className="object-cover transition-transform duration-700 group-hover:scale-110" 
+                          />
                           <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center"><Maximize2 size={24} className="text-white" /></div>
                         </div>
                       ))}
