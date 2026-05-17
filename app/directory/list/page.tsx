@@ -106,6 +106,7 @@ function ListContent() {
           .select('*')
           .eq('user_id', user.id)
           .eq('source', 'MALLU_MART')
+          .eq('is_verified', true) // 🔥 THE FIX: This keeps the gate locked!
           .limit(1);
 
         const ownerRecord = ownerRecords?.[0];
@@ -123,6 +124,8 @@ function ListContent() {
              }));
           }
         } else {
+          // If the row exists but is_verified is false, it falls down here 
+          // and keeps the EmailVerificationGate on their screen.
           setIsVerified(false);
         }
 
@@ -157,7 +160,8 @@ function ListContent() {
             })));
           }
         }
-      } catch (err) { 
+      }
+      catch (err) { 
         console.error(err); 
       } finally { 
         setFetching(false); 

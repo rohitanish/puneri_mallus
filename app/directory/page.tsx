@@ -68,6 +68,7 @@ export default function MalluMartPage() {
           .from('directory_owners')
           .select('verified_email, email, phone_number')
           .eq('user_id', user.id)
+          .eq('is_verified', true) // 🔥 THE FIX: Ignore unverified rows
           .limit(1);
 
         const realEmail = ownerRecords?.[0]?.verified_email || ownerRecords?.[0]?.email || user.email;
