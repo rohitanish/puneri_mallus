@@ -98,27 +98,31 @@ export default function EmailVerificationGate({ userId, source, onVerified }: Em
     let interval: NodeJS.Timeout;
     
     if (step === 2) {
+      const cleanEmail = email.trim().toLowerCase();
+      
       interval = setInterval(async () => {
-        const cacheBuster = new Date().getTime().toString();
-
+        // 🔥 THE FIX: Changed 'email' to 'verified_email' to match your database column
         const { data, error } = await supabase
           .from('directory_owners')
           .select('is_verified')
           .eq('user_id', userId)
           .eq('source', source)
-          .neq('full_name', cacheBuster) 
-          .single();
+          .eq('verified_email', cleanEmail) // <--- THIS WAS THE BUG!
+          .order('created_at', { ascending: false }) 
+          .limit(1)
+          .maybeSingle(); 
         
-        if (error) console.error("Poller Check Error:", error.message);
+        if (error) {
+          console.error("Poller Check Error:", error.message);
+          return;
+        }
 
+        // If the database says this specific entry is now verified
         if (data && data.is_verified === true) {
           clearInterval(interval);
           setStep(3); 
 
-          const cleanEmail = email.trim().toLowerCase();
-
           setTimeout(() => {
-            // Because we cleaned it in step 0, 'phone' is exactly 10 digits here
             onVerified({ fullName, phone, businessName, email: cleanEmail });
           }, 1500);
         }

@@ -97,9 +97,10 @@ export default function CommunityPage() {
           .from('directory_owners')
           .select('verified_email, email, phone_number')
           .eq('user_id', user.id)
+          .eq('is_verified', true) // 🔥 THE FIX: Ignore unverified rows
           .limit(1);
 
-        // 🔥 THE FIX: Extract directly using optional chaining without the `{}` fallback
+        // Extract directly using optional chaining without the `{}` fallback
         const realEmail = ownerRecords?.[0]?.verified_email || ownerRecords?.[0]?.email || user.email;
         const dbPhone = ownerRecords?.[0]?.phone_number || user.phone;
         

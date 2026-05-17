@@ -86,12 +86,13 @@ function AddCommunityForm() {
       if (!user) return router.push('/auth/login');
       setUser(user);
 
-      try {
+     try {
         const { data: ownerRecords } = await supabase
           .from('directory_owners')
           .select('*')
           .eq('user_id', user.id)
           .eq('source', 'COMMUNITY')
+          .eq('is_verified', true) // 🔥 THE FIX: This keeps the gate locked!
           .limit(1); 
 
         const ownerRecord = ownerRecords?.[0];
@@ -108,6 +109,8 @@ function AddCommunityForm() {
              }));
           }
         } else {
+          // If the row exists but is_verified is false, it falls down here 
+          // and keeps the EmailVerificationGate on their screen.
           setIsVerified(false);
         }
 
@@ -166,7 +169,7 @@ function AddCommunityForm() {
             }
           }
         }
-      } catch (err) {
+      }catch (err) {
         console.error("Initialization Error:", err);
       } finally {
         setFetching(false);
