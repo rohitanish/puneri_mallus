@@ -394,8 +394,9 @@ export default function Home() {
                     src="/founders/suchi.jpg" 
                     alt="Suchi" 
                     fill 
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                    quality={80}
+                    // 🔥 THE FIX: Explicitly tell Next.js the exact max widths to fetch
+                    sizes="(max-width: 640px) 260px, 340px"
+                    quality={75}
                     loading="lazy"
                     className="object-cover group-hover:scale-105 transition-all duration-700" 
                   />
@@ -413,10 +414,11 @@ export default function Home() {
                 >                  
                   <Image 
                     src="/founders/shehanas_2.jpeg" 
-                    alt="Shena" 
+                    alt="Shehanas" 
                     fill 
-                    sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                    quality={80}
+                    // 🔥 THE FIX: Explicitly tell Next.js the exact max widths to fetch
+                    sizes="(max-width: 640px) 260px, 340px"
+                    quality={75}
                     loading="lazy"
                     className="object-cover group-hover:scale-105 transition-all duration-700" 
                   />
