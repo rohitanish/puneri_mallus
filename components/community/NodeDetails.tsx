@@ -111,7 +111,15 @@ export default function NodeDetails({ isAdminView = false }: NodeDetailsProps) {
 
       {/* 1. BACKGROUND PARALLAX */}
       <motion.div style={{ y }} className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-black">
-        <Image src="/events/comm_2.png" alt="Atmosphere" fill priority sizes="100vw" className="object-cover opacity-[0.25] brightness-[0.7] scale-110 saturate-[1.2]" />
+        <Image 
+          src="/events/comm_2.png" 
+          alt="Atmosphere" 
+          fill 
+          priority 
+          quality={60} // 🔥 Lowered quality for massive speed boost
+          sizes="100vw" 
+          className="object-cover opacity-[0.25] brightness-[0.7] scale-110 saturate-[1.2]" 
+        />
         <div className="absolute inset-0 bg-gradient-to-b from-[#030303]/60 via-transparent to-[#030303] z-[1]" />
       </motion.div>
 
@@ -122,7 +130,15 @@ export default function NodeDetails({ isAdminView = false }: NodeDetailsProps) {
           <div className="flex flex-col md:flex-row gap-10 justify-center items-center md:items-start">
             
             <div className="w-32 h-32 md:w-44 md:h-44 relative rounded-[32px] overflow-hidden border border-white/10 bg-zinc-900 shadow-2xl shrink-0 transition-all duration-500 hover:scale-105">
-              <Image src={thumbnail || "/about/placeholder.jpeg"} alt={item.title} fill priority sizes="33vw" className="object-cover" />
+              <Image 
+                src={thumbnail || "/about/placeholder.jpeg"} 
+                alt={item.title} 
+                fill 
+                priority 
+                sizes="(max-width: 768px) 128px, 176px" // 🔥 Explicit sizes
+                quality={80}
+                className="object-cover" 
+              />
             </div>
 
             <div className="flex-1 space-y-6 w-full flex flex-col items-center text-center md:items-start md:text-left">
@@ -253,7 +269,9 @@ export default function NodeDetails({ isAdminView = false }: NodeDetailsProps) {
                           src={m.image || "/about/placeholder.jpeg"} 
                           alt={m.name} 
                           fill 
-                          
+                          sizes="(max-width: 768px) 144px, 160px" // 🔥 Explicit sizes
+                          quality={75}
+                          loading="lazy"
                           className="object-cover" 
                         />
                       </div>
@@ -286,7 +304,16 @@ export default function NodeDetails({ isAdminView = false }: NodeDetailsProps) {
               <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
                 {allImages.filter((img: string) => img).map((img: string, idx: number) => (
                   <div key={idx} onClick={() => setZoomImage(img)} className="relative aspect-square rounded-[32px] overflow-hidden border border-white/10 bg-zinc-900 cursor-zoom-in group shadow-2xl">
-                    <Image src={img} alt="Archive" fill unoptimized className="object-cover transition-transform duration-700 group-hover:scale-110 opacity-90 group-hover:opacity-100" />
+                    <Image 
+                      src={img} 
+                      alt="Archive" 
+                      fill 
+                      // 🔥 Removed unoptimized, added sizes and lazy loading
+                      sizes="(max-width: 768px) 50vw, 33vw"
+                      quality={75}
+                      loading="lazy"
+                      className="object-cover transition-transform duration-700 group-hover:scale-110 opacity-90 group-hover:opacity-100" 
+                    />
                     <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                       <Maximize2 size={24} className="text-white" />
                     </div>
