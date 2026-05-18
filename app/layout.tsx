@@ -1,5 +1,4 @@
-"use client"; // 🔥 Must be a client component to use usePathname
-
+import type { Metadata } from 'next';
 import { Inter } from "next/font/google";
 import "./globals.css";
 import Script from "next/script";
@@ -10,28 +9,46 @@ import Footer from "@/components/Footer";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import { Analytics } from "@vercel/analytics/next";
 import { WhatsAppTribe } from '@/components/ui/WhatsappTribe';
-import GlobalEntryGate from '@/components/GlobalEntryGate';
-import { usePathname } from 'next/navigation'; // 🔥 Import this
+
+// 🔥 Import the new client-side gatekeeper
+import ConditionalGate from '@/components/ConditionalGate'; 
 
 const inter = Inter({ subsets: ["latin"] });
 
-// Note: Metadata must be moved to a separate layout-metadata.ts file 
-// or defined in a server component if you need SEO, because "use client" 
-// layouts cannot export metadata. 
+// 🔥 FULL METADATA SETUP (Works perfectly because this is now a Server Component)
+export const metadata: Metadata = {
+  metadataBase: new URL('https://www.punerimallus.com'), 
+  title: 'Puneri Mallus | The Hub for Malayalees in Pune',
+  description: 'Join the ultimate community for Malayalees in Pune and PCMC. Connect with verified businesses, professionals, and fellow Mallus.',
+  openGraph: {
+    title: 'Puneri Mallus | The Hub for Malayalees in Pune',
+    description: 'Join the ultimate community for Malayalees in Pune and PCMC. Connect with verified businesses, professionals, and fellow Mallus.',
+    url: '/', 
+    siteName: 'Puneri Mallus',
+    images: [
+      {
+        url: 'https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSbcHUSuPYM3HA5pDH4lGXjgrMA1yCrAaUM9Q&s', 
+        width: 1200,
+        height: 630,
+        alt: 'Puneri Mallus Community Banner',
+      },
+    ],
+    locale: 'en_IN',
+    type: 'website',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: 'Puneri Mallus',
+    description: 'The professional hub for Malayalees in Pune and PCMC.',
+    images: ['https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcSbcHUSuPYM3HA5pDH4lGXjgrMA1yCrAaUM9Q&s'],
+  },
+};
 
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  const pathname = usePathname();
-
-  // 🔥 Define the "No-Fly Zone" for the Global Gatekeeper
-  const isAuthOrAdmin = 
-    pathname?.includes('/login') || 
-    pathname?.includes('/auth') || 
-    pathname?.includes('/admin');
-
   return (
     <html lang="en" className="dark scroll-smooth overflow-x-hidden">
       <body className={`${inter.className} antialiased bg-black text-white selection:bg-brandRed/30 overflow-x-hidden w-full`}>
@@ -41,8 +58,8 @@ export default function RootLayout({
           <main className="min-h-screen w-full overflow-x-hidden">
             {children}
             
-            {/* 🔥 ONLY render the Gatekeeper if we are NOT on an Admin/Auth page */}
-            {!isAuthOrAdmin && <GlobalEntryGate />}
+            {/* 🔥 Client-side path checking happens safely inside this component */}
+            <ConditionalGate />
             
             <Script
               id="razorpay-checkout-js"
