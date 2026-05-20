@@ -126,6 +126,15 @@ export default function AdminEventsPage() {
     }
   };
 
+  const formatUrl = (url?: string) => {
+    if (!url) return '';
+    const trimmed = url.trim();
+    if (trimmed !== '' && !trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+      return `https://${trimmed}`;
+    }
+    return trimmed;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.date || !form.time) {
@@ -134,11 +143,15 @@ export default function AdminEventsPage() {
     }
 
     setSaving(true);
+    
+    // 🔥 Apply the formatUrl helper to mapUrl and ticketUrl
     const sanitizedForm = {
       ...form,
       title: form.title.trim().toUpperCase(),
       location: form.location.trim().toUpperCase(),
       category: form.category.trim().toUpperCase(),
+      mapUrl: formatUrl(form.mapUrl),
+      ticketUrl: formatUrl(form.ticketUrl),
     };
 
     try {
