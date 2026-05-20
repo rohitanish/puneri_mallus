@@ -117,7 +117,7 @@ export default function Home() {
       <div
         className="fixed inset-0 z-0 pointer-events-none overflow-hidden"
         style={{
-          backgroundImage: 'url(/events/main2.jpeg)',
+          backgroundImage: 'url(/events/eventsback.jpg)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           opacity: 0.45,

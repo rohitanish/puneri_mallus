@@ -103,7 +103,7 @@ export default function EventsPage() {
       <div
         className="fixed inset-0 z-0 pointer-events-none overflow-hidden"
         style={{
-          backgroundImage: 'url(/events/eventsback.jpg)',
+          backgroundImage: 'url(/events/main2.jpeg)',
           backgroundSize: 'cover',
           backgroundPosition: 'center',
           opacity: 0.45,
