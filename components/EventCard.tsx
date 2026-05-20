@@ -222,11 +222,16 @@ export default function EventCard({
             )}
 
             {isUpcoming && (
-              <a href={ticketUrl || "/events"} className="block group/btn">
-                <button className="w-full py-4 bg-brandRed text-white font-black uppercase text-[9px] tracking-[0.3em] hover:bg-white hover:text-black transition-all rounded-2xl shadow-xl active:scale-95 flex items-center justify-center gap-2">
-                  Secure Spot <Zap size={12} />
-                </button>
-              </a>
+              <a 
+  href={ticketUrl || "/events"} 
+  target="_blank" 
+  rel="noopener noreferrer" 
+  className="block group/btn"
+>
+  <button className="w-full py-4 bg-brandRed text-white font-black uppercase text-[9px] tracking-[0.3em] hover:bg-white hover:text-black transition-all rounded-2xl shadow-xl active:scale-95 flex items-center justify-center gap-2">
+    Secure Spot <Zap size={12} />
+  </button>
+</a>
             )}
           </div>
         </div>
