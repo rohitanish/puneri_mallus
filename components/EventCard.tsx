@@ -9,7 +9,7 @@ interface EventCardProps {
   date: string;
   image: string;
   category: string;
-  categoryLogo?: string; // 🔥 Added for logo support
+  categoryLogo?: string; 
   isUpcoming?: boolean;
   showDescription?: boolean; 
   description?: string;
@@ -24,7 +24,7 @@ export default function EventCard({
   date, 
   image, 
   category, 
-  categoryLogo, // 🔥 New Prop
+  categoryLogo, 
   isUpcoming = false, 
   showDescription = true, 
   description, 
@@ -87,45 +87,53 @@ export default function EventCard({
       }`}>
         
         {/* IMAGE SECTION */}
-        <div className="relative w-full aspect-[16/11] overflow-hidden">
-        <Image 
-          src={safeSrc} 
-          alt={title} 
-          fill 
-          className="object-cover transition-all duration-1000 group-hover:scale-105" 
-          sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-          priority={isUpcoming} 
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/20 to-transparent z-10" />
+        <div className="relative w-full aspect-[16/11] overflow-hidden bg-zinc-950">
           
-          {/* 🔥 UPDATED: LOGO BADGE (Increased Size & Full Frame) */}
-          <div className="absolute top-5 right-5 z-20">
-            {/* Increased to w-14 h-14 */}
+          {/* 1. Blurred Background Layer (Fills empty space for vertical flyers) */}
+          <div className="absolute inset-0 z-0">
+            <Image 
+              src={safeSrc} 
+              alt="Background blur" 
+              fill 
+              className="object-cover opacity-30 blur-2xl scale-125" 
+              priority={isUpcoming} 
+            />
+          </div>
+
+          {/* 2. Main Image (object-contain ensures the entire flyer is visible) */}
+          <Image 
+            src={safeSrc} 
+            alt={title} 
+            fill 
+            className="object-contain transition-all duration-1000 group-hover:scale-105 z-10" 
+            sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+            priority={isUpcoming} 
+          />
+          
+          {/* 3. Gradient Overlay */}
+          <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 via-zinc-950/20 to-transparent z-20 pointer-events-none" />
+          
+          {/* 4. LOGO BADGE */}
+          <div className="absolute top-5 right-5 z-30">
             <div className="relative w-14 h-14 flex items-center justify-center">
-              {/* Outer Glow Ring */}
               <div className={`absolute inset-0 rounded-full blur-lg transition-opacity duration-700 ${isUpcoming ? 'bg-brandRed opacity-40 group-hover:opacity-80' : 'bg-zinc-600 opacity-20'}`} />
-              
-              {/* Logo Container - Removed padding to allow full coverage */}
               <div className={`relative w-full h-full rounded-full border-2 overflow-hidden flex items-center justify-center backdrop-blur-md shadow-2xl transition-all ${
                 isUpcoming ? 'bg-zinc-950/90 border-white/20' : 'bg-zinc-900/90 border-white/5 opacity-60 grayscale'
               }`}>
                 {categoryLogo ? (
-                  /* object-cover ensures the circle is entirely covered */
                   <img src={categoryLogo} alt={category} className="w-full h-full object-cover" />
                 ) : (
-                  /* Fallback icon if no logo provided */
                   isUpcoming ? <Zap size={20} className="text-brandRed" /> : <History size={20} className="text-zinc-500" />
                 )}
               </div>
             </div>
           </div>
 
-          {/* COUNTDOWN OVERLAY - MAINTAINED */}
+          {/* 5. COUNTDOWN OVERLAY */}
           {isUpcoming && isLive && (
-            <div className="absolute inset-0 bg-black/70 flex items-center justify-center backdrop-blur-md opacity-0 group-hover:opacity-100 transition-all duration-700 z-30">
+            <div className="absolute inset-0 bg-black/70 flex items-center justify-center backdrop-blur-md opacity-0 group-hover:opacity-100 transition-all duration-700 z-40">
               <div className="text-center">
                 <p className="text-[10px] tracking-[.4em] text-brandRed mb-5 uppercase font-black">Syncing Pulse</p>
-                
                 <div className="flex gap-4 text-white font-black italic text-4xl tracking-tighter">
                    <div className="flex flex-col items-center">
                      <span className="leading-none">{timeLeft.days}</span>
@@ -147,7 +155,7 @@ export default function EventCard({
           )}
         </div>
 
-        {/* CONTENT SECTION - MAINTAINED */}
+        {/* CONTENT SECTION */}
         <div className="p-8 md:p-10 flex-1 flex flex-col relative z-20">
           <div className="flex items-start gap-5 mb-6">
             <div className="flex flex-col items-center justify-center w-14 h-16 bg-white rounded-2xl overflow-hidden shadow-2xl group-hover:-rotate-3 transition-transform duration-700 shrink-0">
@@ -194,7 +202,7 @@ export default function EventCard({
             </div>
           )}
 
-          {/* FOOTER - MAINTAINED */}
+          {/* FOOTER */}
           <div className="mt-auto space-y-4">
             {location && (
               <div className="flex items-center justify-between bg-white/5 p-3 px-4 rounded-xl border border-white/5 backdrop-blur-md">
