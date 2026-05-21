@@ -267,7 +267,7 @@ export default function EventsPage() {
                         <div className="flex gap-2">
                            {item.isUpcoming && (
                              <Link 
-                               href={item.link || '#'} 
+                               href={item.ticketUrl || '#'}
                                target="_blank" 
                                className="flex-[2] bg-brandRed text-white py-4 rounded-2xl font-black uppercase text-[11px] tracking-widest hover:bg-white hover:text-black transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95"
                              >
