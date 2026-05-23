@@ -202,38 +202,53 @@ export default function EventCard({
             </div>
           )}
 
-          {/* FOOTER */}
-          <div className="mt-auto space-y-4">
-            {location && (
-              <div className="flex items-center justify-between bg-white/5 p-3 px-4 rounded-xl border border-white/5 backdrop-blur-md">
-                <div className="flex items-center gap-3">
-                  <MapPin size={14} className="text-brandRed" />
-                  <div className="flex flex-col">
-                    <span className="text-[7px] font-black text-zinc-500 uppercase tracking-widest leading-none mb-1">Venue</span>
-                    <p className="text-[10px] font-black uppercase tracking-widest text-zinc-300 leading-tight truncate max-w-[150px]">{location}</p>
-                  </div>
-                </div>
-                {mapUrl && (
-                  <a href={mapUrl} target="_blank" rel="noopener noreferrer" className="p-2 bg-zinc-950 hover:bg-brandRed hover:text-white rounded-lg transition-all border border-white/10">
-                    <ExternalLink size={12} />
-                  </a>
-                )}
-              </div>
-            )}
+{/* FOOTER */}
+<div className="mt-auto space-y-4">
+  {location && (
+    <div className="flex items-center justify-between bg-white/5 p-3 px-4 rounded-xl border border-white/5 backdrop-blur-md">
+      
+      {/* Added flex-1 to allow this section to take up all available horizontal space */}
+      <div className="flex items-center gap-3 flex-1">
+        
+        {/* Added shrink-0 so the pin icon never gets squished */}
+        <MapPin size={14} className="text-brandRed shrink-0" />
+        
+        <div className="flex flex-col flex-1">
+          <span className="text-[7px] font-black text-zinc-500 uppercase tracking-widest leading-none mb-1">Venue</span>
+          
+          {/* 🔥 Removed `truncate` and `max-w-[150px]`. Added `pr-4` so it doesn't touch the button */}
+          <p className="text-[10px] font-black uppercase tracking-widest text-zinc-300 leading-tight pr-4">
+            {location}
+          </p>
+        </div>
+      </div>
 
-            {isUpcoming && (
-              <a 
-  href={ticketUrl || "/events"} 
-  target="_blank" 
-  rel="noopener noreferrer" 
-  className="block group/btn"
->
-  <button className="w-full py-4 bg-brandRed text-white font-black uppercase text-[9px] tracking-[0.3em] hover:bg-white hover:text-black transition-all rounded-2xl shadow-xl active:scale-95 flex items-center justify-center gap-2">
-    Secure Spot <Zap size={12} />
-  </button>
-</a>
-            )}
-          </div>
+      {mapUrl && (
+        <a 
+          href={mapUrl} 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          className="p-2 bg-zinc-950 hover:bg-brandRed hover:text-white rounded-lg transition-all border border-white/10 shrink-0"
+        >
+          <ExternalLink size={12} />
+        </a>
+      )}
+    </div>
+  )}
+
+  {isUpcoming && (
+    <a 
+      href={ticketUrl || "/events"} 
+      target="_blank" 
+      rel="noopener noreferrer" 
+      className="block group/btn"
+    >
+      <button className="w-full py-4 bg-brandRed text-white font-black uppercase text-[9px] tracking-[0.3em] hover:bg-white hover:text-black transition-all rounded-2xl shadow-xl active:scale-95 flex items-center justify-center gap-2">
+        Secure Spot <Zap size={12} />
+      </button>
+    </a>
+  )}
+</div>
         </div>
       </div>
     </motion.div>
