@@ -11,7 +11,7 @@ export async function POST(req: Request) {
     }
 
     const client = await clientPromise;
-    const db = client.db('puneri_mallus');
+    const db = client.db('punerimallus');
     
     // Process all updates in parallel
     const bulkOps = updates.map((update: any) => ({
