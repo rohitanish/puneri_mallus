@@ -336,7 +336,7 @@ export default function AboutPage() {
 
 
        {/* DYNAMIC TEAM SECTION */}
-        <section className="max-w-[90%] md:max-w-7xl mx-auto text-center mb-40">
+        {/* <section className="max-w-[90%] md:max-w-7xl mx-auto text-center mb-40">
           <div className="flex flex-col items-center mb-12 md:mb-20">
             <h2 className="text-5xl md:text-7xl font-black uppercase italic tracking-tighter text-white">
               Our <span className="text-brandRed">Team</span>
@@ -385,9 +385,9 @@ export default function AboutPage() {
               </div>
             )}
           </div>
-        </section>
+        </section> */}
         
-        <LaserDivider />
+        {/* <LaserDivider /> */}
 
         {/* CONCISE GALLERY SECTION */}
         <section className="max-w-[90%] mx-auto mb-40 relative">
