@@ -36,6 +36,7 @@ interface Partner {
   image: string;
   category: string;
   perk?: string;
+  order?: number;
 }
 
 export default function PartnersPage() {
@@ -70,6 +71,8 @@ export default function PartnersPage() {
         (p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
          p.perk?.toLowerCase().includes(searchQuery.toLowerCase()))
       )
+      // 🔥 ADD THIS SORT FUNCTION
+        .sort((a, b) => (a.order || 0) - (b.order || 0))
     })).filter(group => group.members.length > 0);
   }, [partners, searchQuery]);
 
