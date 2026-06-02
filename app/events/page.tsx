@@ -57,10 +57,33 @@ export default function EventsPage() {
         const data = await res.json();
         
         if (Array.isArray(data)) {
-            const sortedData = data.sort((a: any, b: any) => {
-              if (a.isUpcoming !== b.isUpcoming) return a.isUpcoming ? -1 : 1;
-              return new Date(b.date).getTime() - new Date(a.date).getTime();
+            const now = new Date().getTime();
+
+            // 🔥 1. Add precise timestamps and calculate `isUpcoming` securely
+            const processedData = data.map(e => {
+                const eventTime = new Date(`${e.date} ${e.time || "12:00 AM"}`).getTime();
+                return {
+                    ...e,
+                    timestamp: eventTime || 0,
+                    isUpcoming: eventTime >= now
+                };
             });
+
+            // 🔥 2. Sort Upcoming & Past accurately
+            const sortedData = processedData.sort((a, b) => {
+                // Group UPCOMING first, PAST second
+                if (a.isUpcoming && !b.isUpcoming) return -1;
+                if (!a.isUpcoming && b.isUpcoming) return 1;
+
+                if (a.isUpcoming) {
+                    // For Upcoming: Closest date first (Ascending)
+                    return a.timestamp - b.timestamp;
+                } else {
+                    // For Past: Most recent date first (Descending)
+                    return b.timestamp - a.timestamp;
+                }
+            });
+
             setEvents(sortedData);
         } else {
             setEvents([]);
@@ -96,10 +119,8 @@ export default function EventsPage() {
   );
 
   return (
-    <div 
-      className="bg-[#030303] min-h-screen relative selection:bg-brandRed/30 overflow-x-hidden"
-    >
-     {/* Background Image - Now visible on mobile! */}
+    <div className="bg-[#030303] min-h-screen relative selection:bg-brandRed/30 overflow-x-hidden">
+     {/* Background Image */}
       <div
         className="fixed inset-0 z-0 pointer-events-none overflow-hidden"
         style={{
@@ -130,13 +151,11 @@ export default function EventsPage() {
                 <input 
                     id="searchEvents"
                     placeholder="Search events..." 
-                    // 🔥 MOBILE OPTIMIZATION: Solid bg-zinc-900 on mobile, translucent on md:
                     className="w-full bg-zinc-900 md:bg-zinc-950/40 border border-white/10 rounded-xl py-3.5 pl-11 text-[13px] font-medium outline-none focus:border-brandRed transition-all text-white md:backdrop-blur-xl placeholder:text-zinc-500" 
                     onChange={e => {setSearch(e.target.value); }} value={search}
                 />
             </div>
 
-            {/* 🔥 MOBILE OPTIMIZATION: Solid bg-zinc-900 on mobile */}
             <div className="relative flex items-center bg-zinc-900 md:bg-zinc-950/50 p-1 rounded-xl border border-white/10 w-full md:w-[450px] md:backdrop-blur-md">
                 {FILTERS.map((f) => (
                     <button key={f.id} onClick={() => {setActiveFilter(f.id); }}
@@ -172,7 +191,6 @@ export default function EventsPage() {
                   initial={{ opacity: 0 }} 
                   animate={{ opacity: 1 }} 
                   exit={{ opacity: 0 }}
-                  // 🔥 MOBILE OPTIMIZATION: Solid bg-zinc-900 on mobile, glass on md:
                   className="group relative border border-white/10 md:border-white/5 rounded-[40px] overflow-hidden transition-all duration-500 hover:border-brandRed/30 shadow-xl md:backdrop-blur-2xl h-fit bg-zinc-900 md:bg-white/[0.03]"
                   style={{ transform: 'translateZ(0)' }}
                 >
@@ -199,7 +217,6 @@ export default function EventsPage() {
                           className={`absolute inset-0 rounded-full blur-lg ${item.isUpcoming ? 'bg-brandRed' : 'bg-zinc-600'}`} 
                         />
                         
-                        {/* 🔥 MOBILE OPTIMIZATION: Solid colors on mobile for the logo badge */}
                         <div className={`relative w-full h-full rounded-full border-2 overflow-hidden flex items-center justify-center transition-all duration-500 md:backdrop-blur-md ${
                           item.isUpcoming 
                           ? 'bg-zinc-950 md:bg-zinc-950/90 border-white/20 shadow-2xl' 

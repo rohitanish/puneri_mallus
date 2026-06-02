@@ -23,7 +23,7 @@ interface TribeEvent {
   mapUrl?: string;
   ticketUrl?: string;
   category: string;
-  categoryLogo?: string; // 🔥 NEW
+  categoryLogo?: string; 
   image: string;
   featured: boolean;
   description: string;
@@ -40,12 +40,12 @@ export default function AdminEventsPage() {
   
   // --- REFS & CALENDAR STATES ---
   const timeInputRef = useRef<HTMLInputElement>(null);
-  const dateContainerRef = useRef<HTMLDivElement>(null); // Anchor for TribeCalendar
+  const dateContainerRef = useRef<HTMLDivElement>(null); 
   const [showCalendar, setShowCalendar] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<{id: string, title: string} | null>(null);
   const [showTimePicker, setShowTimePicker] = useState(false);
-  const [logoUploading, setLogoUploading] = useState(false); // New state for logo
+  const [logoUploading, setLogoUploading] = useState(false); 
   const timeContainerRef = useRef<HTMLDivElement>(null);
   const supabase = createBrowserClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -56,6 +56,7 @@ export default function AdminEventsPage() {
     title: '', date: '', time: '', location: '', mapUrl: '', 
     ticketUrl: '', category: 'CULTURAL', image: '', featured: false, description: '',categoryLogo: ''
   });
+
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     try {
       const file = e.target.files?.[0];
@@ -144,7 +145,6 @@ export default function AdminEventsPage() {
 
     setSaving(true);
     
-    // 🔥 Apply the formatUrl helper to mapUrl and ticketUrl
     const sanitizedForm = {
       ...form,
       title: form.title.trim().toUpperCase(),
@@ -183,16 +183,15 @@ export default function AdminEventsPage() {
     const eventDateTime = new Date(`${event.date} ${event.time}`);
     const isUpcoming = isNaN(eventDateTime.getTime()) || eventDateTime >= now;
 
-    if (isUpcoming) {
-      if (upcoming.filter(e => e.featured).length >= 2) {
-        showAlert("LIMIT REACHED: Max 2 Featured Upcoming events allowed.", "error");
-        return;
-      }
-    } else {
-      if (past.filter(e => e.featured).length >= 3) {
-        showAlert("LIMIT REACHED: Max 3 Featured Past events allowed.", "error");
-        return;
-      }
+    // 🔥 Removed the limit check for past events, kept only for upcoming
+    if (!isUpcoming) {
+      showAlert("Past events are automatically sorted by date. Toggle disabled.", "error");
+      return;
+    }
+
+    if (upcoming.filter(e => e.featured).length >= 2) {
+      showAlert("LIMIT REACHED: Max 2 Featured Upcoming events allowed.", "error");
+      return;
     }
     executeToggle(event);
   };
@@ -302,7 +301,7 @@ export default function AdminEventsPage() {
                   </div>
                 </div>
               </div>
-              {/* 🔥 ENHANCED: CATEGORY & LOGO SECTION */}
+
 <div className="grid grid-cols-1 gap-6">
   <div className="space-y-1 text-[10px]">
     <label className="font-black uppercase tracking-[0.3em] text-zinc-600 ml-2">Category</label>
@@ -321,7 +320,6 @@ export default function AdminEventsPage() {
   <div className="space-y-1 text-[10px]">
     <label className="font-black uppercase tracking-[0.3em] text-zinc-600 ml-2">Category Logo (Circle Icon)</label>
     <div className="flex gap-4">
-      {/* 🔥 Increased size to w-20 h-20 for better Admin visibility */}
       <div className="w-20 h-20 bg-zinc-900 border border-white/10 rounded-full overflow-hidden shrink-0 flex items-center justify-center p-0 shadow-inner group relative">
         {form.categoryLogo ? (
           <img 
@@ -333,7 +331,6 @@ export default function AdminEventsPage() {
           <Zap className="text-zinc-800" size={24} />
         )}
         
-        {/* Simple "Remove" overlay if a logo exists */}
         {form.categoryLogo && (
           <button 
             type="button"
@@ -394,7 +391,7 @@ export default function AdminEventsPage() {
   value={form.date} 
   onChange={handleDateSelect} 
   onClose={() => setShowCalendar(false)}
-  anchorRef={dateContainerRef} // ✅ CORRECT PROP NAME
+  anchorRef={dateContainerRef}
 />
                         </>
                       )}
@@ -466,7 +463,7 @@ export default function AdminEventsPage() {
 
               <label className="flex items-center gap-4 p-5 bg-white/5 rounded-2xl cursor-pointer border border-white/5 hover:border-brandRed/20 transition-all">
                 <input type="checkbox" className="accent-brandRed w-5 h-5" checked={form.featured} onChange={e => setForm({...form, featured: e.target.checked})} />
-                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Featured Placement</span>
+                <span className="text-[10px] font-black uppercase tracking-[0.2em] text-zinc-400">Featured Placement <span className="text-brandRed">(Upcoming Only)</span></span>
               </label>
 
               <button type="submit" disabled={saving || uploading} className="w-full py-5 bg-brandRed text-white font-black uppercase tracking-widest rounded-2xl hover:bg-white hover:text-black transition-all shadow-xl active:scale-95 text-xs">
@@ -513,24 +510,17 @@ export default function AdminEventsPage() {
           </section>
 
           <section className="space-y-8 pt-10">
+            {/* 🔥 Removed Featured Limits Header for Past Events */}
             <h3 className="text-[10px] font-black uppercase tracking-[0.5em] text-zinc-600 flex items-center gap-4">
               Past Archive 
-              <span className={`px-3 py-1 rounded-full border text-[9px] ${past.filter(e => e.featured).length >= 3 ? 'border-brandRed text-brandRed animate-pulse' : 'border-zinc-800 text-zinc-500'}`}>
-                Featured: {past.filter(e => e.featured).length} / 3
-              </span>
               <div className="h-px flex-1 bg-zinc-900" />
             </h3>
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10 opacity-60 grayscale hover:grayscale-0 hover:opacity-100 transition-all duration-500">
               {past.map(event => (
                 <div key={event._id} className="relative group">
+                  {/* 🔥 Removed Star button mapping for past events */}
                   <div className="absolute top-4 right-4 z-40 flex gap-2 opacity-0 group-hover:opacity-100 transition-all scale-90 group-hover:scale-100">
-                    <button 
-                      onClick={() => toggleFeatured(event)} 
-                      className={`p-4 rounded-2xl backdrop-blur-md border border-white/10 transition-all ${event.featured ? 'bg-brandRed text-white shadow-lg' : 'bg-black/80 hover:bg-brandRed text-white'}`}
-                    >
-                      <Star size={16} fill={event.featured ? "currentColor" : "none"} />
-                    </button>
                     <button onClick={() => startEdit(event)} className="p-4 bg-black/80 backdrop-blur-md hover:bg-blue-600 rounded-2xl transition-all border border-white/10 text-white"><Edit3 size={16}/></button>
                     <button onClick={() => {setEventToDelete({id: event._id, title: event.title}); setConfirmOpen(true);}} className="p-4 bg-black/80 backdrop-blur-md hover:bg-red-600 rounded-2xl transition-all border border-white/10 text-white"><Trash2 size={16}/></button>
                   </div>

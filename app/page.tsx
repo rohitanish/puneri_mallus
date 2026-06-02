@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import EventCard from '@/components/EventCard';
 import DynamicTribeAd from '@/components/Popup';
+import { ArrowRight } from 'lucide-react';
 
 // COMPACT LASER DIVIDER
 const LaserDivider = () => (
@@ -65,12 +66,19 @@ export default function Home() {
           setSlides(sliderData.slides);
         }
 
+        // UPCOMING: Still requires 'featured' toggle
         const upcomingNodes = allEvents
           .filter((e: any) => e.isUpcoming === true && e.featured === true)
           .sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
-        const pastFeatured = allEvents
-          .filter((e: any) => e.isUpcoming === false && e.featured === true);
+        // 🔥 THE FIX: Removed 'e.featured === true'. Now it grabs ALL past events and sorts newest-first.
+        const pastNodes = allEvents
+          .filter((e: any) => e.isUpcoming === false)
+          .sort((a: any, b: any) => {
+            const timeA = new Date(`${a.date} ${a.time || "12:00 AM"}`).getTime();
+            const timeB = new Date(`${b.date} ${b.time || "12:00 AM"}`).getTime();
+            return (timeB || 0) - (timeA || 0); 
+          });
 
         const format = (list: any[]) => list.map(e => ({ 
           ...e, 
@@ -80,10 +88,10 @@ export default function Home() {
         }));
 
         setUpcoming(format(upcomingNodes).slice(0, 2));
-        setPast(format(pastFeatured).slice(0, 3));
+        setPast(format(pastNodes).slice(0, 3)); // Automatically grabs the latest 3
 
       } catch (err) {
-        // 🔥 SILENT FAILURE: Removed console.error to prevent leaking internal routing details
+        // Silent Failure
       } finally {
         setLoading(false);
       }
@@ -105,7 +113,6 @@ export default function Home() {
   if (loading) return (
     <div className="min-h-screen bg-black flex flex-col items-center justify-center">
       <Loader2 className="text-brandRed animate-spin mb-4" size={40} />
-      {/* 🔥 SIMPLE ENGLISH UX */}
       <p className="text-zinc-500 text-[11px] font-bold uppercase tracking-widest">Loading...</p>
     </div>
   );
@@ -137,10 +144,6 @@ export default function Home() {
           {slides.length > 0 && slides.map((slide, index) => {
             const isActive = index === currentSlide;
             
-            // 🔥 FIX 1: Do not use return null; for videos! 
-            // If we unmount the video, the browser has to reload it from scratch next time.
-            // We keep it in the DOM but hide it visually and disable pointers.
-
             return (
               <div
                 key={index}
@@ -158,11 +161,7 @@ export default function Home() {
                       loop 
                       muted 
                       playsInline 
-                      
-                      // 🔥 FIX 2: Change preload="none" to preload="auto" so it loads during the preloader
                       preload="auto" 
-                      // 🔥 FIX 3: Add a poster image if you have one to cover the first frame delay
-                      // poster={slide.posterUrl || "/events/mmart.webp"} 
                       className="w-full h-full object-cover transition-opacity duration-700"
                       style={{ opacity: Math.min(((slide.visibility || 60) + 20) / 100, 1), objectPosition: `50% ${slide.vOffset || 50}%` }}
                     >
@@ -174,7 +173,6 @@ export default function Home() {
                       quality={80}
                       className="object-cover transition-opacity duration-700"
                       style={{ opacity: Math.min(((slide.visibility || 60) + 20) / 100, 1), objectPosition: `50% ${slide.vOffset || 50}%` }}
-                      // 🔥 FIX 4: Only priority load the first slide's image
                       priority={index === 0}
                     />
                   )}
@@ -249,7 +247,6 @@ export default function Home() {
                             {event.title} · Live {new Date().getFullYear()}
                           </span>
                         </div>
-                        {/* 🔥 SAFE GLASS FIX */}
                         <div 
                           className="relative overflow-hidden rounded-3xl border border-white/10 bg-zinc-950/80 md:bg-white/[0.03] md:backdrop-blur-xl shadow-2xl group-hover:border-brandRed/30 transition-all duration-500"
                           style={{ transform: 'translateZ(0)' }}
@@ -283,32 +280,48 @@ export default function Home() {
           <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-20">
             <div className="flex justify-between items-end mb-10">
               <h2 className="text-4xl sm:text-5xl md:text-7xl font-black uppercase italic tracking-tighter text-white drop-shadow-2xl">
-                Past <span className="text-brandRed">Events</span>
+                Recent <span className="text-brandRed">Events</span>
               </h2>
-              <Link href="/events" className="text-[11px] font-bold uppercase tracking-widest text-zinc-400 hover:text-brandRed transition-all whitespace-nowrap ml-4">
-                View All
-              </Link>
+              
+              <Link 
+  href="/events" 
+  className="group relative flex items-center gap-2 px-5 py-2.5 text-sm sm:text-base font-black uppercase tracking-widest text-white transition-all whitespace-nowrap ml-4 overflow-hidden rounded-full border border-white/20 hover:border-brandRed bg-white/[0.05]"
+>
+  <span className="relative z-10 flex items-center gap-2">
+    View All 
+    <ArrowUpRight size={16} className="text-white group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+  </span>
+  {/* Hover Fill Effect */}
+  <div className="absolute inset-0 bg-brandRed translate-y-full group-hover:translate-y-0 transition-transform duration-300 z-0" />
+</Link>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8 relative z-30">
-              {past.map((event) => (
-                <div key={event.id} className="relative transition-transform duration-500 md:hover:-translate-y-4">
-                  {/* 🔥 SAFE GLASS FIX */}
-                  <div 
-                    className="bg-zinc-950/80 md:bg-white/[0.03] md:backdrop-blur-xl rounded-[40px] border border-white/5 overflow-hidden"
-                    style={{ transform: 'translateZ(0)' }}
-                  >
-                    <EventCard {...event} isUpcoming={false} />
+            {past.length > 0 ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 sm:gap-8 relative z-30">
+                {/* 🔥 Since 'past' is already sorted and sliced in the useEffect, we just map it! */}
+                {past.map((event) => (
+                  <div key={event.id || event._id} className="relative transition-transform duration-500 md:hover:-translate-y-4">
+                    <div 
+                      className="bg-zinc-950/80 md:bg-white/[0.03] md:backdrop-blur-xl rounded-[40px] border border-white/5 overflow-hidden"
+                      style={{ transform: 'translateZ(0)' }}
+                    >
+                      <EventCard {...event} isUpcoming={false} />
+                    </div>
                   </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="w-full py-12 text-center border border-white/5 rounded-3xl bg-white/[0.02] mt-6">
+                <p className="text-zinc-500 font-black uppercase tracking-widest text-[10px]">
+                  No recent events found. 
+                </p>
+              </div>
+            )}
           </div>
         </section>
-
         <LaserDivider />
 
-       {/* RECENT RECAPS */}
+        {/* RECENT RECAPS */}
         <section className="py-12 sm:py-24 md:py-32 relative overflow-hidden">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-20">
             <div className="mb-8 sm:mb-12">
@@ -327,7 +340,6 @@ export default function Home() {
                     style={{ transform: 'translateZ(0)' }}
                   >                
                     <div className="absolute inset-0 z-0 opacity-40 group-hover:opacity-80 transition-opacity duration-1000">
-                      {/* 🔥 BULLETPROOF VIDEO 1 */}
                       <video 
                         src="/videos/agam-recap.mp4" 
                         className="w-full h-full object-cover"
@@ -336,7 +348,6 @@ export default function Home() {
                         muted 
                         playsInline 
                         preload="metadata"
-                        /* poster="/images/agam-poster.jpg" <-- 🔥 ADD THIS FOR INSTANT LOAD ILLUSION */
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
                     </div>
@@ -352,7 +363,6 @@ export default function Home() {
                     style={{ transform: 'translateZ(0)' }}
                   >                
                     <div className="absolute inset-0 z-0 opacity-40 group-hover:opacity-80 transition-opacity duration-1000">
-                      {/* 🔥 BULLETPROOF VIDEO 2 */}
                       <video 
                         src="/videos/jam.mp4" 
                         className="w-full h-full object-cover"
@@ -361,7 +371,6 @@ export default function Home() {
                         muted 
                         playsInline 
                         preload="metadata"
-                        /* poster="/images/jam-poster.jpg" <-- 🔥 ADD THIS FOR INSTANT LOAD ILLUSION */
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-black via-black/20 to-transparent" />
                     </div>
@@ -385,7 +394,6 @@ export default function Home() {
             </h2>
             <div className="flex flex-wrap justify-center gap-10 sm:gap-16 lg:gap-32">
               <div className="group w-full max-w-[260px] sm:max-w-[340px]">
-                {/* 🔥 SAFE GLASS FIX */}
                 <div 
                   className="aspect-[3/4] bg-zinc-950/80 md:bg-white/[0.03] md:backdrop-blur-md rounded-[32px] sm:rounded-[50px] mb-6 sm:mb-8 overflow-hidden border border-white/10 group-hover:border-brandRed transition-all duration-700 shadow-2xl relative"
                   style={{ transform: 'translateZ(0)' }}
@@ -394,7 +402,6 @@ export default function Home() {
                     src="/founders/suchi.jpg" 
                     alt="Suchi" 
                     fill 
-                    // 🔥 THE FIX: Explicitly tell Next.js the exact max widths to fetch
                     sizes="(max-width: 640px) 260px, 340px"
                     quality={75}
                     loading="lazy"
@@ -407,7 +414,6 @@ export default function Home() {
               </div>
 
               <div className="group w-full max-w-[260px] sm:max-w-[340px]">
-                {/* 🔥 SAFE GLASS FIX */}
                 <div 
                   className="aspect-[3/4] bg-zinc-950/80 md:bg-white/[0.03] md:backdrop-blur-md rounded-[32px] sm:rounded-[50px] mb-6 sm:mb-8 overflow-hidden border border-white/10 group-hover:border-brandRed transition-all duration-700 shadow-2xl relative"
                   style={{ transform: 'translateZ(0)' }}
@@ -416,7 +422,6 @@ export default function Home() {
                     src="/founders/shehanas_2.jpeg" 
                     alt="Shehanas" 
                     fill 
-                    // 🔥 THE FIX: Explicitly tell Next.js the exact max widths to fetch
                     sizes="(max-width: 640px) 260px, 340px"
                     quality={75}
                     loading="lazy"
