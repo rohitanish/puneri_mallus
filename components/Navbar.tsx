@@ -131,7 +131,7 @@ export default function Navbar() {
     { name: 'Events', href: '/events' },
     { name: 'Our Team', href: '/partners' },
     { name: 'Community', href: '/community' },
-    { name: 'Mallu Mart', href: '/directory' },
+    { name: 'Mallu Connect', href: '/directory' },
     { name: 'Contact', href: '/contact' },
   ];
 
