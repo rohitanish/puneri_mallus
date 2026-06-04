@@ -226,7 +226,7 @@ export default function MalluMartPage() {
             </div>
             <div className="space-y-1">
                 <h1 className="text-5xl md:text-7xl font-black italic uppercase tracking-tighter leading-none">
-                Mallu <span className="text-brandRed">Mart .</span>
+                Mallu <span className="text-brandRed">Connect .</span>
                 </h1>
                 <p className="text-zinc-400 text-xs md:text-sm font-medium leading-relaxed max-w-xl italic">
                     The professional hub for Puneri Mallus. Connect with verified businesses and skilled service providers.
