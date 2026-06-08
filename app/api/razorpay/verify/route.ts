@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-import { sendPremiumMembershipEmail, sendMartSubscriptionEmail } from "@/lib/mail"; 
+// 🔥 NEW: Added sendFootballReceiptEmail
+import { sendPremiumMembershipEmail, sendMartSubscriptionEmail, sendFootballReceiptEmail } from "@/lib/mail"; 
 import { createClient } from '@supabase/supabase-js';
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
@@ -28,8 +29,9 @@ export async function POST(req: Request) {
       razorpay_signature,
       paymentType, 
       plan,
-      amount, // 🔥 EXTRACT THE AMOUNT HERE
-      invoiceEmail // 🔥 NEW: Extract the captured email from the Gate
+      amount, 
+      invoiceEmail, 
+      teamData // 🔥 NEW: Extract the Football Team Data sent from the frontend
     } = await req.json();
 
     const trueUserId = user.id;
@@ -63,19 +65,19 @@ export async function POST(req: Request) {
     const trueUserEmail = profile?.email || user.email;
     const trueUserPhone = profile?.phone_number || '';
     
-    // 🔥 Determine the actual email to use for the receipt
+    // Determine the actual email to use for the receipt
     const finalReceiptEmail = invoiceEmail || trueUserEmail;
 
     // 6. RECORD THE TRANSACTION IN THE PAYMENTS TABLE
     await supabaseAdmin.from('payments').insert({
       user_id: trueUserId,
-      email: finalReceiptEmail, // 🔥 Logs the actual email the invoice went to
+      email: finalReceiptEmail, 
       phone_number: trueUserPhone,
       razorpay_order_id: razorpay_order_id,
       razorpay_payment_id: razorpay_payment_id,
-      payment_type: paymentType, // 'LIFETIME' or 'MART'
+      payment_type: paymentType, 
       plan: plan || 'NONE',
-      amount: amount || 0, // 🔥 SAVE THE REAL AMOUNT INSTEAD OF 0
+      amount: amount || 0, 
       status: 'SUCCESS'
     });
 
@@ -85,7 +87,7 @@ export async function POST(req: Request) {
       await supabaseAdmin.from('profiles')
         .update({ 
           is_member: true,
-          mart_unlocked: true // 🔥 Gives them Mart access automatically
+          mart_unlocked: true
         })
         .eq('id', trueUserId);
         
@@ -107,7 +109,6 @@ export async function POST(req: Request) {
       if (plan === "MONTHLY") expiresAt = new Date(now.setMonth(now.getMonth() + 1));
       else if (plan === "YEARLY") expiresAt = new Date(now.setFullYear(now.getFullYear() + 1));
 
-      // Note: You will need a `mart_subscriptions` table in Supabase
       await supabaseAdmin.from('mart_subscriptions').upsert({
         user_id: trueUserId,
         plan: plan,
@@ -116,14 +117,35 @@ export async function POST(req: Request) {
         last_payment_id: razorpay_payment_id
       }, { onConflict: 'user_id' });
 
-      // 🔥 CRITICAL FIX: Sync the flag that the UI actually checks, using the exact DB column name
       await supabaseAdmin.from('profiles')
         .update({ mart_unlocked: true }) 
         .eq('id', trueUserId);
 
-      // 🔥 Send invoice specifically to the captured real email
       if (finalReceiptEmail) {
         await sendMartSubscriptionEmail(finalReceiptEmail, plan, razorpay_order_id, razorpay_payment_id);
+      }
+    }
+    // 🔥 NEW: FOOTBALL TEAM REGISTRATION LOGIC
+    else if (paymentType === "FOOTBALL") {
+      // Step A: Insert Team Data into football_teams table
+      await supabaseAdmin.from('football_teams').insert({
+        rep_name: teamData.repName,
+        contact: teamData.contact,
+        alt_contact: teamData.altContact,
+        email: teamData.email,
+        locality: teamData.locality,
+        team_type: teamData.teamType,
+        team_name: teamData.teamName.toUpperCase(),
+        captain_name: teamData.capName,
+        captain_contact: teamData.capContact,
+        payment_id: razorpay_payment_id,
+        amount_paid: amount,
+        status: 'CONFIRMED'
+      });
+
+      // Step B: Send Football Receipt Email directly to the team rep's email
+      if (teamData.email) {
+        await sendFootballReceiptEmail(teamData.email, teamData.teamName, razorpay_order_id, razorpay_payment_id);
       }
     }
 

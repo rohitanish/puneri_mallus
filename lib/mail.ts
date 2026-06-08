@@ -516,3 +516,30 @@ export const sendBusinessVerificationEmail = async (to: string, verifyLink: stri
 
   return await transporter.sendMail(mailOptions);
 };
+
+export const sendFootballReceiptEmail = async (to: string, teamName: string, orderId: string, paymentId: string) => {
+  const mailOptions = {
+    from: `"Puneri Mallus Tribe" <${process.env.EMAIL_USER}>`,
+    to: to,
+    subject: `⚽ Registration Confirmed: ${teamName}`,
+    html: `
+      <div style="font-family: sans-serif; max-width: 400px; margin: auto; background: #000; color: #fff; padding: 30px; border-radius: 20px; border: 1px solid #333; text-align: center;">
+        <h2 style="color: #ff0000; text-transform: uppercase;">Slot Secured</h2>
+        <p style="font-size: 14px; color: #ccc; line-height: 1.6; margin-bottom: 20px;">
+          Your team <strong style="color: #fff; font-size: 18px;">${teamName}</strong> is officially registered for the tournament.
+        </p>
+        <div style="background: #111; border: 1px solid #222; border-radius: 12px; padding: 15px; text-align: left; margin-bottom: 30px;">
+          <p style="font-size: 11px; color: #888; margin: 0 0 5px 0; text-transform: uppercase;">Order ID</p>
+          <p style="font-size: 13px; font-family: monospace; color: #fff; margin: 0 0 15px 0;">${orderId}</p>
+          <p style="font-size: 11px; color: #888; margin: 0 0 5px 0; text-transform: uppercase;">Payment Ref</p>
+          <p style="font-size: 13px; font-family: monospace; color: #fff; margin: 0;">${paymentId}</p>
+        </div>
+        <p style="font-size: 10px; color: #666; line-height: 1.5;">
+          The organizing committee will contact the Team Representative shortly with the fixtures and rulebook.
+        </p>
+      </div>
+    `,
+  };
+
+  return await transporter.sendMail(mailOptions);
+};

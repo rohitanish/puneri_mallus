@@ -39,6 +39,10 @@ export async function POST(req: Request) {
       else if (plan === "YEARLY") targetPrice = settings?.martYearlyPrice || settings?.mart_yearly_price || 899;
       else if (plan === "LIFETIME") targetPrice = settings?.martLifetimePrice || settings?.mart_lifetime_price || 2499;
     }
+    // 🔥 NEW: FOOTBALL REGISTRATION LOGIC
+    else if (paymentType === "FOOTBALL") {
+      targetPrice = settings?.footballFee || settings?.football_fee || 1500;
+    }
 
     // 3. Convert to Paise (Required by Razorpay, Integer only)
     const amountInPaise = Math.round(Number(targetPrice) * 100);
