@@ -108,9 +108,8 @@ export default function FootballRegistration() {
   return (
     <div className="min-h-screen bg-[#030303] flex items-center justify-center p-6 relative overflow-hidden text-white selection:bg-brandRed/30 pt-32">
       {/* Background */}
-      <div className="absolute inset-0 z-0 bg-[url('/events/eventsback.jpg')] bg-cover bg-center opacity-30 mix-blend-luminosity" />
-      <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black z-0" />
-
+<div className="absolute inset-0 z-0 bg-[url('/events/footback.png')] bg-cover bg-center opacity-50" />
+<div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black z-0" />
       <div className="w-full max-w-xl relative z-10">
         <div className="text-center mb-10">
           <Trophy size={40} className="text-brandRed mx-auto mb-4" />
@@ -153,7 +152,7 @@ export default function FootballRegistration() {
                   </div>
                   <div className="relative">
                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
-                    <input type="email" placeholder="Email Address (For Receipts) *" required value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="w-full bg-black/50 border border-white/10 p-4 pl-12 rounded-2xl text-sm outline-none focus:border-brandRed text-white" suppressHydrationWarning   />
+                    <input type="email" placeholder="Email Address (For Receipts and Updates) *" required value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="w-full bg-black/50 border border-white/10 p-4 pl-12 rounded-2xl text-sm outline-none focus:border-brandRed text-white" suppressHydrationWarning   />
                   </div>
                 </div>
 
