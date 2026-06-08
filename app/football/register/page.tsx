@@ -141,7 +141,7 @@ export default function FootballRegistration() {
                 <div className="space-y-4">
                   <div className="relative">
                     <User className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
-                    <input type="text" placeholder="Rep Full Name *" required value={form.repName} onChange={e => setForm({...form, repName: e.target.value})} className="w-full bg-black/50 border border-white/10 p-4 pl-12 rounded-2xl text-sm outline-none focus:border-brandRed text-white" />
+                    <input type="text" placeholder="Team Representative Full Name *" required value={form.repName} onChange={e => setForm({...form, repName: e.target.value})} className="w-full bg-black/50 border border-white/10 p-4 pl-12 rounded-2xl text-sm outline-none focus:border-brandRed text-white" />
                   </div>
                   <div className="relative">
                     <Phone className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
@@ -249,49 +249,61 @@ export default function FootballRegistration() {
             )}
 
             {/* STEP 4: DECLARATION & PAY */}
-            {step === 4 && (
-              <motion.div key="step4" variants={stepVariants} initial="hidden" animate="visible" exit="exit" className="space-y-6">
-                <div className="flex items-center gap-4 border-b border-white/5 pb-4">
-                  <button onClick={() => setStep(3)} className="text-zinc-500 hover:text-white"><ArrowLeft size={18} /></button>
-                  <h3 className="text-xl font-black uppercase italic text-white">Declaration *</h3>
-                </div>
-                
-                <div className="space-y-4 bg-white/[0.02] p-6 rounded-3xl border border-white/5">
-                  {[
-                    "I confirm that all information provided is accurate.",
-                    "I agree to follow the tournament rules and decisions of the organizers.",
-                    "I understand that registration does not guarantee participation until confirmed by the organizers."
-                  ].map((text, idx) => (
-                    <label key={idx} className="flex items-start gap-4 cursor-pointer group">
-                      <div className="mt-0.5 shrink-0">
-                        <input 
-                          type="checkbox" 
-                          className="hidden" 
-                          checked={declarations[idx]} 
-                          onChange={(e) => {
-                            const newDecs = [...declarations];
-                            newDecs[idx] = e.target.checked;
-                            setDeclarations(newDecs);
-                          }}
-                        />
-                        <div className={`w-5 h-5 rounded-md flex items-center justify-center border transition-all ${declarations[idx] ? 'bg-brandRed border-brandRed' : 'border-zinc-600 group-hover:border-zinc-400'}`}>
-                          {declarations[idx] && <CheckSquare size={14} className="text-white" />}
-                        </div>
-                      </div>
-                      <span className="text-xs text-zinc-300 leading-relaxed font-medium">{text}</span>
-                    </label>
-                  ))}
-                </div>
+{step === 4 && (
+  <motion.div key="step4" variants={stepVariants} initial="hidden" animate="visible" exit="exit" className="space-y-6">
+    <div className="flex items-center gap-4 border-b border-white/5 pb-4">
+      <button onClick={() => setStep(3)} className="text-zinc-500 hover:text-white"><ArrowLeft size={18} /></button>
+      <h3 className="text-xl font-black uppercase italic text-white">Declaration *</h3>
+    </div>
+    
+    <div className="space-y-4 bg-white/[0.02] p-6 rounded-3xl border border-white/5">
+      {/* 🔥 ADDED PDF LINK HERE */}
+      <div className="mb-4">
+        <a 
+          href="https://bhfrgcphqmbocplfcvbg.supabase.co/storage/v1/object/public/assets/MPL%20Rules%20and%20Regulation.pdf" 
+          target="_blank" 
+          rel="noopener noreferrer"
+          className="text-[10px] font-black uppercase tracking-widest text-brandRed hover:text-white underline transition-colors"
+        >
+          View Tournament Rules & Regulations (PDF)
+        </a>
+      </div>
 
-                <button 
-                  disabled={!isStep4Valid || loading} 
-                  onClick={triggerRazorpay} 
-                  className="w-full py-5 bg-brandRed text-white font-black uppercase tracking-[0.3em] rounded-2xl hover:bg-white hover:text-black transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-xs shadow-[0_0_30px_rgba(255,0,0,0.3)] active:scale-95"
-                >
-                  {loading ? <Loader2 className="animate-spin" size={16} /> : <>Secure Spot <Zap size={14} fill="currentColor" /></>}
-                </button>
-              </motion.div>
-            )}
+      {[
+        "I confirm that all information provided is accurate.",
+        "I agree to follow the tournament rules and decisions of the organizers.",
+        "I understand that registration does not guarantee participation until confirmed by the organizers."
+      ].map((text, idx) => (
+        <label key={idx} className="flex items-start gap-4 cursor-pointer group">
+          <div className="mt-0.5 shrink-0">
+            <input 
+              type="checkbox" 
+              className="hidden" 
+              checked={declarations[idx]} 
+              onChange={(e) => {
+                const newDecs = [...declarations];
+                newDecs[idx] = e.target.checked;
+                setDeclarations(newDecs);
+              }}
+            />
+            <div className={`w-5 h-5 rounded-md flex items-center justify-center border transition-all ${declarations[idx] ? 'bg-brandRed border-brandRed' : 'border-zinc-600 group-hover:border-zinc-400'}`}>
+              {declarations[idx] && <CheckSquare size={14} className="text-white" />}
+            </div>
+          </div>
+          <span className="text-xs text-zinc-300 leading-relaxed font-medium">{text}</span>
+        </label>
+      ))}
+    </div>
+
+    <button 
+      disabled={!isStep4Valid || loading} 
+      onClick={triggerRazorpay} 
+      className="w-full py-5 bg-brandRed text-white font-black uppercase tracking-[0.3em] rounded-2xl hover:bg-white hover:text-black transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-xs shadow-[0_0_30px_rgba(255,0,0,0.3)] active:scale-95"
+    >
+      {loading ? <Loader2 className="animate-spin" size={16} /> : <>Secure Spot <Zap size={14} fill="currentColor" /></>}
+    </button>
+  </motion.div>
+)}
 
             {/* STEP 5: SUCCESS */}
             {step === 5 && (
