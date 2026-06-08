@@ -38,16 +38,29 @@ export default function AdminFootballTeams() {
   }, []);
 
   const handleSaveFee = async () => {
+    if (isNaN(footballFee) || footballFee < 0) {
+      showAlert("Invalid Fee Amount", "error");
+      return;
+    }
+
     setSaving(true);
     try {
-      // Assuming your settings API takes a partial object to update
+      // 🔥 Ensure the key matches the one defined in your API PATCH route
       const res = await fetch('/api/admin/settings', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ football_fee: footballFee }) 
       });
-      if (res.ok) showAlert("Registration Fee Updated", "success");
-      else throw new Error();
+      
+      if (res.ok) {
+        showAlert("Registration Fee Updated", "success");
+        // Re-fetch to ensure the state is perfectly synced with the DB
+        const settingsRes = await fetch('/api/admin/settings');
+        const updatedSettings = await settingsRes.json();
+        setFootballFee(updatedSettings.footballFee || updatedSettings.football_fee || 0);
+      } else {
+        throw new Error("Failed to deploy");
+      }
     } catch (err) {
       showAlert("Transmission Error", "error");
     } finally {

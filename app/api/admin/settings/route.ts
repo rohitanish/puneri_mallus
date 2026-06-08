@@ -12,7 +12,6 @@ export async function GET() {
       process.env.SUPABASE_SERVICE_ROLE_KEY! 
     );
 
-    // Fetch the settings row
     const { data: settings, error } = await supabaseAdmin
       .from('app_settings')
       .select('*')
@@ -35,6 +34,8 @@ export async function GET() {
       membershipPrice: settings.membership_price,
       membershipBenefits: settings.membership_benefits,
       currency: settings.currency,
+      // 🔥 NEW: Football Fee
+      footballFee: settings.football_fee, 
     } : null;
 
     return NextResponse.json(formattedSettings || { 
@@ -42,7 +43,8 @@ export async function GET() {
       martMonthlyPrice: 99,
       martYearlyPrice: 899,
       martLifetimePrice: 2499,
-      membershipPrice: 499
+      membershipPrice: 499,
+      footballFee: 1500 // Default fallback
     });
   } catch (e) {
     console.error("Supabase Settings Fetch Error:", e);
@@ -52,7 +54,6 @@ export async function GET() {
 
 export async function PATCH(req: Request) {
   try {
-    // 1. Authenticate the User making the request
     const cookieStore = await cookies();
     const supabaseAuth = createServerClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -66,42 +67,40 @@ export async function PATCH(req: Request) {
       return NextResponse.json({ error: "Unauthorized access" }, { status: 401 });
     }
 
-    // 2. Initialize Service Role Client for DB checks/writes
     const supabaseAdmin = createClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY! 
     );
 
-    // 3. 🔥 DYNAMIC ADMIN CHECK: Query the authorized_admins table
     const { data: adminRecord, error: adminError } = await supabaseAdmin
       .from('authorized_admins')
       .select('email')
       .eq('email', user.email)
       .single();
 
-    // If there's an error finding the record, or it doesn't exist, block the request
     if (adminError || !adminRecord) {
-      console.warn(`SECURITY ALERT: Unauthorized settings update attempt by ${user.email}`);
       return NextResponse.json({ error: "Forbidden: Master Admin Access Required" }, { status: 403 });
     }
 
-    // --- USER IS AN AUTHORIZED ADMIN, PROCEED WITH UPDATE ---
-
     const body = await req.json();
 
+    // 🔥 DYNAMIC PAYLOAD: This will handle whatever is passed in the body
+    // If you pass { football_fee: 1200 }, it updates only that.
     const dbPayload = {
       id: 1, 
-      mart_enabled: body.martEnabled,
-      mart_note: body.martNote,
-      mart_monthly_active: body.martMonthlyActive,
-      mart_monthly_price: body.martMonthlyPrice,
-      mart_yearly_active: body.martYearlyActive,
-      mart_yearly_price: body.martYearlyPrice,
-      mart_lifetime_active: body.martLifetimeActive,
-      mart_lifetime_price: body.martLifetimePrice,
-      membership_price: body.membershipPrice,
-      membership_benefits: body.membershipBenefits,
-      currency: body.currency || 'INR',
+      ...(body.martEnabled !== undefined && { mart_enabled: body.martEnabled }),
+      ...(body.martNote !== undefined && { mart_note: body.martNote }),
+      ...(body.martMonthlyActive !== undefined && { mart_monthly_active: body.martMonthlyActive }),
+      ...(body.martMonthlyPrice !== undefined && { mart_monthly_price: body.martMonthlyPrice }),
+      ...(body.martYearlyActive !== undefined && { mart_yearly_active: body.martYearlyActive }),
+      ...(body.martYearlyPrice !== undefined && { mart_yearly_price: body.martYearlyPrice }),
+      ...(body.martLifetimeActive !== undefined && { mart_lifetime_active: body.martLifetimeActive }),
+      ...(body.martLifetimePrice !== undefined && { mart_lifetime_price: body.martLifetimePrice }),
+      ...(body.membershipPrice !== undefined && { membership_price: body.membershipPrice }),
+      ...(body.membershipBenefits !== undefined && { membership_benefits: body.membershipBenefits }),
+      ...(body.currency !== undefined && { currency: body.currency }),
+      // 🔥 NEW: Football Fee update
+      ...(body.football_fee !== undefined && { football_fee: body.football_fee }),
       updated_at: new Date().toISOString()
     };
 

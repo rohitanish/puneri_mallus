@@ -1,10 +1,11 @@
 "use client";
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { User, Phone, Mail, MapPin, Users, ShieldCheck, ArrowRight, ArrowLeft, Loader2, Trophy, Zap, CheckSquare } from 'lucide-react';
 import { useAlert } from '@/context/AlertContext';
 
 const TEAM_TYPES = ["Locality Team", "Friends Team", "Corporate Team", "Club Team", "Other"];
+const PUNE_AREAS = ["Akurdi", "Aundh", "Balewadi", "Baner", "Bavdhan", "Bhosari", "Bibwewadi", "Camp", "Chikhali", "Chinchwad", "Dapodi", "Deccan", "Dhanori", "Erandwane", "Fatima Nagar", "Ghorpadi", "Hadapsar", "Hinjewadi", "Kalyani Nagar", "Karve Nagar", "Kasarwadi","Kalewadi","Katraj", "Khadki", "Kondhwa", "Koregaon Park", "Kothrud", "Lohegaon", "Magarpatta", "Model Colony", "Moshi", "Mundhwa", "NIBM", "Nigdi", "Pashan", "Phugewadi", "Pimpri", "Pimple Gurav", "Pimple Nilakh", "Pimple Saudagar", "Pune City", "Punawale", "Rahatani", "Ravet", "Sadashiv Peth", "Sahakar Nagar", "Sangvi", "Shivajinagar", "Sinhagad Road", "Sus", "Swargate", "Talawade", "Tathawade", "Thergaon", "Undri", "Viman Nagar", "Vishrantwadi", "Wakad", "Wanowrie", "Warje", "Yerwada"].sort();
 
 const stepVariants = {
   hidden: { opacity: 0, x: 20 },
@@ -17,10 +18,10 @@ export default function FootballRegistration() {
   const [loading, setLoading] = useState(false);
   const { showAlert } = useAlert();
 
-  // Form State
+  // Form State - Added customTeamType
   const [form, setForm] = useState({
     repName: '', contact: '', altContact: '', email: '',
-    locality: '', teamType: '',
+    locality: '', teamType: '', customTeamType: '',
     teamName: '', capName: '', capContact: ''
   });
 
@@ -28,7 +29,8 @@ export default function FootballRegistration() {
   const [declarations, setDeclarations] = useState([false, false, false]);
 
   const isStep1Valid = form.repName && form.contact.length === 10 && form.email.includes('@');
-  const isStep2Valid = form.locality && form.teamType;
+  // Require custom text if "Other" is selected
+  const isStep2Valid = form.locality && (form.teamType === 'Other' ? form.customTeamType.trim() !== '' : form.teamType !== '');
   const isStep3Valid = form.teamName && form.capName && form.capContact.length === 10;
   const isStep4Valid = declarations.every(Boolean); // All checkboxes must be checked
 
@@ -45,12 +47,13 @@ export default function FootballRegistration() {
       const orderData = await orderRes.json();
       if (!orderRes.ok) throw new Error(orderData.error);
 
-      // 2. Format phones with +91 for backend storage
+      // 2. Format phones with +91 and swap teamType if "Other"
       const finalData = {
         ...form,
         contact: `+91${form.contact}`,
         altContact: form.altContact ? `+91${form.altContact}` : '',
-        capContact: `+91${form.capContact}`
+        capContact: `+91${form.capContact}`,
+        teamType: form.teamType === 'Other' ? form.customTeamType : form.teamType
       };
 
       const options = {
@@ -73,7 +76,7 @@ export default function FootballRegistration() {
                 razorpay_signature: response.razorpay_signature,
                 paymentType: 'FOOTBALL',
                 amount: orderData.amount / 100,
-                teamData: finalData // Send all form data to backend
+                teamData: finalData // Send all formatted form data to backend
               })
             });
 
@@ -150,7 +153,7 @@ export default function FootballRegistration() {
                   </div>
                   <div className="relative">
                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
-                    <input type="email" placeholder="Email Address (For Receipts) *" required value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="w-full bg-black/50 border border-white/10 p-4 pl-12 rounded-2xl text-sm outline-none focus:border-brandRed text-white" />
+                    <input type="email" placeholder="Email Address (For Receipts) *" required value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="w-full bg-black/50 border border-white/10 p-4 pl-12 rounded-2xl text-sm outline-none focus:border-brandRed text-white" suppressHydrationWarning   />
                   </div>
                 </div>
 
@@ -160,7 +163,7 @@ export default function FootballRegistration() {
               </motion.div>
             )}
 
-            {/* STEP 2: LOCALITY */}
+            {/* STEP 2: LOCALITY & TYPE */}
             {step === 2 && (
               <motion.div key="step2" variants={stepVariants} initial="hidden" animate="visible" exit="exit" className="space-y-6">
                 <div className="flex items-center gap-4 border-b border-white/5 pb-4">
@@ -169,10 +172,16 @@ export default function FootballRegistration() {
                 </div>
                 
                 <div className="space-y-4">
+                  {/* LOCALITY DROPDOWN */}
                   <div className="relative">
                     <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
-                    <input type="text" placeholder="Area / Locality Represented *" required value={form.locality} onChange={e => setForm({...form, locality: e.target.value})} className="w-full bg-black/50 border border-white/10 p-4 pl-12 rounded-2xl text-sm outline-none focus:border-brandRed text-white" />
+                    <select required value={form.locality} onChange={e => setForm({...form, locality: e.target.value})} className="w-full bg-black/50 border border-white/10 p-4 pl-12 rounded-2xl text-sm outline-none focus:border-brandRed text-white appearance-none cursor-pointer">
+                      <option value="" disabled>Select Area (Pune) *</option>
+                      {PUNE_AREAS.map(area => <option key={area} value={area} className="bg-zinc-900">{area}</option>)}
+                    </select>
                   </div>
+                  
+                  {/* TEAM TYPE DROPDOWN */}
                   <div className="relative">
                     <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
                     <select required value={form.teamType} onChange={e => setForm({...form, teamType: e.target.value})} className="w-full bg-black/50 border border-white/10 p-4 pl-12 rounded-2xl text-sm outline-none focus:border-brandRed text-white appearance-none cursor-pointer">
@@ -180,6 +189,28 @@ export default function FootballRegistration() {
                       {TEAM_TYPES.map(type => <option key={type} value={type} className="bg-zinc-900">{type}</option>)}
                     </select>
                   </div>
+
+                  {/* CUSTOM TEAM TYPE INPUT (Only shows if "Other" is selected) */}
+                  <AnimatePresence>
+                    {form.teamType === 'Other' && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                        animate={{ opacity: 1, height: 'auto', marginTop: 16 }}
+                        exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                        className="relative overflow-hidden"
+                      >
+                        <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
+                        <input 
+                          type="text" 
+                          placeholder="Please specify Team Type *" 
+                          required 
+                          value={form.customTeamType} 
+                          onChange={e => setForm({...form, customTeamType: e.target.value})} 
+                          className="w-full bg-black/50 border border-white/10 p-4 pl-12 rounded-2xl text-sm outline-none focus:border-brandRed text-white" 
+                        />
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </div>
 
                 <button disabled={!isStep2Valid} onClick={() => setStep(3)} className="w-full py-5 bg-white text-black font-black uppercase tracking-widest rounded-2xl hover:bg-brandRed hover:text-white transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-xs">
