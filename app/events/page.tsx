@@ -288,7 +288,7 @@ export default function EventsPage() {
                                target="_blank" 
                                className="flex-[2] bg-brandRed text-white py-4 rounded-2xl font-black uppercase text-[11px] tracking-widest hover:bg-white hover:text-black transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95"
                              >
-                               <Ticket size={16} /> Book Tickets
+                               <Ticket size={16} /> Register Now 
                              </Link>
                            )}
                            

@@ -1,7 +1,7 @@
 "use client";
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Phone, Mail, MapPin, Users, ShieldCheck, ArrowRight, ArrowLeft, Loader2, Trophy, Zap, CheckSquare } from 'lucide-react';
+import { User, Phone, Mail, MapPin, Users, ShieldCheck, ArrowRight, ArrowLeft, Loader2, Trophy, Zap, CheckSquare, CalendarDays } from 'lucide-react';
 import { useAlert } from '@/context/AlertContext';
 
 const TEAM_TYPES = ["Locality Team", "Friends Team", "Corporate Team", "Club Team", "Other"];
@@ -16,28 +16,50 @@ const stepVariants = {
 export default function FootballRegistration() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
+  const [checkingEmail, setCheckingEmail] = useState(false); // 🔥 NEW: Email check loading state
   const { showAlert } = useAlert();
 
-  // Form State - Added customTeamType
   const [form, setForm] = useState({
     repName: '', contact: '', altContact: '', email: '',
+    ageCategory: '', 
     locality: '', teamType: '', customTeamType: '',
     teamName: '', capName: '', capContact: ''
   });
 
-  // Declarations State
   const [declarations, setDeclarations] = useState([false, false, false]);
 
-  const isStep1Valid = form.repName && form.contact.length === 10 && form.email.includes('@');
-  // Require custom text if "Other" is selected
+  const isStep1Valid = form.repName && form.contact.length === 10 && form.email.includes('@') && form.ageCategory !== '';
   const isStep2Valid = form.locality && (form.teamType === 'Other' ? form.customTeamType.trim() !== '' : form.teamType !== '');
   const isStep3Valid = form.teamName && form.capName && form.capContact.length === 10;
-  const isStep4Valid = declarations.every(Boolean); // All checkboxes must be checked
+  const isStep4Valid = declarations.every(Boolean); 
+
+  // 🔥 NEW: Check email against DB before moving to step 2
+  const handleStep1Next = async () => {
+    setCheckingEmail(true);
+    try {
+      const res = await fetch('/api/football/check-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: form.email })
+      });
+      
+      const data = await res.json();
+
+      if (data.exists) {
+        showAlert("This email is already registered with a team.", "error");
+      } else {
+        setStep(2); // Email is unique, proceed to step 2
+      }
+    } catch (err) {
+      showAlert("Network error while verifying email. Please try again.", "error");
+    } finally {
+      setCheckingEmail(false);
+    }
+  };
 
   const triggerRazorpay = async () => {
     setLoading(true);
     try {
-      // 1. Fetch dynamic price from Admin settings
       const orderRes = await fetch('/api/razorpay/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -47,7 +69,6 @@ export default function FootballRegistration() {
       const orderData = await orderRes.json();
       if (!orderRes.ok) throw new Error(orderData.error);
 
-      // 2. Format phones with +91 and swap teamType if "Other"
       const finalData = {
         ...form,
         contact: `+91${form.contact}`,
@@ -76,14 +97,14 @@ export default function FootballRegistration() {
                 razorpay_signature: response.razorpay_signature,
                 paymentType: 'FOOTBALL',
                 amount: orderData.amount / 100,
-                teamData: finalData // Send all formatted form data to backend
+                teamData: finalData 
               })
             });
 
             const verifyData = await verifyRes.json();
             if (verifyData.success) {
               showAlert("Registration Successful!", "success");
-              setStep(5); // Success Screen
+              setStep(5); 
             } else {
               throw new Error("Verification failed.");
             }
@@ -107,9 +128,8 @@ export default function FootballRegistration() {
 
   return (
     <div className="min-h-screen bg-[#030303] flex items-center justify-center p-6 relative overflow-hidden text-white selection:bg-brandRed/30 pt-32">
-      {/* Background */}
-<div className="absolute inset-0 z-0 bg-[url('/events/footback.png')] bg-cover bg-center opacity-50" />
-<div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black z-0" />
+      <div className="absolute inset-0 z-0 bg-[url('/events/footback.png')] bg-cover bg-center opacity-50" />
+      <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-transparent to-black z-0" />
       <div className="w-full max-w-xl relative z-10">
         <div className="text-center mb-10">
           <Trophy size={40} className="text-brandRed mx-auto mb-4" />
@@ -121,7 +141,6 @@ export default function FootballRegistration() {
 
         <div className="bg-zinc-950/80 backdrop-blur-2xl border border-white/10 rounded-[40px] p-8 md:p-10 shadow-2xl relative overflow-hidden">
           
-          {/* Progress Bar */}
           {step < 5 && (
             <div className="flex gap-2 mb-8">
               {[1, 2, 3, 4].map(i => (
@@ -132,7 +151,6 @@ export default function FootballRegistration() {
 
           <AnimatePresence mode="wait">
             
-            {/* STEP 1: REP DETAILS */}
             {step === 1 && (
               <motion.div key="step1" variants={stepVariants} initial="hidden" animate="visible" exit="exit" className="space-y-6">
                 <h3 className="text-xl font-black uppercase italic text-white border-b border-white/5 pb-4">Representative Details</h3>
@@ -152,17 +170,34 @@ export default function FootballRegistration() {
                   </div>
                   <div className="relative">
                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
-                    <input type="email" placeholder="Email Address (For Receipts and Updates) *" required value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="w-full bg-black/50 border border-white/10 p-4 pl-12 rounded-2xl text-sm outline-none focus:border-brandRed text-white" suppressHydrationWarning   />
+                    <input type="email" placeholder="Email Address (For Receipts) *" required value={form.email} onChange={e => setForm({...form, email: e.target.value})} className="w-full bg-black/50 border border-white/10 p-4 pl-12 rounded-2xl text-sm outline-none focus:border-brandRed text-white" suppressHydrationWarning />
+                  </div>
+                  
+                  <div className="relative">
+                    <CalendarDays className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
+                    <select required value={form.ageCategory} onChange={e => setForm({...form, ageCategory: e.target.value})} className="w-full bg-black/50 border border-white/10 p-4 pl-12 rounded-2xl text-sm outline-none focus:border-brandRed text-white appearance-none cursor-pointer">
+                      <option value="" disabled>Select Age Category *</option>
+                      <option value="Above 35" className="bg-zinc-900">Above 35: Born before 30-Jun-1991</option>
+                      <option value="Below 35" className="bg-zinc-900">Below 35: Born on or after 30-Jun-1991</option>
+                    </select>
                   </div>
                 </div>
 
-                <button disabled={!isStep1Valid} onClick={() => setStep(2)} className="w-full py-5 bg-white text-black font-black uppercase tracking-widest rounded-2xl hover:bg-brandRed hover:text-white transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-xs">
-                  Continue <ArrowRight size={16} />
+                {/* 🔥 UPDATED: Uses handleStep1Next to check email duplication */}
+                <button 
+                  disabled={!isStep1Valid || checkingEmail} 
+                  onClick={handleStep1Next} 
+                  className="w-full py-5 bg-white text-black font-black uppercase tracking-widest rounded-2xl hover:bg-brandRed hover:text-white transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-xs"
+                >
+                  {checkingEmail ? (
+                    <><Loader2 className="animate-spin" size={16} /> Verifying...</>
+                  ) : (
+                    <>Continue <ArrowRight size={16} /></>
+                  )}
                 </button>
               </motion.div>
             )}
 
-            {/* STEP 2: LOCALITY & TYPE */}
             {step === 2 && (
               <motion.div key="step2" variants={stepVariants} initial="hidden" animate="visible" exit="exit" className="space-y-6">
                 <div className="flex items-center gap-4 border-b border-white/5 pb-4">
@@ -171,7 +206,6 @@ export default function FootballRegistration() {
                 </div>
                 
                 <div className="space-y-4">
-                  {/* LOCALITY DROPDOWN */}
                   <div className="relative">
                     <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
                     <select required value={form.locality} onChange={e => setForm({...form, locality: e.target.value})} className="w-full bg-black/50 border border-white/10 p-4 pl-12 rounded-2xl text-sm outline-none focus:border-brandRed text-white appearance-none cursor-pointer">
@@ -180,7 +214,6 @@ export default function FootballRegistration() {
                     </select>
                   </div>
                   
-                  {/* TEAM TYPE DROPDOWN */}
                   <div className="relative">
                     <Users className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
                     <select required value={form.teamType} onChange={e => setForm({...form, teamType: e.target.value})} className="w-full bg-black/50 border border-white/10 p-4 pl-12 rounded-2xl text-sm outline-none focus:border-brandRed text-white appearance-none cursor-pointer">
@@ -189,7 +222,6 @@ export default function FootballRegistration() {
                     </select>
                   </div>
 
-                  {/* CUSTOM TEAM TYPE INPUT (Only shows if "Other" is selected) */}
                   <AnimatePresence>
                     {form.teamType === 'Other' && (
                       <motion.div
@@ -218,7 +250,6 @@ export default function FootballRegistration() {
               </motion.div>
             )}
 
-            {/* STEP 3: TEAM DATA */}
             {step === 3 && (
               <motion.div key="step3" variants={stepVariants} initial="hidden" animate="visible" exit="exit" className="space-y-6">
                 <div className="flex items-center gap-4 border-b border-white/5 pb-4">
@@ -247,64 +278,61 @@ export default function FootballRegistration() {
               </motion.div>
             )}
 
-            {/* STEP 4: DECLARATION & PAY */}
-{step === 4 && (
-  <motion.div key="step4" variants={stepVariants} initial="hidden" animate="visible" exit="exit" className="space-y-6">
-    <div className="flex items-center gap-4 border-b border-white/5 pb-4">
-      <button onClick={() => setStep(3)} className="text-zinc-500 hover:text-white"><ArrowLeft size={18} /></button>
-      <h3 className="text-xl font-black uppercase italic text-white">Declaration *</h3>
-    </div>
-    
-    <div className="space-y-4 bg-white/[0.02] p-6 rounded-3xl border border-white/5">
-      {/* 🔥 ADDED PDF LINK HERE */}
-      <div className="mb-4">
-        <a 
-          href="https://bhfrgcphqmbocplfcvbg.supabase.co/storage/v1/object/public/assets/MPL%20Rules%20and%20Regulation.pdf" 
-          target="_blank" 
-          rel="noopener noreferrer"
-          className="text-[10px] font-black uppercase tracking-widest text-brandRed hover:text-white underline transition-colors"
-        >
-          View Tournament Rules & Regulations (PDF)
-        </a>
-      </div>
+            {step === 4 && (
+              <motion.div key="step4" variants={stepVariants} initial="hidden" animate="visible" exit="exit" className="space-y-6">
+                <div className="flex items-center gap-4 border-b border-white/5 pb-4">
+                  <button onClick={() => setStep(3)} className="text-zinc-500 hover:text-white"><ArrowLeft size={18} /></button>
+                  <h3 className="text-xl font-black uppercase italic text-white">Declaration *</h3>
+                </div>
+                
+                <div className="space-y-4 bg-white/[0.02] p-6 rounded-3xl border border-white/5">
+                  <div className="mb-4">
+                    <a 
+                      href="https://bhfrgcphqmbocplfcvbg.supabase.co/storage/v1/object/public/assets/MPL%20Rules%20and%20Regulation.pdf" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-[10px] font-black uppercase tracking-widest text-brandRed hover:text-white underline transition-colors"
+                    >
+                      View Tournament Rules & Regulations (PDF)
+                    </a>
+                  </div>
 
-      {[
-        "I confirm that all information provided is accurate.",
-        "I agree to follow the tournament rules and decisions of the organizers.",
-        "I understand that registration does not guarantee participation until confirmed by the organizers."
-      ].map((text, idx) => (
-        <label key={idx} className="flex items-start gap-4 cursor-pointer group">
-          <div className="mt-0.5 shrink-0">
-            <input 
-              type="checkbox" 
-              className="hidden" 
-              checked={declarations[idx]} 
-              onChange={(e) => {
-                const newDecs = [...declarations];
-                newDecs[idx] = e.target.checked;
-                setDeclarations(newDecs);
-              }}
-            />
-            <div className={`w-5 h-5 rounded-md flex items-center justify-center border transition-all ${declarations[idx] ? 'bg-brandRed border-brandRed' : 'border-zinc-600 group-hover:border-zinc-400'}`}>
-              {declarations[idx] && <CheckSquare size={14} className="text-white" />}
-            </div>
-          </div>
-          <span className="text-xs text-zinc-300 leading-relaxed font-medium">{text}</span>
-        </label>
-      ))}
-    </div>
+                  {[
+                    "I confirm that all information provided is accurate.",
+                    "I agree to follow the tournament rules and decisions of the organizers.",
+                    "I understand that registration does not guarantee participation until confirmed by the organizers."
+                  ].map((text, idx) => (
+                    <label key={idx} className="flex items-start gap-4 cursor-pointer group">
+                      <div className="mt-0.5 shrink-0">
+                        <input 
+                          type="checkbox" 
+                          className="hidden" 
+                          checked={declarations[idx]} 
+                          onChange={(e) => {
+                            const newDecs = [...declarations];
+                            newDecs[idx] = e.target.checked;
+                            setDeclarations(newDecs);
+                          }}
+                        />
+                        <div className={`w-5 h-5 rounded-md flex items-center justify-center border transition-all ${declarations[idx] ? 'bg-brandRed border-brandRed' : 'border-zinc-600 group-hover:border-zinc-400'}`}>
+                          {declarations[idx] && <CheckSquare size={14} className="text-white" />}
+                        </div>
+                      </div>
+                      <span className="text-xs text-zinc-300 leading-relaxed font-medium">{text}</span>
+                    </label>
+                  ))}
+                </div>
 
-    <button 
-      disabled={!isStep4Valid || loading} 
-      onClick={triggerRazorpay} 
-      className="w-full py-5 bg-brandRed text-white font-black uppercase tracking-[0.3em] rounded-2xl hover:bg-white hover:text-black transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-xs shadow-[0_0_30px_rgba(255,0,0,0.3)] active:scale-95"
-    >
-      {loading ? <Loader2 className="animate-spin" size={16} /> : <>Secure Spot <Zap size={14} fill="currentColor" /></>}
-    </button>
-  </motion.div>
-)}
+                <button 
+                  disabled={!isStep4Valid || loading} 
+                  onClick={triggerRazorpay} 
+                  className="w-full py-5 bg-brandRed text-white font-black uppercase tracking-[0.3em] rounded-2xl hover:bg-white hover:text-black transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-xs shadow-[0_0_30px_rgba(255,0,0,0.3)] active:scale-95"
+                >
+                  {loading ? <Loader2 className="animate-spin" size={16} /> : <>Secure Spot <Zap size={14} fill="currentColor" /></>}
+                </button>
+              </motion.div>
+            )}
 
-            {/* STEP 5: SUCCESS */}
             {step === 5 && (
               <motion.div key="step5" variants={stepVariants} initial="hidden" animate="visible" className="text-center py-8 space-y-4">
                 <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-6 shadow-[0_0_30px_rgba(34,197,94,0.2)]">

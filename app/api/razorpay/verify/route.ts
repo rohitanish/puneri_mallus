@@ -133,6 +133,7 @@ export async function POST(req: Request) {
         contact: teamData.contact,
         alt_contact: teamData.altContact,
         email: teamData.email,
+        age_category: teamData.ageCategory, // 🔥 ADD THIS LINE
         locality: teamData.locality,
         team_type: teamData.teamType,
         team_name: teamData.teamName.toUpperCase(),
