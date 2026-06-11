@@ -322,7 +322,7 @@ export default function BusinessCollabAd() {
                   className="collab-cta group w-full py-[13px] sm:py-[16px] rounded-2xl flex items-center justify-center gap-3"
                 >
                   <span className="collab-font-mono text-[10px] tracking-[0.3em] uppercase text-black font-medium">
-                    View Partnership
+                    Register Now
                   </span>
                   <ArrowUpRight
                     size={14}
@@ -331,7 +331,7 @@ export default function BusinessCollabAd() {
                 </Link>
 
                 <p className="collab-font-mono text-center text-[8px] text-white/10 tracking-widest mt-4 sm:mt-5 uppercase">
-                  Paid partnership
+                  Official Football Tournament
                 </p>
               </div>
             </motion.div>
