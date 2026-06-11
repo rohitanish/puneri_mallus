@@ -177,8 +177,8 @@ export default function FootballRegistration() {
                     <CalendarDays className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500" size={16} />
                     <select required value={form.ageCategory} onChange={e => setForm({...form, ageCategory: e.target.value})} className="w-full bg-black/50 border border-white/10 p-4 pl-12 rounded-2xl text-sm outline-none focus:border-brandRed text-white appearance-none cursor-pointer">
                       <option value="" disabled>Select Age Category *</option>
-                      <option value="Above 35" className="bg-zinc-900">Above 35: Born before 30-Jun-1991</option>
-                      <option value="Below 35" className="bg-zinc-900">Below 35: Born on or after 30-Jun-1991</option>
+                      <option value="Above 35" className="bg-zinc-900">Senior (Above 35): Born on or before 31-Dec-1991</option>
+                      <option value="Below 35" className="bg-zinc-900">Junior (Below 35): Born on or after  1-Jan-1992</option>
                     </select>
                   </div>
                 </div>

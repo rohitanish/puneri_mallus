@@ -5,7 +5,8 @@ import {
   ArrowRight, Settings, LayoutPanelTop, 
   Zap, ShieldCheck, Globe, Handshake, Search, X,
   MessageSquare, // Existing
-  Megaphone,UserCircle2 // Added for Collaborations
+  Megaphone,UserCircle2, // Added for Collaborations
+  PlaySquare
 } from 'lucide-react';
 import Link from 'next/link';
 import AddAdminCard from '@/components/admin/AddAdminCard';
@@ -109,6 +110,14 @@ export default function AdminPortal() {
       desc: "Configure global payment gates, access pricing, and mart monetization protocols.",
       icon: <Handshake className="text-yellow-500" size={32} />,
       link: "/admin/payments", // This matches your new route
+      status: "Config",
+      color: "from-yellow-500/20"
+    },
+    {
+      title: "Football Transactions",
+      desc: "Configure football transaction and team details.",
+      icon: <PlaySquare className="text-yellow-500" size={32} />,
+      link: "/admin/football", // This matches your new route
       status: "Config",
       color: "from-yellow-500/20"
     },
