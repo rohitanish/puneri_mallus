@@ -288,7 +288,7 @@ export default function FootballRegistration() {
                 <div className="space-y-4 bg-white/[0.02] p-6 rounded-3xl border border-white/5">
                   <div className="mb-4">
                     <a 
-                      href="https://bhfrgcphqmbocplfcvbg.supabase.co/storage/v1/object/public/assets/MPL%202026%20General%20Info%20&%20Rules.pdf" 
+                      href="https://bhfrgcphqmbocplfcvbg.supabase.co/storage/v1/object/public/assets/MPL%202026%20General%20Info%20&%20Rules%20(1).pdf" 
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="text-[10px] font-black uppercase tracking-widest text-brandRed hover:text-white underline transition-colors"
