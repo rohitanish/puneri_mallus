@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import InstagramGlimpse from '@/components/about/InstagramGlimpse';
@@ -11,16 +11,31 @@ import {
   ArrowRight, 
   Music, 
   ArrowUpRight,
-  X
+  X,
+  Calendar,
+  ChevronDown
 } from 'lucide-react';
-import MembershipCard from '@/components/Membership'; // Check your import path
-
-// 2. Add this state inside your component (before the return statement)
+import MembershipCard from '@/components/Membership'; 
 
 interface TeamMember {
   name: string;
   role: string;
   image: string;
+}
+
+interface GalleryEvent {
+  id: string;
+  title: string;
+  year: number;
+  description: string;
+  images: string[];
+}
+
+interface DisplayImage {
+  src: string;
+  title: string;
+  description: string;
+  year: number;
 }
 
 const shimmer = (w: number, h: number) => `
@@ -42,12 +57,30 @@ const LaserDivider = () => (
   </div>
 );
 
+const shuffleArray = <T,>(array: T[]): T[] => {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+};
+
 export default function AboutPage() {
   const [cycle, setCycle] = useState(false);
-  const [galleryImages, setGalleryImages] = useState<string[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMember[]>([]);
   const [zoomImage, setZoomImage] = useState<string | null>(null);
-  const [showMembershipModal, setShowMembershipModal] = useState(false);
+  
+  // Gallery States
+  const currentYear = new Date().getFullYear();
+  const [galleryEvents, setGalleryEvents] = useState<GalleryEvent[]>([]);
+  const [selectedYear, setSelectedYear] = useState<number>(currentYear);
+  const [displayedImages, setDisplayedImages] = useState<DisplayImage[]>([]);
+  
+  // Global Admin Settings States
+  const [globalDisplayMode, setGlobalDisplayMode] = useState<'MIX' | 'SPECIFIC'>('MIX');
+  const [globalFeaturedEventId, setGlobalFeaturedEventId] = useState<string | null>(null);
+
   useEffect(() => {
     async function initializeTribeData() {
       try {
@@ -57,13 +90,13 @@ export default function AboutPage() {
         ]);
 
         const galleryData = await galleryRes.json();
-        if (galleryData && Array.isArray(galleryData.images) && galleryData.images.length > 0) {
-          setGalleryImages(galleryData.images);
-        } else {
-          setGalleryImages([
-            '/gallery/img1.jpg', '/gallery/img2.jpg', '/gallery/img3.jpg', 
-            '/gallery/img4.jpg', '/gallery/img5.jpg', '/gallery/img6.jpg'
-          ]);
+        
+        if (galleryData) {
+          if (Array.isArray(galleryData.events) && galleryData.events.length > 0) {
+            setGalleryEvents(galleryData.events);
+          }
+          if (galleryData.displayMode) setGlobalDisplayMode(galleryData.displayMode);
+          if (galleryData.featuredEventId) setGlobalFeaturedEventId(galleryData.featuredEventId);
         }
 
         const teamData = await teamRes.json();
@@ -72,15 +105,60 @@ export default function AboutPage() {
         }
 
       } catch (err) {
-        setGalleryImages([
-          '/gallery/img1.jpg', '/gallery/img2.jpg', '/gallery/img3.jpg', 
-          '/gallery/img4.jpg', '/gallery/img5.jpg', '/gallery/img6.jpg'
-        ]);
+        console.error("Initialization error:", err);
       }
     }
 
     initializeTribeData();
   }, []);
+
+  const availableYears = useMemo(() => {
+    const years = galleryEvents.map(e => e.year);
+    return Array.from(new Set([currentYear, ...years])).sort((a, b) => b - a);
+  }, [galleryEvents, currentYear]);
+
+  const currentImagePool = useMemo(() => {
+    let pool: DisplayImage[] = [];
+    const isViewingCurrentYear = selectedYear === currentYear;
+
+    if (isViewingCurrentYear && globalDisplayMode === 'SPECIFIC' && globalFeaturedEventId) {
+      const specificEvent = galleryEvents.find(e => String(e.id) === String(globalFeaturedEventId));
+      if (specificEvent) {
+        specificEvent.images.forEach(img => {
+          pool.push({
+            src: img,
+            title: specificEvent.title,
+            description: specificEvent.description,
+            year: specificEvent.year
+          });
+        });
+        return pool; 
+      }
+    }
+
+    const eventsToProcess = galleryEvents.filter(e => e.year === selectedYear);
+
+    eventsToProcess.forEach(event => {
+      event.images.forEach(img => {
+        pool.push({
+          src: img,
+          title: event.title,
+          description: event.description,
+          year: event.year
+        });
+      });
+    });
+
+    return pool;
+  }, [galleryEvents, selectedYear, globalDisplayMode, globalFeaturedEventId, currentYear]);
+
+  useEffect(() => {
+    if (currentImagePool.length > 0) {
+      setDisplayedImages(shuffleArray(currentImagePool).slice(0, 6));
+    } else {
+      setDisplayedImages([]);
+    }
+  }, [currentImagePool]);
 
   useEffect(() => {
     if (!zoomImage) return;
@@ -99,7 +177,7 @@ export default function AboutPage() {
   return (
     <main className="min-h-screen bg-[#030303] text-white pt-40 pb-20 px-6 relative selection:bg-brandRed/30">
       
-      {/* 1. FIXED BRANDED BACKGROUND */}
+      {/* FIXED BRANDED BACKGROUND */}
       <div
         className="fixed inset-0 z-0 pointer-events-none overflow-hidden"
         style={{
@@ -121,13 +199,12 @@ export default function AboutPage() {
         
        {/* HERO: THE ORIGIN STORY */}
         <section className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 md:gap-20 items-center mb-40 px-6"> 
-          
           <div className="relative aspect-square rounded-[40px] overflow-hidden border border-white/10 group shadow-2xl bg-zinc-950">
             <Image 
               src="/about/community.jpeg" 
               alt="Community" 
               fill 
-              priority /* 🔥 Keeps the instant load fix */
+              priority
               blurDataURL={blurPlaceholder} 
               placeholder="blur"
               sizes="(max-width: 768px) 100vw, 50vw" 
@@ -141,7 +218,6 @@ export default function AboutPage() {
               About <br />
               <span className="text-brandRed">Puneri <br />Mallus.</span>
             </h1>
-            
             <p className="text-xl md:text-2xl text-zinc-400 font-medium leading-relaxed italic max-w-xl">
               The heartbeat of the Kerala diaspora in Pune. A cultural bridge, a support system, and a family away from home.
             </p>
@@ -263,7 +339,6 @@ export default function AboutPage() {
                     Live Music
                   </span>
                 </div>
-                {/* 🔥 FIX 1: QA Empty H3 Bug. Hardcoded stable text. */}
                 <h3 className="text-6xl md:text-8xl font-black uppercase italic tracking-tighter leading-[0.85]">
                   <span className="text-white">THE </span>
                   <span className="text-brandRed drop-shadow-[0_0_15px_rgba(255,0,0,0.5)]">JAMMING</span><br />
@@ -297,7 +372,6 @@ export default function AboutPage() {
                 Elegance, culture, and identity on a single stage.
               </p>
 
-              {/* 🔥 NEW VIEW MORE BUTTON */}
               <div className="pt-4">
                 <a 
                   href="https://misskeralapune.com/"
@@ -306,7 +380,6 @@ export default function AboutPage() {
                   className="inline-flex items-center gap-2 bg-white text-black px-8 py-4 rounded-full font-black uppercase tracking-widest text-[11px] hover:scale-105 hover:bg-brandRed hover:text-white transition-all duration-300 shadow-xl active:scale-95"
                 >
                   View More 
-                  {/* Note: If you have lucide-react imported, you can drop an <ArrowUpRight size={16} /> here! */}
                 </a>
               </div>
             </div>
@@ -334,103 +407,130 @@ export default function AboutPage() {
         
         <LaserDivider />
 
+        {/* 🚀 SMART ARCHIVE SYSTEM */}
+        <section className="max-w-[90%] md:max-w-7xl mx-auto mb-40 relative px-6 md:px-0">
+          <div className="flex flex-col md:flex-row justify-between items-baseline gap-6 mb-12">
+            <div className="flex flex-col md:flex-row items-baseline gap-4">
+              <h2 className="text-4xl md:text-6xl font-black uppercase italic tracking-tighter text-white">
+                The <span className="text-brandRed">Archive</span>
+              </h2>
+              <p className="text-zinc-500 font-bold uppercase tracking-widest text-[10px]">
+                Visual Legacy // {currentYear}
+              </p>
+            </div>
 
-       {/* DYNAMIC TEAM SECTION */}
-        {/* <section className="max-w-[90%] md:max-w-7xl mx-auto text-center mb-40">
-          <div className="flex flex-col items-center mb-12 md:mb-20">
-            <h2 className="text-5xl md:text-7xl font-black uppercase italic tracking-tighter text-white">
-              Our <span className="text-brandRed">Team</span>
-            </h2>
-            <div className="w-24 h-1 bg-brandRed mt-4 shadow-[0_0_20px_#FF0000]" />
-          </div>
-          
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-4 md:gap-12 justify-items-center">
-            {teamMembers.length > 0 ? (
-              teamMembers.map((member, idx) => (
-                <div key={idx} className="group w-full max-w-[280px]">
-                    <div 
-                      className="relative aspect-[3/4] rounded-2xl md:rounded-[40px] overflow-hidden border border-white/5 mb-3 md:mb-6 bg-zinc-950 shadow-xl transition-colors duration-500 group-hover:border-brandRed/50"
-                      style={{ transform: 'translateZ(0)' }} // 🔥 GPU Acceleration
-                    >
-                      <Image 
-                        src={member.image} 
-                        alt={member.name} 
-                        fill
-                        blurDataURL={blurPlaceholder} placeholder="blur"
-                        sizes="(max-width: 768px) 50vw, 33vw"
-                        className="object-cover transition-transform duration-700 will-change-transform group-hover:scale-105" 
-                      />
-                      <div className="absolute inset-0 bg-black/40 group-hover:bg-transparent transition-colors duration-500 pointer-events-none" />
-                      <div className="absolute inset-0 bg-gradient-to-t from-brandRed/20 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-                    </div>
-
-                  <h4 className="text-[14px] sm:text-lg md:text-3xl font-black uppercase italic leading-tight text-white group-hover:text-brandRed transition-colors truncate px-1">
-                    {member.name}
-                  </h4>
-                  
-                  <div className="flex items-center justify-center gap-1.5 md:gap-2 mt-1 md:mt-2">
-                    <div className="h-[1px] w-2 md:w-4 bg-brandRed/40" />
-                    <p className="text-brandRed font-black uppercase text-[10px] md:text-[11px] tracking-widest truncate max-w-[120px] md:max-w-none">
-                      {member.role}
-                    </p>
-                    <div className="h-[1px] w-2 md:w-4 bg-brandRed/40" />
-                  </div>
-                </div>
-              ))
-            ) : (
-              <div className="col-span-full py-12 md:py-20 border border-dashed border-white/5 rounded-2xl md:rounded-[40px] w-full">
-                <p className="text-zinc-500 font-bold uppercase tracking-widest text-[11px]">
-                  Loading team members...
-                </p>
-              </div>
-            )}
-          </div>
-        </section> */}
-        
-        {/* <LaserDivider /> */}
-
-        {/* CONCISE GALLERY SECTION */}
-        <section className="max-w-[90%] mx-auto mb-40 relative">
-          <div className="flex flex-col md:flex-row items-baseline gap-6 mb-12">
-            <h2 className="text-5xl md:text-7xl font-black uppercase italic tracking-tighter text-white">
-              The <span className="text-brandRed">Archive</span>
-            </h2>
-            <p className="text-zinc-500 font-bold uppercase tracking-widest text-[11px]">
-              Visual Legacy // {new Date().getFullYear()}
-            </p>
+            {/* 🔥 INTERACTIVE DROPDOWN */}
+            <div className="relative w-40 shrink-0 mt-2 md:mt-0">
+              <div className="absolute inset-0 bg-zinc-900/80 rounded-lg border border-white/5 transition-colors hover:border-white/20" />
+              <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 text-brandRed pointer-events-none z-10" size={14} />
+              <select 
+                value={selectedYear}
+                onChange={(e) => setSelectedYear(Number(e.target.value))}
+                className="relative w-full bg-transparent py-3 pl-9 pr-8 text-[11px] outline-none focus:border-brandRed text-white/90 appearance-none cursor-pointer font-black uppercase tracking-widest z-10"
+              >
+                {availableYears.map(year => (
+                  <option key={year} value={year} className="bg-zinc-900 text-white">{year}</option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-500 pointer-events-none z-10" size={14} />
+            </div>
           </div>
 
-          {galleryImages.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              {galleryImages.map((src, idx) => (
-                <div 
-                  key={idx} 
-                  onClick={() => setZoomImage(src)}
-                  className="relative aspect-video md:aspect-[4/3] rounded-2xl overflow-hidden border border-white/5 group bg-zinc-900 shadow-xl cursor-pointer"
-                  style={{ transform: 'translateZ(0)' }}
+          {galleryEvents.length > 0 ? (
+            <div className="space-y-10">
+              
+              {/* ARCHIVE META CARD */}
+              <AnimatePresence mode="wait">
+                <motion.div 
+                  key={selectedYear === currentYear && globalDisplayMode === 'SPECIFIC' ? globalFeaturedEventId : selectedYear}
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="flex flex-col gap-2 bg-zinc-900/30 p-6 rounded-3xl border border-white/5"
                 >
-                  <Image 
-                    src={src} 
-                    alt={`Archive Legacy ${idx + 1}`} 
-                    fill 
-                    blurDataURL={blurPlaceholder} placeholder="blur"
-                    sizes="(max-width: 768px) 50vw, 33vw"
-                    className="object-cover transition-all duration-700 will-change-[transform,filter] grayscale md:group-hover:grayscale-0 md:group-hover:scale-110" 
-                    loading="lazy"  
-                  />
-                  <div className="absolute top-4 right-4 w-6 h-[1px] bg-white/20 group-hover:bg-brandRed transition-colors" />
-                  <div className="absolute top-4 right-4 h-6 w-[1px] bg-white/20 group-hover:bg-brandRed transition-colors" />
-                </div>
-              ))}
+                  <div className="flex items-center gap-2 text-brandRed font-black uppercase text-[10px] tracking-widest">
+                    <Calendar size={12} /> 
+                    {selectedYear === currentYear && globalDisplayMode === 'SPECIFIC' 
+                      ? 'Featured Event Highlight' 
+                      : `${selectedYear} Collection`
+                    }
+                  </div>
+                  <p className="text-zinc-400 text-sm font-medium leading-relaxed italic">
+                    {selectedYear === currentYear && globalDisplayMode === 'SPECIFIC'
+                      ? galleryEvents.find(e => String(e.id) === String(globalFeaturedEventId))?.description || "Highlighting our featured event moments."
+                      : `A curated mix of our milestones, celebrations, and gatherings from ${selectedYear}.`
+                    }
+                  </p>
+                </motion.div>
+              </AnimatePresence>
+
+              {/* 🔥 UPDATED: LARGER DYNAMIC IMAGE GRID WITH PREMIUM METADATA */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-10 lg:gap-14">
+                {displayedImages.length > 0 ? (
+                  displayedImages.map((img, idx) => (
+                    <motion.div 
+                      key={`${selectedYear}-${img.src}-${idx}`}
+                      initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                      animate={{ opacity: 1, scale: 1, y: 0 }}
+                      transition={{ delay: idx * 0.05, duration: 0.4 }}
+                      className="group cursor-pointer flex flex-col"
+                      onClick={() => setZoomImage(img.src)}
+                    >
+                      {/* Premium Image Container */}
+                      <div 
+                        className="relative aspect-square md:aspect-[4/3] rounded-[32px] overflow-hidden border border-white/5 bg-zinc-900 shadow-2xl mb-5"
+                        style={{ transform: 'translateZ(0)' }}
+                      >
+                        <Image 
+                          src={img.src} 
+                          alt={`Archive Asset ${img.title}`} 
+                          fill 
+                          blurDataURL={blurPlaceholder} placeholder="blur"
+                          sizes="(max-width: 768px) 100vw, 33vw"
+                          className="object-cover transition-transform duration-700 will-change-[transform] md:group-hover:scale-105" 
+                          loading="lazy"  
+                        />
+                        <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center">
+                           <Eye size={32} className="text-white opacity-70 drop-shadow-xl" />
+                        </div>
+                      </div>
+                      
+                      {/* Premium Metadata */}
+                      <div className="px-1 flex flex-col gap-1.5">
+                        <div className="flex items-center gap-3">
+                          <span className="bg-[#111] text-brandRed border border-white/5 px-3 py-1 rounded-full font-black text-[11px] tracking-widest shadow-md">
+                            {img.year}
+                          </span>
+                          <h4 className="text-white font-black uppercase text-xl tracking-tighter truncate mt-0.5">
+                            {img.title}
+                          </h4>
+                        </div>
+                        {img.description && (
+                          <p className="text-zinc-500 text-sm italic font-bold uppercase tracking-wider pl-1 line-clamp-1">
+                            {img.description}
+                          </p>
+                        )}
+                      </div>
+                    </motion.div>
+                  ))
+                ) : (
+                  <div className="col-span-full py-20 border border-dashed border-white/5 rounded-3xl w-full text-center bg-zinc-950/50">
+                    <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs">
+                      No images found for this selection.
+                    </p>
+                  </div>
+                )}
+              </div>
             </div>
           ) : (
-            <div className="py-12 md:py-20 border border-dashed border-white/5 rounded-2xl md:rounded-[40px] w-full text-center">
-              <p className="text-zinc-500 font-bold uppercase tracking-widest text-[11px]">
+            <div className="py-20 border border-dashed border-white/5 rounded-3xl w-full text-center bg-zinc-950/50">
+              <p className="text-zinc-500 font-bold uppercase tracking-widest text-xs">
                 Archive compiling...
               </p>
             </div>
           )}
         </section>
+        
         <LaserDivider />
 
         {/* LIGHTBOX OVERLAY */}
@@ -456,10 +556,8 @@ export default function AboutPage() {
                   alt="Zoomed Legacy Asset" 
                   fill 
                   unoptimized 
-                  // 🔥 Added priority to skip lazy-loading and instantly render the zoomed image
                   priority
                   className="object-contain" 
-                  // 🔥 Removed blur placeholder so it snaps in instantly from cache
                 />
               </motion.div>
               <button className="absolute top-6 right-6 md:top-10 md:right-10 text-white p-3 md:p-4 bg-zinc-900 rounded-full hover:bg-brandRed transition-all shadow-2xl border border-white/10 active:scale-90">
