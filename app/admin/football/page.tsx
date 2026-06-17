@@ -45,7 +45,6 @@ export default function AdminFootballTeams() {
 
     setSaving(true);
     try {
-      // 🔥 Ensure the key matches the one defined in your API PATCH route
       const res = await fetch('/api/admin/settings', {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -54,7 +53,6 @@ export default function AdminFootballTeams() {
       
       if (res.ok) {
         showAlert("Registration Fee Updated", "success");
-        // Re-fetch to ensure the state is perfectly synced with the DB
         const settingsRes = await fetch('/api/admin/settings');
         const updatedSettings = await settingsRes.json();
         setFootballFee(updatedSettings.footballFee || updatedSettings.football_fee || 0);
@@ -126,19 +124,22 @@ export default function AdminFootballTeams() {
           </div>
 
           <div className="bg-zinc-950 border border-white/10 rounded-[30px] overflow-hidden shadow-2xl overflow-x-auto">
-            <table className="w-full text-left border-collapse min-w-[900px]">
+            <table className="w-full text-left border-collapse min-w-[1000px]">
               <thead>
                 <tr className="bg-white/5 text-[9px] uppercase tracking-[0.2em] text-zinc-400 font-black border-b border-white/10">
                   <th className="p-6">Squad Name</th>
                   <th className="p-6">Representative</th>
                   <th className="p-6">Origin / Type</th>
+                  {/* 🔥 NEW COLUMN ADDED */}
+                  <th className="p-6">Age Category</th>
                   <th className="p-6">Captain details</th>
                   <th className="p-6">Payment Ref</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-white/5 text-sm font-bold">
                 {filteredTeams.length === 0 ? (
-                  <tr><td colSpan={5} className="p-10 text-center text-zinc-500 italic">No squads registered yet.</td></tr>
+                  /* Updated colSpan from 5 to 6 */
+                  <tr><td colSpan={6} className="p-10 text-center text-zinc-500 italic">No squads registered yet.</td></tr>
                 ) : (
                   filteredTeams.map((team, idx) => (
                     <tr key={idx} className="hover:bg-white/5 transition-colors">
@@ -155,6 +156,20 @@ export default function AdminFootballTeams() {
                         <span className="text-zinc-300 flex items-center gap-2"><MapPin size={12} className="text-brandRed" /> {team.locality}</span>
                         <span className="text-[10px] text-zinc-500 uppercase tracking-widest">{team.team_type}</span>
                       </td>
+                      
+                      {/* 🔥 NEW AGE CATEGORY DATA CELL */}
+                      <td className="p-6">
+                        <span className={`text-[9px] uppercase tracking-widest px-2.5 py-1 rounded-md border inline-block ${
+                          team.age_category === 'Above 35' 
+                            ? 'bg-amber-500/10 text-amber-500 border-amber-500/20' 
+                            : team.age_category === 'Below 35' 
+                              ? 'bg-blue-500/10 text-blue-400 border-blue-500/20'
+                              : 'bg-zinc-800 text-zinc-400 border-zinc-700'
+                        }`}>
+                          {team.age_category || 'Unspecified'}
+                        </span>
+                      </td>
+
                       <td className="p-6 space-y-1">
                         <span className="text-zinc-200 block"><span className="text-zinc-500 font-normal">Cap:</span> {team.captain_name}</span>
                         <span className="text-[10px] text-zinc-500 flex items-center gap-1"><Phone size={10} /> {team.captain_contact}</span>
