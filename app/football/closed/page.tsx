@@ -34,7 +34,7 @@ export default function FootballRegistration() {
           </h2>
           
           <p className="text-zinc-400 text-sm md:text-base font-medium leading-relaxed mb-8">
-            Registrations have been closed as we have reached our maximum capacity for the tournament. Thank you for the overwhelming response!
+           Thanks for your interest! Registrations are currently full, but we will reach out to you directly if any registered team cancels their spot.
           </p>
 
           {/* Contact Box */}
