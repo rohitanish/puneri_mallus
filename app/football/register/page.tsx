@@ -1,7 +1,8 @@
 "use client";
 import { useState } from 'react';
+import { useRouter } from 'next/navigation'; // 🔥 NEW: For redirecting
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Phone, Mail, MapPin, Users, ShieldCheck, ArrowRight, ArrowLeft, Loader2, Trophy, Zap, CheckSquare, CalendarDays } from 'lucide-react';
+import { User, Phone, Mail, MapPin, Users, ShieldCheck, ArrowRight, ArrowLeft, Loader2, Trophy, CheckSquare, CalendarDays } from 'lucide-react';
 import { useAlert } from '@/context/AlertContext';
 
 const TEAM_TYPES = ["Locality Team", "Friends Team", "Corporate Team", "Club Team", "Other"];
@@ -14,9 +15,10 @@ const stepVariants = {
 };
 
 export default function FootballRegistration() {
+  const router = useRouter(); // 🔥 NEW: Router instance
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
-  const [checkingEmail, setCheckingEmail] = useState(false); // 🔥 NEW: Email check loading state
+  const [checkingEmail, setCheckingEmail] = useState(false);
   const { showAlert } = useAlert();
 
   const [form, setForm] = useState({
@@ -33,7 +35,6 @@ export default function FootballRegistration() {
   const isStep3Valid = form.teamName && form.capName && form.capContact.length === 10;
   const isStep4Valid = declarations.every(Boolean); 
 
-  // 🔥 NEW: Check email against DB before moving to step 2
   const handleStep1Next = async () => {
     setCheckingEmail(true);
     try {
@@ -48,7 +49,7 @@ export default function FootballRegistration() {
       if (data.exists) {
         showAlert("This email is already registered with a team.", "error");
       } else {
-        setStep(2); // Email is unique, proceed to step 2
+        setStep(2); 
       }
     } catch (err) {
       showAlert("Network error while verifying email. Please try again.", "error");
@@ -57,71 +58,41 @@ export default function FootballRegistration() {
     }
   };
 
-  const triggerRazorpay = async () => {
+  // 🔥 NEW: Replaced Razorpay with direct database submission and redirect
+  const submitRegistration = async () => {
     setLoading(true);
     try {
-      const orderRes = await fetch('/api/razorpay/order', {
+      // 1. Prepare data mapping to match your Supabase columns exactly
+      const finalData = {
+        rep_name: form.repName,
+        contact: `+91${form.contact}`,
+        alt_contact: form.altContact ? `+91${form.altContact}` : null,
+        email: form.email,
+        age_category: form.ageCategory,
+        locality: form.locality,
+        team_type: form.teamType === 'Other' ? form.customTeamType : form.teamType,
+        team_name: form.teamName.toUpperCase(),
+        captain_name: form.capName,
+        captain_contact: `+91${form.capContact}`
+      };
+
+      // 2. Send data to backend API
+      const response = await fetch('/api/football/register', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paymentType: 'FOOTBALL' })
+        body: JSON.stringify(finalData)
       });
 
-      const orderData = await orderRes.json();
-      if (!orderRes.ok) throw new Error(orderData.error);
+      if (!response.ok) {
+        throw new Error("Failed to save registration data.");
+      }
 
-      const finalData = {
-        ...form,
-        contact: `+91${form.contact}`,
-        altContact: form.altContact ? `+91${form.altContact}` : '',
-        capContact: `+91${form.capContact}`,
-        teamType: form.teamType === 'Other' ? form.customTeamType : form.teamType
-      };
+      // 3. Show success and Redirect to closed page
+      showAlert("Details submitted successfully!", "success");
+      router.push('/football/closed');
 
-      const options = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-        amount: orderData.amount,
-        currency: "INR",
-        name: "PUNERI MALLUS",
-        description: `Registration: ${form.teamName}`,
-        order_id: orderData.id,
-        theme: { color: "#FF0000" },
-        handler: async function (response: any) {
-          setLoading(true);
-          try {
-            const verifyRes = await fetch('/api/razorpay/verify', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                razorpay_order_id: response.razorpay_order_id,
-                razorpay_payment_id: response.razorpay_payment_id,
-                razorpay_signature: response.razorpay_signature,
-                paymentType: 'FOOTBALL',
-                amount: orderData.amount / 100,
-                teamData: finalData 
-              })
-            });
-
-            const verifyData = await verifyRes.json();
-            if (verifyData.success) {
-              showAlert("Registration Successful!", "success");
-              setStep(5); 
-            } else {
-              throw new Error("Verification failed.");
-            }
-          } catch (err) {
-            showAlert("Error verifying payment.", "error");
-          } finally {
-            setLoading(false);
-          }
-        },
-        prefill: { email: form.email, contact: form.contact },
-        modal: { ondismiss: () => setLoading(false) }
-      };
-
-      const rzp = new (window as any).Razorpay(options);
-      rzp.open();
     } catch (err: any) {
-      showAlert(err.message || "Failed to initiate payment", "error");
+      showAlert(err.message || "Failed to submit. Please try again.", "error");
       setLoading(false);
     }
   };
@@ -136,18 +107,16 @@ export default function FootballRegistration() {
           <h1 className="text-4xl md:text-5xl font-black italic uppercase tracking-tighter leading-none">
             Tournament <span className="text-brandRed">Entry</span>
           </h1>
-          <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.3em] mt-2">Secure your team's spot</p>
+          <p className="text-[10px] text-zinc-500 font-bold uppercase tracking-[0.3em] mt-2">Post Registration Request</p>
         </div>
 
         <div className="bg-zinc-950/80 backdrop-blur-2xl border border-white/10 rounded-[40px] p-8 md:p-10 shadow-2xl relative overflow-hidden">
           
-          {step < 5 && (
-            <div className="flex gap-2 mb-8">
-              {[1, 2, 3, 4].map(i => (
-                <div key={i} className={`h-1.5 flex-1 rounded-full transition-colors duration-500 ${step >= i ? 'bg-brandRed' : 'bg-white/10'}`} />
-              ))}
-            </div>
-          )}
+          <div className="flex gap-2 mb-8">
+            {[1, 2, 3, 4].map(i => (
+              <div key={i} className={`h-1.5 flex-1 rounded-full transition-colors duration-500 ${step >= i ? 'bg-brandRed' : 'bg-white/10'}`} />
+            ))}
+          </div>
 
           <AnimatePresence mode="wait">
             
@@ -183,7 +152,6 @@ export default function FootballRegistration() {
                   </div>
                 </div>
 
-                {/* 🔥 UPDATED: Uses handleStep1Next to check email duplication */}
                 <button 
                   disabled={!isStep1Valid || checkingEmail} 
                   onClick={handleStep1Next} 
@@ -323,24 +291,14 @@ export default function FootballRegistration() {
                   ))}
                 </div>
 
+                {/* 🔥 UPDATED: Triggers database insertion and redirects to closed page */}
                 <button 
                   disabled={!isStep4Valid || loading} 
-                  onClick={triggerRazorpay} 
+                  onClick={submitRegistration} 
                   className="w-full py-5 bg-brandRed text-white font-black uppercase tracking-[0.3em] rounded-2xl hover:bg-white hover:text-black transition-all disabled:opacity-50 flex items-center justify-center gap-2 text-xs shadow-[0_0_30px_rgba(255,0,0,0.3)] active:scale-95"
                 >
-                  {loading ? <Loader2 className="animate-spin" size={16} /> : <>Secure Spot <Zap size={14} fill="currentColor" /></>}
+                  {loading ? <Loader2 className="animate-spin" size={16} /> : <>Submit Registration <CheckSquare size={16} /></>}
                 </button>
-              </motion.div>
-            )}
-
-            {step === 5 && (
-              <motion.div key="step5" variants={stepVariants} initial="hidden" animate="visible" className="text-center py-8 space-y-4">
-                <div className="w-20 h-20 bg-green-500/10 rounded-full flex items-center justify-center mx-auto mb-6 shadow-[0_0_30px_rgba(34,197,94,0.2)]">
-                  <ShieldCheck size={40} className="text-green-500" />
-                </div>
-                <h3 className="text-3xl font-black uppercase italic text-white">Spot Secured</h3>
-                <p className="text-zinc-400 text-sm font-medium">Your registration is complete. A confirmation receipt has been sent to your email.</p>
-                <button onClick={() => window.location.href = '/'} className="mt-6 text-brandRed font-black uppercase text-[10px] tracking-[0.2em] hover:underline">Return Home</button>
               </motion.div>
             )}
 
