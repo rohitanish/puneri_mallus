@@ -6,7 +6,8 @@ import {
   Zap, ShieldCheck, Globe, Handshake, Search, X,
   MessageSquare,
   Megaphone, UserCircle2,
-  PlaySquare
+  PlaySquare,
+  Ticket
 } from 'lucide-react';
 import Link from 'next/link';
 import AddAdminCard from '@/components/admin/AddAdminCard';
@@ -86,6 +87,14 @@ export default function AdminPortal() {
       link: "/admin/members",
       status: "Internal",
       color: "from-blue-500/10"
+    },
+    {
+      title: "Box Office Dashboard",
+      desc: "Monitor event sales, view purchaser ledgers, and pause/resume ticket categories.",
+      icon: <Ticket className="text-green-400" size={32} />,
+      link: "/admin/boxoffice",
+      status: "Live",
+      color: "from-green-400/20"
     },
     {
       title: "Support Tickets",

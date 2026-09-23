@@ -29,6 +29,9 @@ interface TribeEvent {
   image: string;
   featured: boolean;
   description: string;
+  memberDiscount?: number;
+  memberPoints?: number;
+  nonMemberPoints?: number;
 }
 
 export default function AdminEventsPage() {
@@ -60,7 +63,8 @@ export default function AdminEventsPage() {
 
   const [form, setForm] = useState({ 
     title: '', date: '', time: '', location: '', mapUrl: '', 
-    ticketUrl: '', category: 'CULTURAL', image: '', featured: false, description: '',categoryLogo: ''
+    ticketUrl: '', category: 'CULTURAL', image: '', featured: false, description: '',categoryLogo: '',
+    memberDiscount: 0, memberPoints: 0, nonMemberPoints: 0 // 🔥 NEW
   });
 
   const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -159,6 +163,9 @@ export default function AdminEventsPage() {
       mapUrl: formatUrl(form.mapUrl),
       // 🔥 NEW: Check for INTERNAL flag before formatting URL
       ticketUrl: form.ticketUrl === 'INTERNAL' ? 'INTERNAL' : formatUrl(form.ticketUrl),
+      memberDiscount: Number(form.memberDiscount) || 0,
+      memberPoints: Number(form.memberPoints) || 0,
+      nonMemberPoints: Number(form.nonMemberPoints) || 0,
     };
 
     try {
@@ -229,7 +236,8 @@ export default function AdminEventsPage() {
   const resetForm = () => {
     setForm({ 
       title: '', date: '', time: '', location: '', mapUrl: '', 
-      ticketUrl: '', category: 'CULTURAL', image: '', featured: false, description: '',categoryLogo: ''
+      ticketUrl: '', category: 'CULTURAL', image: '', featured: false, description: '',categoryLogo: '',
+      memberDiscount: 0, memberPoints: 0, nonMemberPoints: 0 // 🔥 NEW
     });
     setIsEditingId(null);
   };
@@ -312,7 +320,54 @@ export default function AdminEventsPage() {
                 <label className="font-black uppercase tracking-[0.3em] text-zinc-600 ml-2">Designation</label>
                 <input required className="w-full bg-black border border-white/10 p-5 rounded-2xl font-bold focus:border-brandRed outline-none uppercase tracking-widest text-white" value={form.title} onChange={e => setForm({...form, title: e.target.value})} />
               </div>
+              {/* 🔥 NEW: TICKETING MODE TOGGLE */}
+              <div className="space-y-3">
+                <label className="text-[10px] font-black uppercase tracking-[0.3em] text-zinc-600 ml-2">Ticketing Mode</label>
+                {/* ... existing ticketing toggle buttons ... */}
+              </div>
 
+              {/* 🔥 NEW: TRIBE REWARDS & DISCOUNTS BLOCK */}
+              <div className="space-y-3 pt-4 border-t border-white/5">
+                <label className="text-[10px] font-black uppercase tracking-[0.3em] text-cyan-400 ml-2 flex items-center gap-2">
+                  <Star size={14} /> Rewards & Discounts
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="space-y-1">
+                    <label className="text-[8px] font-black uppercase tracking-[0.2em] text-zinc-500 ml-2">Tribe Discount (%)</label>
+                    <input 
+                      type="number" 
+                      min="0" 
+                      max="100" 
+                      className="w-full bg-black border border-white/10 p-4 rounded-2xl font-bold focus:border-brandRed outline-none text-brandRed" 
+                      value={form.memberDiscount === undefined || form.memberDiscount === 0 ? '' : form.memberDiscount} 
+                      onChange={e => setForm({...form, memberDiscount: Number(e.target.value)})} 
+                      placeholder="0" 
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[8px] font-black uppercase tracking-[0.2em] text-zinc-500 ml-2">Tribe Points</label>
+                    <input 
+                      type="number" 
+                      min="0" 
+                      className="w-full bg-black border border-white/10 p-4 rounded-2xl font-bold focus:border-cyan-400 outline-none text-white" 
+                      value={form.memberPoints === undefined || form.memberPoints === 0 ? '' : form.memberPoints} 
+                      onChange={e => setForm({...form, memberPoints: Number(e.target.value)})} 
+                      placeholder="0" 
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[8px] font-black uppercase tracking-[0.2em] text-zinc-500 ml-2">Guest Points</label>
+                    <input 
+                      type="number" 
+                      min="0" 
+                      className="w-full bg-black border border-white/10 p-4 rounded-2xl font-bold focus:border-zinc-400 outline-none text-zinc-400" 
+                      value={form.nonMemberPoints === undefined || form.nonMemberPoints === 0 ? '' : form.nonMemberPoints} 
+                      onChange={e => setForm({...form, nonMemberPoints: Number(e.target.value)})} 
+                      placeholder="0" 
+                    />
+                  </div>
+                </div>
+              </div>
               <div className="space-y-4">
                 <div className="space-y-1 text-[10px]">
                   <label className="font-black uppercase tracking-[0.3em] text-zinc-600 ml-2">Venue / Location</label>
@@ -544,7 +599,7 @@ export default function AdminEventsPage() {
                       <button onClick={() => startEdit(event)} className="p-4 bg-black/80 backdrop-blur-md hover:bg-blue-600 rounded-2xl transition-all border border-white/10 text-white"><Edit3 size={16}/></button>
                       <button onClick={() => {setEventToDelete({id: event._id, title: event.title}); setConfirmOpen(true);}} className="p-4 bg-black/80 backdrop-blur-md hover:bg-red-600 rounded-2xl transition-all border border-white/10 text-white"><Trash2 size={16}/></button>
                     </div>
-                    <EventCard {...event} isUpcoming={true} />
+                    <EventCard {...event} eventId={event._id} isUpcoming={true} />
                   </div>
                 ))}
               </div>
@@ -564,7 +619,7 @@ export default function AdminEventsPage() {
                     <button onClick={() => startEdit(event)} className="p-4 bg-black/80 backdrop-blur-md hover:bg-blue-600 rounded-2xl transition-all border border-white/10 text-white"><Edit3 size={16}/></button>
                     <button onClick={() => {setEventToDelete({id: event._id, title: event.title}); setConfirmOpen(true);}} className="p-4 bg-black/80 backdrop-blur-md hover:bg-red-600 rounded-2xl transition-all border border-white/10 text-white"><Trash2 size={16}/></button>
                   </div>
-                  <EventCard {...event} isUpcoming={false} />
+                  <EventCard {...event} eventId={event._id} isUpcoming={false} />
                 </div>
               ))}
             </div>

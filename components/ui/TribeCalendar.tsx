@@ -48,18 +48,32 @@ export default function TribeCalendar({ value, onChange, onClose, maxDate, defau
     return Array.from({ length: 80 }, (_, i) => limitYear - i);
   }, [maxDate]);
 
-  const updatePosition = useCallback(() => {
+ const updatePosition = useCallback(() => {
     if (anchorRef?.current) {
       const rect = anchorRef.current.getBoundingClientRect();
       const calendarWidth = 300;
+      const calendarHeight = 380; // Estimated height of the calendar popup
+      
       let left = rect.left;
       
       if (left + calendarWidth > window.innerWidth) {
         left = window.innerWidth - calendarWidth - 20;
       }
 
+      // Check available space below and above the input relative to the viewport
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+
+      // Default behavior: open downwards
+      let top = rect.bottom + window.scrollY + 8;
+
+      // 🔥 SMART FLIP: If there isn't enough space below AND there is more space above, open UPWARDS
+      if (spaceBelow < calendarHeight && spaceAbove > spaceBelow) {
+        top = rect.top + window.scrollY - calendarHeight - 8;
+      }
+
       setCoords({
-        top: rect.bottom + window.scrollY + 8,
+        top: top,
         left: Math.max(20, left)
       });
     }

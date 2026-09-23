@@ -251,7 +251,7 @@ export default function Home() {
                           className="relative overflow-hidden rounded-3xl border border-white/10 bg-zinc-950/80 md:bg-white/[0.03] md:backdrop-blur-xl shadow-2xl group-hover:border-brandRed/30 transition-all duration-500"
                           style={{ transform: 'translateZ(0)' }}
                         >
-                          <EventCard {...event} isUpcoming={true} showDescription={true} />
+                          <EventCard {...event} eventId={event._id} isUpcoming={true} showDescription={true} />
                         </div>
                       </div>
                     </div>

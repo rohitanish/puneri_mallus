@@ -1,6 +1,8 @@
 # Puneri Mallus Repository File Lineage
 
-> Generated from a static source-tree audit on 2026-08-24. This document describes purpose, consumers, dependencies, and runtime lineage for every source, configuration, script, and public asset file in the repository, excluding generated `.next/` and installed `node_modules/` contents.
+> Generated from a static source-tree audit on 2026-09-14. This document describes purpose, consumers, dependencies, and runtime lineage for every source, configuration, script, and public asset file in the repository, excluding generated `.next/` and installed `node_modules/` contents.
+>
+> This revision includes recently added event-ticketing, QR-scanning, and repository-audit tooling that was not present in the earlier lineage snapshot.
 >
 > Static analysis cannot prove runtime consumers for database-provided URLs, browser navigation, uploads, or external systems. Those cases are called out explicitly rather than guessed.
 
@@ -48,6 +50,18 @@ forms
 **Lineage:** Loaded directly by Next.js/server runtime and by `migrate.js`; values are read through `process.env` in server libraries and API routes. It is not imported as source code.
 
 **Important:** This file is secret-sensitive. Its values should never be copied into this documentation, committed, or exposed to client code unless deliberately prefixed with `NEXT_PUBLIC_`.
+
+### `compile.js`
+
+**Purpose:** Repository snapshot utility that walks the source tree and writes a single combined output file for auditing, code packaging, and prompt-generation workflows.
+
+**Lineage:** Run manually with Node; it reads the project directory, skips generated and vendor folders, and emits `compiled_repo.txt`. It is not part of the production app runtime.
+
+### `compiled_repo.txt`
+
+**Purpose:** Generated repository-wide source dump created by `compile.js`.
+
+**Lineage:** Used as an audit artifact for documentation, PR review, and prompt packaging. It is a generated output file rather than an active runtime dependency.
 
 ### `.gitignore`
 
@@ -221,6 +235,12 @@ forms
 
 **Lineage:** Route `/football/register`. Calls `/api/football/check-email` and `/api/football/register`; final payment/team persistence may continue through Razorpay flows elsewhere.
 
+### `app/events/[id]/book/page.tsx`
+
+**Purpose:** Event ticket booking flow with category selection, quantity limits, Razorpay checkout, and final PDF pass issuance.
+
+**Lineage:** Route `/events/:id/book`. Reads `event_ticket_categories` from Supabase for the event, validates ticket limits, calls `/api/razorpay/order` for checkout, then verifies payment via `/api/tickets/verify` and sends the generated e-ticket PDF by email.
+
 ### `app/partners/page.tsx`
 
 **Purpose:** Public partner/member directory.
@@ -327,6 +347,12 @@ forms
 
 **Lineage:** Route `/admin`. Links to admin modules and uses `AddAdminCard` for administrator management.
 
+### `app/admin/scanner/page.tsx`
+
+**Purpose:** QR/ticket entry verification terminal for event-day scanning.
+
+**Lineage:** Route `/admin/scanner`. Reads `bid` and `tno` query parameters, then POSTs to `/api/admin/tickets/scan` to verify whether a ticket has been issued and whether it has already been checked in.
+
 ### `app/admin/action.ts`
 
 **Purpose:** Server actions for adding/revoking admins and writing `admin_audit_logs`.
@@ -341,9 +367,9 @@ forms
 
 ### `app/admin/events/page.tsx`
 
-**Purpose:** Admin event CRUD, date/time controls, asset upload/replacement, and audit logging.
+**Purpose:** Admin event CRUD, date/time controls, asset upload/replacement, audit logging, and ticket configuration management.
 
-**Lineage:** Route `/admin/events`. Uses `TribeCalendar`, `TribeTimePicker`, `/api/events/manage`, `/api/events/delete`, and event storage.
+**Lineage:** Route `/admin/events`. Uses `TribeCalendar`, `TribeTimePicker`, `/api/events/manage`, `/api/events/delete`, event storage, and the `TicketConfig` modal for configuring `event_ticket_categories` per event.
 
 ### `app/admin/community/page.tsx`
 
@@ -454,6 +480,18 @@ forms
 **Purpose:** Reads and updates Supabase `app_settings`.
 
 **Lineage:** Called by admin settings/payment/football UI; protected by admin authorization.
+
+### `app/api/admin/tickets/config/route.ts`
+
+**Purpose:** Authenticated admin endpoint that upserts event ticket categories and capacity settings into Supabase `event_ticket_categories`.
+
+**Lineage:** Called by `components/admin/TicketConfig.tsx` and used from `app/admin/events/page.tsx`; validates admin access with Supabase auth and the `authorized_admins` table before persisting the configuration.
+
+### `app/api/admin/tickets/scan/route.ts`
+
+**Purpose:** Verifies a checked-in event ticket by booking ID and ticket number, updating the scanned ticket status in the `ticket_bookings` payload.
+
+**Lineage:** Called by `app/admin/scanner/page.tsx` during gate scanning; uses the service-role Supabase client to find a booking, validate the ticket, and mark it as `CHECKED_IN`.
 
 ### `app/api/admin/support/route.ts`
 
@@ -589,9 +627,15 @@ forms
 
 ### `app/api/razorpay/order/route.ts`
 
-**Purpose:** Creates Razorpay orders using configured membership pricing.
+**Purpose:** Creates Razorpay orders using configured membership pricing and event ticket cart totals.
 
-**Lineage:** Called by `components/Membership.tsx` and Mallu Mart/payment flows; uses Razorpay secret configuration and server-side pricing.
+**Lineage:** Called by `components/Membership.tsx`, Mallu Mart/payment flows, and `app/events/[id]/book/page.tsx`; uses Razorpay secret configuration and reads the active event category list when `paymentType` is `EVENT_TICKET`.
+
+### `app/api/tickets/verify/route.ts`
+
+**Purpose:** Verifies Razorpay signatures for ticket purchases, issues ticket numbers, writes booking records to `ticket_bookings`, increments sold counts, and emails signed PDF e-tickets.
+
+**Lineage:** Called by `app/events/[id]/book/page.tsx` after Razorpay payment succeeds; persists `tickets_data`, creates QR links for scanning, and triggers `sendEventTicketEmail` through `lib/mail.ts`.
 
 ### `app/api/razorpay/verify/route.ts`
 
@@ -774,6 +818,12 @@ forms
 **Purpose:** Admin creation form/card.
 
 **Lineage:** Used by admin dashboard/member pages; calls `/api/admin/create` and uses alert state.
+
+### `components/admin/TicketConfig.tsx`
+
+**Purpose:** Event ticket category editor for setting names, price, prefix, capacity, and active state.
+
+**Lineage:** Embedded in `app/admin/events/page.tsx` to manage `event_ticket_categories`; saves configuration through `/api/admin/tickets/config`.
 
 ### `components/admin/MemberActivityList.tsx`
 

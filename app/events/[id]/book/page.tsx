@@ -1,13 +1,18 @@
 "use client";
 import { useState, useEffect, use } from 'react'; 
-import { Mail, ArrowRight, Minus, Plus, Loader2, Ticket, Calendar, Clock, MapPin, Sparkles } from 'lucide-react';
+import { Mail, ArrowRight, Minus, Plus, Loader2, Ticket, Calendar, Clock, MapPin, Sparkles, Star } from 'lucide-react';
 import { useAlert } from '@/context/AlertContext';
 import { createBrowserClient } from '@supabase/ssr';
 import { useRouter } from 'next/navigation';
 
 export default function EventBookingPage({ params }: { params: Promise<{ id: string }> }) {
   const { id: eventId } = use(params);
-
+  
+  // 🔥 Tribe Loyalty States
+  const [loyaltyBalance, setLoyaltyBalance] = useState(0);
+  const [applyPoints, setApplyPoints] = useState(false);
+  const MIN_REDEEM_THRESHOLD = 50; 
+  
   const [email, setEmail] = useState('');
   const [step, setStep] = useState(1);
   const [categories, setCategories] = useState<any[]>([]);
@@ -15,6 +20,8 @@ export default function EventBookingPage({ params }: { params: Promise<{ id: str
   const [cart, setCart] = useState<Record<string, number>>({});
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
+  const [isMember, setIsMember] = useState(false);
+  const [discountPercent, setDiscountPercent] = useState(0);
   
   const { showAlert } = useAlert();
   const router = useRouter();
@@ -29,7 +36,6 @@ export default function EventBookingPage({ params }: { params: Promise<{ id: str
       const { data: catData } = await supabase.from('event_ticket_categories').select('*').eq('event_id', eventId).eq('active', true);
       
       if (catData) {
-        // 🔥 SORT CATEGORIES BY PRICE (Lowest to Highest)
         const sortedCategories = catData.sort((a, b) => a.price - b.price);
         setCategories(sortedCategories);
       }
@@ -38,7 +44,25 @@ export default function EventBookingPage({ params }: { params: Promise<{ id: str
         const res = await fetch('/api/events');
         const events = await res.json();
         const currentEvent = events.find((e: any) => e._id === eventId);
-        if (currentEvent) setEventData(currentEvent);
+        
+        if (currentEvent) {
+          setEventData(currentEvent);
+          setDiscountPercent(currentEvent.memberDiscount || 0);
+        }
+
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+          const { data: profile } = await supabase
+            .from('profiles')
+            .select('is_member, loyalty_points')
+            .eq('id', user.id)
+            .single();
+          
+          if (profile) {
+            setIsMember(profile.is_member);
+            setLoyaltyBalance(profile.loyalty_points || 0);
+          }
+        }
       } catch (e) {}
 
       setLoading(false);
@@ -47,8 +71,21 @@ export default function EventBookingPage({ params }: { params: Promise<{ id: str
   }, [eventId]);
 
   const totalTickets = Object.values(cart).reduce((a, b) => a + b, 0);
-  const totalPrice = categories.reduce((sum, cat) => sum + (cat.price * (cart[cat.id] || 0)), 0);
+  
+  // Calculate base price with tier discounts
+  const baseDiscountedPrice = categories.reduce((sum, cat) => {
+    let catPrice = cat.price;
+    if (isMember && discountPercent > 0) {
+      catPrice = cat.price - ((cat.price * discountPercent) / 100);
+    }
+    return sum + (catPrice * (cart[cat.id] || 0));
+  }, 0);
 
+  // 🔥 Calculate actual redemption automatically based on toggle
+  const maxRedeemable = Math.min(loyaltyBalance, baseDiscountedPrice);
+  const pointsToRedeem = applyPoints && loyaltyBalance >= MIN_REDEEM_THRESHOLD ? maxRedeemable : 0;
+  const totalPrice = baseDiscountedPrice - pointsToRedeem;
+  
   const updateCart = (id: string, delta: number, remaining: number) => {
     const currentQty = cart[id] || 0;
     const newQty = currentQty + delta;
@@ -57,8 +94,8 @@ export default function EventBookingPage({ params }: { params: Promise<{ id: str
       showAlert(`Only ${remaining} passes left in this category!`, "error");
       return;
     }
-    if (delta > 0 && totalTickets >= 10) {
-      showAlert("Maximum 10 passes per transaction", "error");
+    if (delta > 0 && totalTickets >= 7) {
+      showAlert("Maximum 7 passes per account", "error");
       return;
     }
     setCart({ ...cart, [id]: newQty });
@@ -70,7 +107,7 @@ export default function EventBookingPage({ params }: { params: Promise<{ id: str
       const orderRes = await fetch('/api/razorpay/order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ paymentType: 'EVENT_TICKET', cart, eventId }) 
+        body: JSON.stringify({ paymentType: 'EVENT_TICKET', cart, eventId, pointsToRedeem }) 
       });
       const orderData = await orderRes.json();
       if (!orderRes.ok) throw new Error(orderData.error);
@@ -94,14 +131,15 @@ export default function EventBookingPage({ params }: { params: Promise<{ id: str
                 razorpay_payment_id: response.razorpay_payment_id,
                 razorpay_signature: response.razorpay_signature,
                 cart, email, eventId, totalAmount: totalPrice,
-                eventData 
+                eventData,
+                pointsToRedeem // Pass to backend for ledger deduction
               })
             });
 
             const verifyData = await verifyRes.json();
             if (verifyData.success) {
               showAlert("Passes Secured Successfully!", "success");
-              router.push('/'); 
+              router.push(`/tickets/${verifyData.bookingId}`);
             } else throw new Error("Verification failed.");
           } catch (err) {
             showAlert("Verification Failed", "error");
@@ -130,7 +168,6 @@ export default function EventBookingPage({ params }: { params: Promise<{ id: str
       
       {/* 🌟 ENHANCED CINEMATIC BACKGROUND */}
       <div className="fixed inset-0 z-0 pointer-events-none overflow-hidden bg-[#030303]">
-        {/* Ambient Concert Lighting Orbs */}
         <div className="absolute top-[-20%] left-[-10%] w-[50vw] h-[50vw] bg-brandRed/10 blur-[120px] rounded-full mix-blend-screen" />
         <div className="absolute bottom-[-20%] right-[-10%] w-[40vw] h-[40vw] bg-brandRed/15 blur-[150px] rounded-full mix-blend-screen" />
         
@@ -141,7 +178,6 @@ export default function EventBookingPage({ params }: { params: Promise<{ id: str
             className="absolute inset-0 w-full h-full object-cover blur-[100px] opacity-25 scale-110 saturate-200" 
           />
         )}
-        {/* Deep Vignette */}
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_transparent_0%,_#030303_100%)] opacity-80" />
       </div>
 
@@ -152,7 +188,6 @@ export default function EventBookingPage({ params }: { params: Promise<{ id: str
         <div className="w-full md:w-5/12 bg-black/50 p-8 border-b md:border-b-0 md:border-r border-white/5 flex flex-col relative overflow-hidden">
           <div className="absolute top-0 left-0 right-0 h-40 bg-brandRed/15 blur-[60px] pointer-events-none" />
           
-          {/* Live Indicator */}
           <div className="absolute top-10 left-10 z-20 flex items-center gap-2 bg-black/60 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-full shadow-xl">
             <span className="w-2 h-2 rounded-full bg-brandRed animate-pulse" />
             <span className="text-[9px] font-black uppercase tracking-widest text-white">Live Event</span>
@@ -199,7 +234,7 @@ export default function EventBookingPage({ params }: { params: Promise<{ id: str
             <p className="text-[10px] text-zinc-400 font-black uppercase tracking-[0.3em] mt-2">Official Ticketing Portal</p>
           </div>
 
-          <div className="flex-1 p-8 overflow-y-auto pb-32 custom-scrollbar">
+          <div className="flex-1 p-8 overflow-y-auto pb-48 custom-scrollbar">
             {step === 1 ? (
               <div className="space-y-10 mt-8 max-w-md mx-auto">
                 <div className="text-center space-y-3">
@@ -229,7 +264,7 @@ export default function EventBookingPage({ params }: { params: Promise<{ id: str
                   <h2 className="text-lg font-black uppercase tracking-widest text-zinc-200 flex items-center gap-2">
                     <Sparkles size={16} className="text-brandRed" /> Select Passes
                   </h2>
-                  <p className="text-[10px] text-brandRed font-black uppercase tracking-widest bg-brandRed/10 border border-brandRed/20 px-3 py-1.5 rounded-full shadow-inner">Max 10 per order</p>
+                  <p className="text-[10px] text-brandRed font-black uppercase tracking-widest bg-brandRed/10 border border-brandRed/20 px-3 py-1.5 rounded-full shadow-inner">Max 7 per account</p>
                 </div>
 
                 <div className="space-y-3">
@@ -238,13 +273,32 @@ export default function EventBookingPage({ params }: { params: Promise<{ id: str
                     const remaining = cat.capacity - cat.sold;
                     const isSoldOut = remaining <= 0;
                     const isFastFilling = remaining <= 10 && remaining > 0;
+                    
+                    const hasActiveDiscount = isMember && discountPercent > 0;
+                    const displayPrice = hasActiveDiscount 
+                      ? cat.price - ((cat.price * discountPercent) / 100) 
+                      : cat.price;
 
                     return (
                       <div key={cat.id} className={`bg-black/60 backdrop-blur-md border p-5 rounded-2xl flex justify-between items-center transition-all duration-300 ${isSoldOut ? 'border-zinc-900 opacity-50 grayscale' : 'border-white/10 hover:border-white/30 hover:bg-white/[0.02] shadow-lg'}`}>
                         <div>
-                          <h3 className="text-sm font-black text-white uppercase tracking-widest">{cat.name}</h3>
+                          <div className="flex items-center gap-2">
+                            <h3 className="text-sm font-black text-white uppercase tracking-widest">{cat.name}</h3>
+                            {hasActiveDiscount && (
+                               <span className="text-[8px] bg-brandRed text-white px-2 py-0.5 rounded-full font-black uppercase tracking-widest flex items-center gap-1 shadow-[0_0_10px_rgba(255,0,0,0.4)]">
+                                 <Star size={8} className="fill-white" /> Tribe Rate
+                               </span>
+                            )}
+                          </div>
                           <div className="flex items-center gap-3 mt-1.5">
-                            <p className="text-xs font-bold text-brandRed tracking-widest">₹{cat.price.toLocaleString('en-IN')}</p>
+                            {hasActiveDiscount ? (
+                               <div className="flex items-center gap-2">
+                                 <p className="text-[10px] font-bold text-zinc-500 tracking-widest line-through">₹{cat.price.toLocaleString('en-IN')}</p>
+                                 <p className="text-xs font-bold text-brandRed tracking-widest">₹{displayPrice.toLocaleString('en-IN')}</p>
+                               </div>
+                            ) : (
+                               <p className="text-xs font-bold text-brandRed tracking-widest">₹{displayPrice.toLocaleString('en-IN')}</p>
+                            )}
                             {isFastFilling && <span className="text-[9px] font-black uppercase text-orange-500 bg-orange-500/10 px-2 py-0.5 rounded-full animate-pulse border border-orange-500/20 shadow-[0_0_10px_rgba(249,115,22,0.2)]">Fast Filling</span>}
                             {isSoldOut && <span className="text-[9px] font-black uppercase text-zinc-500 bg-zinc-900 border border-zinc-800 px-2 py-0.5 rounded-full">Sold Out</span>}
                           </div>
@@ -274,6 +328,38 @@ export default function EventBookingPage({ params }: { params: Promise<{ id: str
           {/* Absolute Checkout Bar */}
           {step === 2 && totalTickets > 0 && (
             <div className="absolute bottom-0 left-0 right-0 bg-zinc-950/95 backdrop-blur-2xl border-t border-white/10 p-6 md:rounded-br-[40px] shadow-[0_-10px_40px_rgba(0,0,0,0.5)]">
+              
+              {/* 🔥 THRESHOLD-LOCKED REDEMPTION TOGGLE */}
+              {loyaltyBalance > 0 && (
+                <div className="mb-6 p-4 bg-amber-500/10 border border-amber-500/20 rounded-2xl animate-in slide-in-from-bottom-4 flex justify-between items-center">
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] font-black uppercase tracking-widest text-amber-500 flex items-center gap-2">
+                      <Star size={12} className="fill-amber-500" /> Tribe Points
+                    </span>
+                    <span className="text-[9px] text-zinc-400 font-bold uppercase tracking-widest">
+                      Balance: {loyaltyBalance} PTS
+                    </span>
+                  </div>
+
+                  {loyaltyBalance >= MIN_REDEEM_THRESHOLD ? (
+                    <label className="flex items-center gap-3 cursor-pointer bg-black/40 px-3 py-2 rounded-xl border border-amber-500/30 hover:bg-black/60 transition-all">
+                      <span className="text-xs font-bold text-amber-400">- ₹{maxRedeemable}</span>
+                      <div className={`w-10 h-5 rounded-full p-1 transition-colors ${applyPoints ? 'bg-amber-500' : 'bg-zinc-700'}`}>
+                        <div className={`w-3 h-3 bg-white rounded-full transition-transform ${applyPoints ? 'translate-x-5' : 'translate-x-0'}`} />
+                      </div>
+                      <input type="checkbox" className="hidden" checked={applyPoints} onChange={(e) => setApplyPoints(e.target.checked)} />
+                    </label>
+                  ) : (
+                    <div className="text-right">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-zinc-500 block">Locked</span>
+                      <span className="text-[8px] font-bold uppercase tracking-widest text-brandRed">
+                        {MIN_REDEEM_THRESHOLD - loyaltyBalance} PTS more to unlock
+                      </span>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <button onClick={processPayment} disabled={processing} className="w-full bg-brandRed text-white py-5 rounded-2xl font-black uppercase tracking-widest flex justify-between items-center px-6 disabled:opacity-50 text-xs shadow-[0_0_40px_rgba(255,0,0,0.3)] hover:shadow-[0_0_60px_rgba(255,0,0,0.5)] transition-all active:scale-[0.98]">
                 {processing ? <Loader2 className="animate-spin mx-auto" /> : (
                   <>

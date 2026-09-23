@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { 
   User, Mail, Camera, Check, AlertCircle, 
   Loader2, Shield, Trash2, MapPin, Phone, Briefcase, 
-  Calendar, AlertTriangle, CheckCircle2, Smartphone, Lock
+  Calendar, AlertTriangle, CheckCircle2, Smartphone, Lock,Star
 } from 'lucide-react';
 import TribeCalendar from '@/components/ui/TribeCalendar';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -49,7 +49,7 @@ export default function ProfilePage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isPurging, setIsPurging] = useState(false);
-
+  const [loyaltyPoints, setLoyaltyPoints] = useState<number>(0);
   // UI STATES
   const router = useRouter();
   const [showCalendar, setShowCalendar] = useState(false);
@@ -95,7 +95,24 @@ export default function ProfilePage() {
       }
     };
   }, [loading]);
+  useEffect(() => {
+  async function loadProfile() {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return;
 
+    const { data: profile, error } = await supabase
+      .from('profiles')
+      .select('*, loyalty_points') // 🔥 Explicitly include loyalty_points
+      .eq('id', user.id)
+      .single();
+
+    if (profile && !error) {
+      setLoyaltyPoints(profile.loyalty_points ?? 0);
+    }
+  }
+
+  loadProfile();
+}, []);
   // --- TIMER EFFECT ---
   useEffect(() => {
     let interval: any;
@@ -394,7 +411,7 @@ export default function ProfilePage() {
             </p>
           </div>
         </div>
-
+              
         {message.text && (
           <div className={`mb-8 p-5 rounded-2xl flex items-center gap-3 font-black uppercase text-[10px] tracking-widest border animate-in fade-in slide-in-from-top-4 ${message.type === 'success' ? 'bg-green-500/10 text-green-400 border-green-500/20' : message.type === 'info' ? 'bg-blue-500/10 text-blue-400 border-blue-500/20' : 'bg-brandRed/10 text-brandRed border-brandRed/20'}`}>
             {message.type === 'success' ? <Check size={18} /> : message.type === 'info' ? <Loader2 size={18} className="animate-spin" /> : <AlertCircle size={18} />}
@@ -461,9 +478,7 @@ export default function ProfilePage() {
               <label className="text-[9px] font-black uppercase tracking-widest text-zinc-500 ml-2">Email Address</label>
               <input 
                 type="email" 
-                // 🔥 FIX: Hide the ghost email if they aren't a member
                 value={!isMember && email?.includes('@punerimallus.com') ? '' : email} 
-                // Add a placeholder so it doesn't just look blank/broken
                 placeholder={!isMember ? "Unlock to connect email" : "Enter Email Address"}
                 onChange={(e) => setEmail(e.target.value)} 
                 disabled={!isMember}
@@ -548,8 +563,47 @@ export default function ProfilePage() {
 
         {/* SECURITY & DANGER ZONE (Always Unlocked) */}
         <div className="mt-8 grid grid-cols-1 md:grid-cols-2 gap-8">
-          
            
+           {/* 🔥 NEW: TRIBE REWARDS & LOYALTY CARD */}
+           <div className="bg-zinc-950 border border-white/5 p-8 rounded-[40px] shadow-2xl relative overflow-hidden group hover:border-amber-500/30 transition-all duration-500">
+             {/* Ambient Amber Glow */}
+             <div className="absolute top-0 right-0 w-44 h-44 bg-amber-500/10 blur-[70px] pointer-events-none group-hover:bg-amber-500/20 transition-all duration-700" />
+
+             <div className="flex justify-between items-start mb-8 relative z-10">
+               <div className="flex items-center gap-4">
+                 <div className="p-4 bg-black border border-white/10 rounded-2xl shadow-xl group-hover:scale-110 group-hover:border-amber-500/40 transition-all duration-500">
+                   <Star size={24} className="text-amber-500 fill-amber-500 animate-pulse" />
+                 </div>
+                 <div>
+                   <h3 className="text-2xl font-black uppercase italic tracking-tighter text-white">
+                     Tribe <span className="text-amber-500">Points</span>
+                   </h3>
+                   <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+                     Loyalty Balance
+                   </p>
+                 </div>
+               </div>
+             </div>
+
+             <div className="flex items-baseline gap-3 mb-6 relative z-10">
+               <span className="text-6xl md:text-7xl font-black italic tracking-tighter text-white leading-none">
+                 {loyaltyPoints}
+               </span>
+               <span className="text-sm font-black uppercase tracking-widest text-amber-500">
+                 PTS
+               </span>
+             </div>
+
+             <p className="text-xs text-zinc-400 font-medium leading-relaxed mb-8 relative z-10">
+               Earn points automatically on every event ticket purchase. Points can be redeemed for exclusive access passes and merchandise in future tribe activations.
+             </p>
+
+             <div className="w-full py-4 bg-black border border-white/5 rounded-2xl text-[10px] font-black uppercase tracking-[0.2em] text-zinc-600 text-center select-none relative z-10">
+               Redemption Gateway • Coming Soon
+             </div>
+           </div>
+
+           {/* DANGER ZONE */}
            <div className="bg-red-500/5 backdrop-blur-3xl p-10 rounded-[40px] border border-red-500/10 flex flex-col justify-center text-center group" style={{ transform: 'translateZ(0)' }}>
               <h3 className="text-red-900 font-black uppercase text-[10px] tracking-[0.5em] mb-4">Danger Zone</h3>
               <p className="text-[9px] text-red-900/50 font-bold uppercase mb-6 italic">This will remove your soul from the tribe cloud permanently.</p>

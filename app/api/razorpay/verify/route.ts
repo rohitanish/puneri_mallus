@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server';
 import crypto from 'crypto';
-// 🔥 NEW: Added sendFootballReceiptEmail
 import { sendPremiumMembershipEmail, sendMartSubscriptionEmail, sendFootballReceiptEmail } from "@/lib/mail"; 
 import { createClient } from '@supabase/supabase-js';
 import { createServerClient } from '@supabase/ssr';
@@ -31,7 +30,7 @@ export async function POST(req: Request) {
       plan,
       amount, 
       invoiceEmail, 
-      teamData // 🔥 NEW: Extract the Football Team Data sent from the frontend
+      teamData // Football Team Data sent from the frontend
     } = await req.json();
 
     const trueUserId = user.id;
@@ -125,7 +124,7 @@ export async function POST(req: Request) {
         await sendMartSubscriptionEmail(finalReceiptEmail, plan, razorpay_order_id, razorpay_payment_id);
       }
     }
-    // 🔥 NEW: FOOTBALL TEAM REGISTRATION LOGIC
+    // FOOTBALL TEAM REGISTRATION LOGIC
     else if (paymentType === "FOOTBALL") {
       // Step A: Insert Team Data into football_teams table
       await supabaseAdmin.from('football_teams').insert({
@@ -133,7 +132,7 @@ export async function POST(req: Request) {
         contact: teamData.contact,
         alt_contact: teamData.altContact,
         email: teamData.email,
-        age_category: teamData.ageCategory, // 🔥 ADD THIS LINE
+        age_category: teamData.ageCategory,
         locality: teamData.locality,
         team_type: teamData.teamType,
         team_name: teamData.teamName.toUpperCase(),

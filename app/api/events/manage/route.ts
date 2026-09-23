@@ -34,6 +34,9 @@ export async function POST(request: Request) {
       location: eventData.location?.trim().toUpperCase(),
       // Ensure categoryLogo is included in the set
       categoryLogo: eventData.categoryLogo || '',
+      memberDiscount: Number(eventData.memberDiscount) || 0,
+      memberPoints: Number(eventData.memberPoints) || 0,
+      nonMemberPoints: Number(eventData.nonMemberPoints) || 0,
       updated_at: new Date()
     };
 

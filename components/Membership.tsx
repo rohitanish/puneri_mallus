@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAlert } from '@/context/AlertContext';
 import { createBrowserClient } from '@supabase/ssr';
 import TribeCalendar from '@/components/ui/TribeCalendar';
+import { useRouter } from 'next/navigation'; // 🔥 NEW: Added router for success redirection
 
 interface MembershipCardProps {
   price: number;
@@ -15,7 +16,7 @@ interface MembershipCardProps {
 
 const PUNE_AREAS = ["Akurdi", "Aundh", "Balewadi", "Baner", "Bavdhan", "Bhosari", "Bibwewadi", "Camp", "Chikhali", "Chinchwad", "Dapodi", "Deccan", "Dhanori", "Erandwane", "Fatima Nagar", "Ghorpadi", "Hadapsar", "Hinjewadi", "Kalyani Nagar", "Karve Nagar", "Kasarwadi","Kalewadi","Katraj", "Khadki", "Kondhwa", "Koregaon Park", "Kothrud", "Lohegaon", "Magarpatta", "Model Colony", "Moshi", "Mundhwa", "NIBM", "Nigdi", "Pashan", "Phugewadi", "Pimpri", "Pimple Gurav", "Pimple Nilakh", "Pimple Saudagar", "Pune City", "Punawale", "Rahatani", "Ravet", "Sadashiv Peth", "Sahakar Nagar", "Sangvi", "Shivajinagar", "Sinhagad Road", "Sus", "Swargate", "Talawade", "Tathawade", "Thergaon", "Undri", "Viman Nagar", "Vishrantwadi", "Wakad", "Wanowrie", "Warje", "Yerwada"].sort();
 
-// 🔥 Snappy animation variants to prevent mobile horizontal scrollbar bugs
+// Snappy animation variants to prevent mobile horizontal scrollbar bugs
 const stepVariants = {
   hidden: { opacity: 0, y: 10 },
   visible: { 
@@ -34,6 +35,7 @@ export default function MembershipCard({ price, benefits, userId, userEmail }: M
   const [upgrading, setUpgrading] = useState(false);
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1); 
   const { showAlert } = useAlert();
+  const router = useRouter(); // 🔥 NEW: Initialize router
   
   const initialEmail = userEmail?.includes('@punerimallus.com') ? '' : (userEmail || '');
 
@@ -170,7 +172,8 @@ export default function MembershipCard({ price, benefits, userId, userEmail }: M
             const verifyData = await verifyRes.json();
             if (verifyData.success) {
               showAlert("Welcome to the Inner Circle!", "success");
-              window.location.href = '/profile'; 
+              // 🔥 NEW: Route directly to the elegant success page
+              window.location.href = '/membership/success';
             } else {
               setUpgrading(false);
               showAlert("Verification failed. Please contact support.", "error");
@@ -195,14 +198,13 @@ export default function MembershipCard({ price, benefits, userId, userEmail }: M
 
   return (
     <motion.div 
-      layout // 🔥 Animates height changes smoothly when switching steps
+      layout 
       initial={{ opacity: 0, scale: 0.95 }}
       whileInView={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.4, ease: "easeOut" }}
-      className="w-full max-w-lg mx-auto bg-zinc-950/95 backdrop-blur-xl border border-white/10 rounded-[32px] md:rounded-[40px] p-6 md:p-10 relative overflow-hidden group shadow-2xl"
+      className="w-full max-w-lg mx-auto bg-zinc-950/95 backdrop-blur-xl border border-white/10 rounded-[32px] md:rounded-[40px] p-6 md:p-10 relative overflow-visible group shadow-2xl"
       style={{ transform: 'translateZ(0)', willChange: 'transform, height' }}
     >
-      {/* 🔥 pointer-events-none added to prevent hit-test lag, blur reduced slightly on mobile */}
       <div className="absolute -top-24 -right-24 w-80 h-80 bg-brandRed/10 blur-[80px] md:blur-[120px] rounded-full group-hover:bg-brandRed/20 transition-all duration-700 pointer-events-none" />
       
       <div className="relative z-10">
@@ -285,7 +287,6 @@ export default function MembershipCard({ price, benefits, userId, userEmail }: M
                 {/* 1. EMAIL */}
                 <div className="relative group">
                   <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-500 group-focus-within:text-brandRed transition-colors" size={16} />
-                  {/* 🔥 text-base forces iOS to NOT zoom in */}
                   <input type="email" placeholder="Email Address" required className="w-full bg-black/50 border border-white/10 p-4 pl-12 rounded-2xl font-medium text-base md:text-[13px] focus:border-brandRed outline-none text-white placeholder:text-zinc-500 transition-colors" value={email} onChange={(e) => setEmail(e.target.value)} />
                 </div>
 

@@ -241,7 +241,7 @@ export default function EventsPage() {
                   </div>
 
                   <div className="p-8 space-y-6">
-                    <h2 className={`text-2xl md:text-3xl font-black italic uppercase tracking-tighter leading-[0.9] truncate ${!item.isUpcoming ? 'text-zinc-500' : 'text-white'}`}>
+                    <h2 className={`text-2xl md:text-3xl font-black italic uppercase tracking-tighter leading-[0.9]  ${!item.isUpcoming ? 'text-zinc-500' : 'text-white'}`}>
                       {item.title || "Untitled Event"}
                     </h2>
 
@@ -284,8 +284,9 @@ export default function EventsPage() {
                         <div className="flex gap-2">
                            {item.isUpcoming && (
   <Link 
-    href={item.ticketUrl === 'INTERNAL' ? `/events/${item._id}/book` : (item.ticketUrl || '#')}
-    target={item.ticketUrl === 'INTERNAL' ? "_self" : "_blank"} 
+    // 🔥 FIX: Made the check robust against whitespace or lowercase database saves
+    href={item.ticketUrl?.toUpperCase().includes('INTERNAL') ? `/events/${item._id}/book` : (item.ticketUrl || '#')}
+    target={item.ticketUrl?.toUpperCase().includes('INTERNAL') ? "_self" : "_blank"} 
     className="flex-[2] bg-brandRed text-white py-4 rounded-2xl font-black uppercase text-[11px] tracking-widest hover:bg-white hover:text-black transition-all flex items-center justify-center gap-2 shadow-lg active:scale-95"
   >
     <Ticket size={16} /> Register Now 
